@@ -1,0 +1,32 @@
+{
+  "repositorio_origem": "https://github.com/Modo-Escuro/compra-com-contexto",
+  "commit_referencia": "ebfd6e08f54c0c4317ebc364608cf9c18df20adb",
+  "data": "2026-10-17",
+  "nota": "Cópias locais preservadas. O snapshot OpenCode não estava versionado no commit de referência. StRS v0.2 permanece em validação.",
+  "arquivos": [
+    {
+      "origem": "docs/stakeholder-requirements-specification.md",
+      "copia": "docs/baseline/stakeholder-requirements-specification.md",
+      "sha256": "7E065CDCD3F1671C5B6EC18F5D487D57616AD57C357C003A45DDEB148A9B1FA6",
+      "origem_versionada": true
+    },
+    {
+      "origem": "docs/contracts/ifood-tools-discovery-read.json",
+      "copia": "docs/baseline/contracts/ifood-tools-discovery-read.json",
+      "sha256": "44D93F8A456734F69184E834C21115D7A2A612E9E4EFAE6FACFB26AA7DD9D741",
+      "origem_versionada": true
+    },
+    {
+      "origem": "docs/contracts/ifood-tools-opencode.json",
+      "copia": "docs/baseline/contracts/ifood-tools-opencode.json",
+      "sha256": "DF8C4F076DF52792C1EEED75F61A75D4805DE8B13931299B126B057D78B4CE23",
+      "origem_versionada": false
+    },
+    {
+      "origem": "docs/contracts/ifood-mcp-documentacao-fornecida.txt",
+      "copia": "docs/baseline/contracts/ifood-mcp-documentacao-fornecida.txt",
+      "sha256": "B237925B92E6C58D18EA150DC5081B30E8937EB024BC181E891E09F7DCC23AED",
+      "origem_versionada": true
+    }
+  ]
+}
