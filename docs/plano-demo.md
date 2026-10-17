@@ -2,7 +2,7 @@
 
 Objetivo: organizar uma compra de grupo, alterar orçamento ou itens preservando restrições, revisar a sacola e enviar somente após aprovação humana válida no ambiente de teste autorizado.
 
-1. Validar o backend: autenticação iFood, listAddresses → searchOffers → getItem. Preservar evidências sanitizadas.
+1. Implementar e validar o [login iFood associado ao organizador](login-ifood.md), incluindo vínculo confirmado, expiração, renovação e desconexão. Token armazenado não comprova sessão válida. Depois validar listAddresses → searchOffers → getItem e preservar evidências sanitizadas.
 2. Definir contrato HTTP para conversa, estado da sacola, alterações, aprovação e status. Rotas ainda não definidas; não presumir /chat ou /approve. Autenticar o bot e associar o organizador à conta de teste.
 3. Implementar Python com long polling, conversa privada e organizador permitido. Não precisa de webhook público do Telegram; OAuth iFood é uma conexão separada.
 4. Manter participantes, limites e restrições no backend. Definir rateio e quantidade de restaurantes explicitamente; permanecem decisões abertas.
