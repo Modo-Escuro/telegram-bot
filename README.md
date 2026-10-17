@@ -2,7 +2,7 @@
 
 Interface conversacional para a demo do hackathon SEMCOMP, em conversa privada entre organizador e bot. O organizador informa as necessidades do grupo; o sistema preserva orçamento e restrições quando o pedido muda e solicita aprovação humana antes do envio.
 
-**Status: base documental inicial. O bot, o long polling e a integração HTTP ainda não estão implementados. Não há operações de compra disponíveis neste repositório.**
+**Status: bot inicial implementado com long polling, /start, /status, /ajuda e acesso restrito ao organizador em conversa privada. Integração HTTP com backend, login iFood, conversa de compras e pedidos ainda pendentes. Testes automatizados usam respostas simuladas do Telegram; conexão real depende da configuração local.**
 
 Fluxo previsto: Telegram → adaptador Python → [api-backend](https://github.com/Modo-Escuro/api-backend) → agente e validações determinísticas → MCP do iFood.
 
@@ -11,6 +11,10 @@ Fluxo previsto: Telegram → adaptador Python → [api-backend](https://github.c
 - Bot: receber mensagens e cliques, verificar o usuário permitido, encaminhar eventos autenticados à API e apresentar opções, sacola e status.
 - Backend: manter contexto e participantes, executar o agente, autenticar no iFood, consultar/modificar a sacola, validar aprovação e reconciliar resultados desconhecidos.
 - Aprovação: evento humano validado pela API, associado ao responsável, à versão e ao total revisados. O modelo não pode produzir sua própria autorização.
+
+## Executar
+
+Siga o [guia de execução no Git Bash](docs/executar-bot.md) para criar o bot no BotFather, configurar o token sem exibi-lo, descobrir seu ID com --identify e iniciar o processo. Python 3.12; nenhuma dependência externa em execução.
 
 ## Documentação
 
@@ -29,4 +33,4 @@ O [repositório original](https://github.com/Modo-Escuro/compra-com-contexto) pr
 3. Definir um organizador permitido pelo ID numérico do Telegram.
 4. Validar as rotas disponíveis no api-backend antes de implementar o adaptador.
 
-Os nomes em .env.example são propostas para a implementação futura; ainda não existe programa que os carregue. O OAuth do iFood permanece no backend.
+As variáveis TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USER_ID e TELEGRAM_STATE_DIR são lidas do ambiente do processo. .env não é carregado automaticamente. As variáveis BACKEND_* estão reservadas para integração futura. O OAuth do iFood permanece no backend.

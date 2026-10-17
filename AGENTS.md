@@ -1,6 +1,6 @@
 # Instruções para o telegram-bot
 
-- Escreva em português. Projeto Python 3.12 previsto; implementação ainda pendente.
+- Escreva em português. Projeto Python 3.12 em src/telegram_bot; canal Telegram implementado, integração com backend pendente.
 - Este repositório implementará a interface Telegram. Consumir o api-backend; não criar outro servidor MCP nem duplicar seu OAuth.
 - Ler docs/regras-preservadas.md e docs/plano-demo.md antes de implementar. Preservar os IDs da StRS copiada em docs/baseline, sem converter propostas ou decisões abertas em comportamento aprovado.
 - Não inventar rotas ou formatos do backend. Distinguir contrato proposto, código existente e chamada verificada.
@@ -12,3 +12,5 @@
 - Não registrar tokens, .env, endereços, documentos pessoais ou bancos locais. O usuário opera o navegador pessoalmente.
 - Testar alterações de código com cenários relevantes. Não apresentar os testes históricos como testes atuais do bot. Documentação apenas não exige executar a suíte do protótipo original.
 - O login iFood é pré-requisito para operações da conta. Seguir docs/login-ifood.md: vínculo com organizador, sessão operacional e escopo apropriado; authenticated=true isolado não basta. Não confundir login com aprovação de pedido.
+
+- Para código, executar python -m unittest discover -s tests -v no ambiente do projeto. A CI usa Windows e Linux. Não executar polling com token real durante os testes automatizados. Guia operacional em docs/executar-bot.md.

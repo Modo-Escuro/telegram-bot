@@ -1,0 +1,56 @@
+import argparse
+import sqlite3
+
+from .config import Config
+from .runner import identify, poll
+from .state import State, single_instance
+from .telegram import Telegram, TelegramError
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Bot privado Compra com Contexto.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--check", action="store_true", help="Verifica token e ausência de webhook.")
+    group.add_argument(
+        "--identify", action="store_true", help="Descobre seu ID por desafio privado."
+    )
+    args = parser.parse_args()
+    try:
+        config = Config.from_env(identify=args.identify)
+        api = Telegram(config.token)
+        me = api.check()
+        if args.check:
+            print("Token Telegram válido e webhook ausente. Login iFood não verificado.")
+            return 0
+        config.state_dir.mkdir(parents=True, exist_ok=True)
+        with single_instance(config.state_dir / f"bot-{me['id']}.lock"):
+            if args.identify:
+                identify(api)
+                return 0
+            state = State(config.state_dir / f"bot-{me['id']}.sqlite3")
+            try:
+                print("Bot iniciado. Abra a conversa privada e envie /start. Ctrl+C encerra.")
+                poll(api, state, config.allowed_user_id, me["username"])
+            finally:
+                state.close()
+    except KeyboardInterrupt:
+        print("\nBot encerrado.")
+        return 0
+    except TelegramError as exc:
+        if exc.code == 401:
+            print("Token Telegram recusado. Confira a configuração local.")
+        elif exc.code == 409:
+            print("Conflito de polling/webhook. Encerre a outra instância antes de reiniciar.")
+        else:
+            print(str(exc))
+        return 1
+    except ValueError as exc:
+        print(str(exc))
+        return 1
+    except (OSError, sqlite3.Error):
+        print("Não foi possível acessar o estado local ou concluir a operação.")
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -22,3 +22,6 @@ Estes são requisitos de contrato, não nomes de rotas nem schemas implementados
 ## Preservação
 
 O repositório original continua íntegro. Não apagar ou arquivar automaticamente. docs/baseline conserva a especificação e os contratos com hash SHA-256. Alterações futuras de requisitos devem identificar a versão de origem e preservar IDs e decisões abertas.
+## Incremento entregue: canal Telegram
+
+Long polling, /start, /status, /ajuda, identificação local por desafio, acesso privado ao organizador e cursor persistente estão implementados. Testes automatizados simulam Telegram; validação real depende do token local. Backend, login iFood e operações de compra continuam pendentes. Consulte [executar o bot](executar-bot.md).

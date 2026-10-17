@@ -11,3 +11,5 @@ data/
 *.log
 dist/
 build/
+
+*.egg-info/
