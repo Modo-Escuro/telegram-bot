@@ -1,0 +1,2 @@
+# Preservar bytes dos snapshots para conferir SHA-256 em qualquer sistema.
+docs/baseline/** -text whitespace=cr-at-eol
