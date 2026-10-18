@@ -9,10 +9,43 @@ from test_conversation_worker import BOT, OWNER, Fixture, snapshot, update
 from telegram_bot import conversation_buttons as buttons
 from telegram_bot.conversation_contract import Snapshot, encode
 from telegram_bot.conversation_runner import Conversations
+from telegram_bot.conversation_view import ADDRESS_REQUIRED
 from telegram_bot.runner import process_batch
 
 
 class ButtonTests(Fixture):
+    def test_address_blocker_offers_delivery_address_instead_of_blocked_search(self):
+        d = self.client.current.to_dict()
+        d["pending"] = [ADDRESS_REQUIRED]
+        d["allowedActions"] = [
+            {**self.action, "kind": "EDIT_CONTEXT", "actionRef": "more_" + "b" * 32}
+        ]
+        self.adapter.receive(update(text="Vamos pedir uma pizza"))
+        self.tick(2)
+        d["version"] = 2
+        self.client.current = Snapshot(encode(d), 2, "COLLECTING")
+        self.tick(5)
+        reply = self.telegram.send.call_args
+        self.assertIn("escolha o endereço de entrega", reply.args[1])
+        self.assertNotIn("mudar o tipo de comida", reply.args[1])
+        self.assertEqual(
+            reply.args[2]["inline_keyboard"],
+            [[{"text": "Escolher endereço de entrega", "callback_data": "nav:addresses"}]],
+        )
+        self.assertIsNone(self.box.active())
+
+    def test_valid_flow_click_queues_without_sending_progress_message(self):
+        process_batch(
+            self.telegram,
+            self.state,
+            [{"update_id": 1, "callback_query": self.callback}],
+            OWNER,
+            "bot",
+            conversations=self.adapter,
+        )
+        self.telegram.send.assert_not_called()
+        self.assertIsNotNone(self.box.active())
+
     def test_no_restrictions_is_inline_and_keeps_version_and_callback_source(self):
         action = {**self.action, "kind": "EDIT_CONTEXT", "actionRef": "none_" + "b" * 32}
         current = self.client.current.to_dict()

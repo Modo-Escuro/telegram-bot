@@ -180,7 +180,7 @@ class Conversations:
             return "Não consegui validar essa escolha. Use a resposta mais recente."
         except ConversationError:
             return "Não consegui confirmar a conta desta escolha. Confira sua conexão e tente novamente."
-        return "Vou conferir sua escolha."
+        return None
 
     def mode_click(self, callback, update_id, choice, context=None):
         """Clique já autorizado e consumido: enfileira o texto fixo pelo caminho normal de mensagem."""
@@ -463,6 +463,7 @@ class ConversationWorker:
 
     def _poll(self, row):
         options = []
+        needs_address = False
         operation = self.client.get_operation(
             row["operation_id"], event_id=row["event_id"], **self._session_args(row)
         )
@@ -483,6 +484,7 @@ class ConversationWorker:
         if operation.status == "SUCCEEDED":
             # Não reutilizar snapshot histórico da operação: ele pode ter sido substituído/expurgado.
             snapshot = self.client.get_snapshot(**self._session_args(row))
+            needs_address = buttons.needs_address(snapshot)
             text = render(snapshot, concise=True)
             options = buttons.offered(
                 snapshot, cart=getattr(self.telegram, "cart_enabled", False) is True
@@ -504,7 +506,7 @@ class ConversationWorker:
         self._deliver(
             row,
             parts,
-            markup=buttons.markup(options),
+            markup=buttons.markup(options, address=needs_address),
             on_delivery=(lambda mid: buttons.bind(self.box, mid, self.client.bot_id, options))
             if options
             else None,

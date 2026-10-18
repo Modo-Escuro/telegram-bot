@@ -4,8 +4,16 @@ import hashlib
 import re
 from datetime import datetime
 
+from .conversation_view import ADDRESS_REQUIRED
+
+
+def needs_address(snapshot):
+    return ADDRESS_REQUIRED in snapshot.to_dict()["pending"]
+
 
 def offered(snapshot, *, cart=False):
+    if needs_address(snapshot):
+        return []
     result = []
     for action in snapshot.to_dict()["allowedActions"]:
         code = action["actionRef"].split("_", 1)[0]
@@ -26,7 +34,13 @@ def offered(snapshot, *, cart=False):
     return result
 
 
-def markup(options):
+def markup(options, *, address=False):
+    if address:
+        return {
+            "inline_keyboard": [
+                [{"text": "Escolher endereço de entrega", "callback_data": "nav:addresses"}]
+            ]
+        }
     return {
         "inline_keyboard": [
             [{"text": label, "callback_data": "cv:" + action["actionRef"]}]
