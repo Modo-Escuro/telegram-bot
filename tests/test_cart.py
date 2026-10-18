@@ -16,6 +16,7 @@ from urllib.error import URLError
 from telegram_bot.backend import BackendConfig, LinkStatus
 from telegram_bot.cart import Carts, review_text
 from telegram_bot.cart_client import CartClient, CartError
+from telegram_bot.cart_view import current_text
 from telegram_bot.config import Config
 from telegram_bot.conversation_contract import Snapshot, encode
 from telegram_bot.menu import keyboard
@@ -54,6 +55,34 @@ def review():
         ],
         "changes": [{"tool": "createCart", "args": {}}],
         "remoteItems": [],
+        "display": {
+            "accountLabel": "Pessoa S. · p***@example.test",
+            "merchantName": "Loja sintética",
+            "addressLabel": "Casa · Centro · Cidade sintética",
+            "items": [{"itemId": "item-sintetico", "name": "Arroz", "options": []}],
+        },
+    }
+
+
+def current():
+    return {
+        "purchaseAuthorized": False,
+        "checkoutEnabled": False,
+        "paymentEnabled": False,
+        "display": review()["display"],
+        "cart": {
+            "items": [
+                {"itemId": "item-sintetico", "quantity": 1, "options": [], "unitPrice": 2000}
+            ],
+            "totals": {
+                "subtotal": 2000,
+                "deliveryFee": 500,
+                "serviceFee": 100,
+                "discount": 0,
+                "total": 2600,
+            },
+        },
+        "budget": {"status": "WITHIN_LIMITS"},
     }
 
 
@@ -172,6 +201,7 @@ class CallbackTests(unittest.TestCase):
         self.client.review.side_effect = lambda: copy.deepcopy(review())
         self.client.confirm.return_value = result()
         self.client.request.return_value = result()
+        self.client.current.return_value = current()
         self.conversation.get_snapshot.return_value = snapshot()
         self.backend.status.return_value = SimpleNamespace(
             state="CONNECTED",
@@ -236,9 +266,80 @@ class CallbackTests(unittest.TestCase):
         self.carts.click(callback)
         self.client.confirm.assert_called_once()
         self.assertIn("PEDIDO NÃO ENVIADO", self.api.send.call_args.args[1])
+        self.assertIn("Total observado: R$ 26,00", self.api.send.call_args.args[1])
         dump = "\n".join(self.state.db.iterdump())
         for secret in [REFERENCE, "Pessoa sintética", "Arroz", callback["id"], callback["data"]]:
             self.assertNotIn(secret, dump)
+
+    def test_failed_final_read_preserves_succeeded_and_never_repeats_confirm(self):
+        callback = self.prepare()
+        self.client.current.side_effect = CartError()
+        self.carts.click(callback)
+        self.pump()
+        self.assertEqual(self.carts._row()[1], "SUCCEEDED")
+        self.assertIn("Não consegui conferir", self.api.send.call_args.args[1])
+        self.client.current.side_effect = None
+        self.carts.receive("/conferircarrinho")
+        self.pump()
+        self.assertIn("Total observado: R$ 26,00", self.api.send.call_args.args[1])
+        self.client.confirm.assert_called_once()
+
+    def test_lost_confirm_reply_recovers_succeeded_in_same_turn_by_get(self):
+        callback = self.prepare()
+        self.client.confirm.side_effect = CartError(uncertain=True)
+        self.carts.click(callback)
+        self.pump()
+        self.assertEqual(self.carts._row()[1], "SUCCEEDED")
+        self.client.confirm.assert_called_once()
+        self.client.request.assert_called_once()
+
+    def test_identity_missing_blocks_button_and_options_and_removal_are_named(self):
+        value = review()
+        for key in ("accountLabel", "merchantName", "addressLabel"):
+            changed = copy.deepcopy(value)
+            del changed["display"][key]
+            with self.assertRaises(CartError):
+                review_text(changed, snapshot())
+        value["lines"][0]["optionIds"] = ["option-a"]
+        value["display"]["items"][0]["options"] = [
+            {"optionId": "option-a", "quantity": 1, "name": "Sem molho"}
+        ]
+        value["remoteItems"] = [{"itemId": "item-extra", "quantity": 2, "options": []}]
+        value["display"]["items"].append({"itemId": "item-extra", "name": "Bebida", "options": []})
+        value["changes"] = [{"tool": "removeItemFromCart", "args": {}}]
+        shown = review_text(value, snapshot())
+        for fact in (
+            "Pessoa S.",
+            "Loja sintética",
+            "Casa",
+            "Sem molho",
+            "2 × Bebida",
+            "remover item",
+        ):
+            self.assertIn(fact, shown)
+
+    def test_final_costs_malformed_or_changed_do_not_claim_budget_validated(self):
+        self.assertIn("R$ 26,00", current_text(current()))
+        value = current()
+        value["budget"]["status"] = "UNVERIFIED"
+        self.assertIn("Orçamento não verificado", current_text(value))
+        for change in (None, -1, True, 0.01):
+            value = current()
+            value["cart"]["totals"]["deliveryFee"] = change
+            with self.assertRaises(CartError):
+                current_text(value)
+
+    def test_existing_configured_item_uses_one_label_for_current_and_desired(self):
+        value = review()
+        option = {"optionId": "option-a", "quantity": 1}
+        value["lines"][0]["optionIds"] = ["option-a"]
+        value["display"]["items"][0]["options"] = [{**option, "name": "Sem molho"}]
+        value["remoteItems"] = [{"itemId": "item-sintetico", "quantity": 2, "options": [option]}]
+        value["changes"] = [{"tool": "updateCartItem", "args": {}}]
+        self.assertIn("2 × Arroz (1 × Sem molho)", review_text(value, snapshot()))
+        value["display"]["items"].append(copy.deepcopy(value["display"]["items"][0]))
+        with self.assertRaises(CartError):
+            review_text(value, snapshot())
 
     def test_polling_routes_human_callback_outside_conversation_model(self):
         callback = self.prepare()

@@ -12,17 +12,19 @@ START = (
     "Me conte quem participa, as restrições alimentares "
     "e quanto vocês querem gastar. Você pode corrigir as informações quando precisar.\n\n"
     "Para conectar a conta teste iFood, toque em Conectar iFood. "
-    "Nesta demo, a sacola é simulada e nenhum pedido é enviado."
+    "A preparação da sacola exige uma revisão e confirmação específicas. Nenhum pedido é enviado."
 )
 STATUS = "Estou por aqui! O login não é verificado nesta tela. Toque em Minha conexão para consultar sua conta."
 HELP = (
     "Converse comigo por aqui para organizar o grupo e ajustar o orçamento.\n\n"
     "Conectar iFood abre o login da conta teste. Minha conexão mostra a conta e os botões "
     "para cancelar um login ou desconectar. Verificar conexão consulta o acesso ao iFood."
+    " Endereços iFood confere os endereços cadastrados e permite escolher qual usar nas sugestões."
 )
 CONVERSATION_HELP = (
     "\n\nAcompanhar mostra suas mensagens pendentes. Interromper solicita a parada local. "
     "Retomar conversa recupera o acompanhamento; se uma entrega ficou incerta, a mensagem pode aparecer novamente."
+    " As respostas chegam automaticamente durante o acompanhamento normal."
 )
 
 
@@ -83,7 +85,16 @@ def process_batch(
             continue
         callback = update.get("callback_query")
         if isinstance(callback, dict):
-            process_callback(api, state, callback, update_id, allowed_id, connections, carts)
+            process_callback(
+                api,
+                state,
+                callback,
+                update_id,
+                allowed_id,
+                connections,
+                conversations=conversations,
+                carts=carts,
+            )
             state.done(update_id)
             continue
         message = private_message(update)
@@ -207,7 +218,9 @@ def identify(api, *, timeout=180, clock=time.monotonic, emit=print):
     raise ValueError("Identificação expirou. Execute --identify novamente.")
 
 
-def process_callback(api, state, callback, update_id, allowed_id, connections, carts=None):
+def process_callback(
+    api, state, callback, update_id, allowed_id, connections, conversations=None, carts=None
+):
     sender, message = callback.get("from"), callback.get("message")
     callback_id = callback.get("id")
     if not isinstance(callback_id, str):
@@ -231,6 +244,15 @@ def process_callback(api, state, callback, update_id, allowed_id, connections, c
     if not authorized:
         return
     data = callback.get("data")
+    if isinstance(data, str) and data.startswith("ifa:"):
+        queued = conversations and conversations.address_click(callback, update_id)
+        api.send(
+            allowed_id,
+            "Vou validar o endereço escolhido na conta conectada."
+            if queued
+            else "Esta escolha expirou ou não corresponde à mensagem original. Toque em Endereços iFood.",
+        )
+        return
     if isinstance(data, str) and data.startswith("cart:"):
         text = (
             carts.click(callback)

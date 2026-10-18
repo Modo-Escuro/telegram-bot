@@ -5,6 +5,7 @@ import threading
 import time
 from datetime import datetime
 
+from .address_flow import AddressFlow
 from .backend import BackendError
 from .conversation import ConversationError
 from .conversation_contract import ProtocolError, decode, encode
@@ -13,7 +14,12 @@ from .outbox import Outbox
 from .telegram import TelegramError
 from .voice import MAX_BYTES, VoiceError, voice_metadata
 
+PROCESSING = "Estou processando sua mensagem e vou trazer a resposta por aqui automaticamente. Você pode continuar escrevendo ou tocar em Interromper."
+
 NOTICES = {
+    "ADDRESS_UNAVAILABLE": "A verificação de endereços ainda não está disponível nesta versão da API. Avise a equipe; a coleta do grupo pode continuar.",
+    "ADDRESS_SELECTED": "Endereço confirmado para as sugestões. Nenhum pedido foi criado ou enviado. Pode continuar a conversa; para trocar, toque em Endereços iFood.",
+    "REFERENCE_EXPIRED": "A lista de endereços mudou ou a escolha expirou. Toque em Endereços iFood para conferir novamente.",
     "VOICE_UNKNOWN": "A transcrição foi interrompida e não será repetida automaticamente. Envie o áudio novamente ou escreva a mensagem.",
     "VOICE_FAILED": "Não consegui entender este áudio com segurança ou o limite de voz foi atingido. Tente mais tarde ou escreva a mensagem.",
     "QUEUE_FULL": "A fila de conversa está cheia. Aguarde e envie esta mensagem novamente depois.",
@@ -58,7 +64,7 @@ def link_fingerprint(status):
 class Conversations:
     """Adaptador usado só pela thread de recebimento, sem rede de conversa."""
 
-    COMMANDS = frozenset({"/andamento", "/interromper", "/retomar"})
+    COMMANDS = frozenset({"/andamento", "/interromper", "/retomar", "/enderecos"})
 
     def __init__(self, box, client, *, voice_enabled=False):
         self.box, self.client = box, client
@@ -68,9 +74,38 @@ class Conversations:
         fingerprint = link_fingerprint(status)
         if not fingerprint:
             return None
-        return self.box.enqueue_context(source_key, fingerprint)
+        queued = self.box.enqueue_context(source_key, fingerprint)
+        if queued and getattr(self.client, "addresses_supported", False):
+            self.box.enqueue_addresses(source_key, fingerprint)
+        return queued
+
+    def address_click(self, callback, update_id):
+        if not getattr(self.client, "addresses_supported", False):
+            return False
+        sender, message = callback.get("from"), callback.get("message")
+        if not isinstance(sender, dict) or not isinstance(message, dict):
+            return False
+        chat = message.get("chat")
+        if (
+            sender.get("is_bot") is not False
+            or type(sender.get("id")) is not int
+            or sender["id"] != self.client.organizer_id
+            or not isinstance(chat, dict)
+            or chat.get("type") != "private"
+            or type(chat.get("id")) is not int
+            or chat["id"] != self.client.organizer_id
+        ):
+            return False
+        return self.box.address_click(callback, update_id, self.client.bot_id)
 
     def receive(self, update, text_command=None):
+        if text_command == "/enderecos":
+            queued = self.box.enqueue_addresses("message-" + str(update["update_id"]))
+            return (
+                "Vou conferir seus endereços cadastrados no iFood."
+                if queued
+                else NOTICES["QUEUE_FULL"]
+            )
         voice = None
         if "voice" in update.get("message", {}):
             if not self.voice_enabled:
@@ -120,6 +155,7 @@ class ConversationWorker:
         self.link_status = link_status
         self.access_allowed = access_allowed
         self.transcriber = transcriber
+        self.addresses = AddressFlow(self)
 
     def _authorized(self):
         return not self.stop_event.is_set() and (
@@ -147,6 +183,8 @@ class ConversationWorker:
             state = row["state"]
             if state == "NOTICE":
                 self._notice(row)
+            elif row["kind"].startswith("ADDRESS_"):
+                self.addresses.tick(row)
             elif row["kind"] == "CONTEXT":
                 self._context(row)
             elif state == "RECEIVED" or (state == "PAUSED" and row["body"] is not None):
@@ -283,7 +321,7 @@ class ConversationWorker:
             return
         if not operation.terminal:
             if row["deadline"] and self.clock() > row["deadline"] + 30:
-                self.box.save(row["seq"], state="PAUSED", attempts=3)
+                self.box.save(row["seq"], state="PAUSED", attempts=3, notice="UNAVAILABLE")
                 self.box.pause_notice(row, "UNAVAILABLE")
                 return
             self.box.save(
@@ -295,9 +333,7 @@ class ConversationWorker:
             if self.box.delivered(row["seq"], 0) is None:
                 self._deliver(
                     row,
-                    [
-                        "Estou processando sua mensagem. Você pode continuar escrevendo ou usar Acompanhar e Interromper."
-                    ],
+                    [PROCESSING],
                     final=False,
                 )
             return
@@ -314,15 +350,16 @@ class ConversationWorker:
             document = operation.to_dict()
             code = (document.get("error") or {}).get("code")
             text = NOTICES.get(code, NOTICES["FAILED"])
+        self.box.save(row["seq"], notice=operation.status)
         self._deliver(row, chunks(text))
 
-    def _deliver(self, row, parts, *, final=True):
+    def _deliver(self, row, parts, *, final=True, markup=None, on_delivery=None):
         # Texto só em memória. Edições de mensagens conhecidas são recuperáveis, envios novos são incertos.
         for index, text in enumerate(parts):
             if not self._authorized():
                 return
             message_id = self.box.delivered(row["seq"], index)
-            digest = hashlib.sha256(text.encode()).hexdigest()
+            digest = hashlib.sha256(text.encode() + (encode(markup) if markup else b"")).hexdigest()
             if message_id and self.box.delivery_digest(row["seq"], index) == digest:
                 continue
             if row["state"] == "NOTICE":
@@ -338,11 +375,14 @@ class ConversationWorker:
                             "chat_id": self.organizer_id,
                             "message_id": message_id,
                             "text": text,
-                            "reply_markup": {"inline_keyboard": []},
+                            "reply_markup": markup or {"inline_keyboard": []},
                         },
                     )
                 else:
-                    response = self.telegram.send(self.organizer_id, text)
+                    # ReplyKeyboardMarkup torna a mensagem não editável na Bot API.
+                    response = self.telegram.send(
+                        self.organizer_id, text, markup or {"inline_keyboard": []}
+                    )
                     if (
                         not isinstance(response, dict)
                         or type(response.get("message_id")) is not int
@@ -350,8 +390,16 @@ class ConversationWorker:
                         raise TelegramError()
                     message_id = response["message_id"]
                 self.box.record_delivery(row["seq"], index, message_id, digest)
+                if on_delivery:
+                    on_delivery(message_id)
             except TelegramError as error:
-                if error.code == 403:
+                if message_id and error.reason == "NOT_MODIFIED":
+                    # Retry da edição cujo ack se perdeu: mesmo ID/conteúdo já aplicado.
+                    self.box.record_delivery(row["seq"], index, message_id, digest)
+                    if on_delivery:
+                        on_delivery(message_id)
+                    self.box.save(row["seq"], state=next_state)
+                elif error.code == 403:
                     self.box.finish(row["seq"])
                 elif not message_id and error.code in {0, 500, 502, 503, 504}:
                     self.box.save(row["seq"], state="DELIVERY_UNKNOWN", attempts=3, body=None)
@@ -398,6 +446,7 @@ class ConversationWorker:
                 "UNAUTHENTICATED",
                 "INVALID_REQUEST",
                 "LINK_CHANGED",
+                "REFERENCE_EXPIRED",
             }
             and not error.uncertain
         ):
@@ -411,6 +460,7 @@ class ConversationWorker:
                 row["seq"],
                 state=state,
                 attempts=attempts,
+                notice=error.code,
                 due=self.clock() + min(30, 5 * 2 ** min(attempts - 1, 3)),
             )
             return attempts >= 3

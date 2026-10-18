@@ -1,12 +1,14 @@
 # CART-01 — Revisão e confirmação no Telegram
 
+**Continuação local de 18/10:** [conclusão offline integrada](cart-01-conclusao-offline.md) completa identificação de conta/loja/endereço, nomes das opções e remoções e apresentação dos custos finais. Os limites e testes abaixo conservam o histórico do draft original; não são o resultado da nova continuação nem evidência externa.
+
 Incremento de código sobre `main@d239edd43d072198367fd2fda3846fa29774ba65` (#16 já mergeado), dependente da API [#46](https://github.com/Modo-Escuro/api-backend/pull/46). Publicação em PR não significa integração na main, deploy ou execução real. `TELEGRAM_CART_ENABLED=false` é o padrão; exige conversa habilitada quando ativado. Nenhuma configuração da Railway foi alterada.
 
 ## Comportamento implementado
 
 - **Revisar carrinho** consulta o backend em worker separado, sem escrever no MCP. Apresenta composição desejada, quantidades, preços observados em centavos, destinatários/restrições, orçamento coletivo e custos anteriores quando conhecidos. O total posterior continua desconhecido.
 - **Preparar este carrinho** é um callback independente do modelo e da aprovação do login. Valida organizador, bot, conversa privada, mensagem original, vínculo, versão e prazo de cinco minutos. Backend revalida a revisão e consome a referência junto da intenção persistente PREPARE_CART. Pedido/pagamento permanecem bloqueados.
-- **Conferir carrinho** consulta apenas `GET cart-writes/requests/:requestId`. Recupera o estado técnico da preparação; ainda não apresenta a composição/custos finais do carrinho. Não é aprovação de compra.
+- **Conferir carrinho** recupera o estado técnico por `GET cart-writes/requests/:requestId` e, em SUCCEEDED/FAILED, consulta `GET cart-writes/current` para apresentar composição/custos atuais. Falha da consulta não repete confirmação nem muda o estado técnico reconhecido. Não é aprovação de compra.
 
 Referência de confirmação fica só na RAM; botão contém outro identificador aleatório, sem referência da API. SQLite armazena apenas escopo, requestId, hash do callback, fase e instante. Não guarda composição, nomes, restrições, referência ou texto da revisão. Alteração de conversa invalida o botão; reinício descarta referências em RAM.
 

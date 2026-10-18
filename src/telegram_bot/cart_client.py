@@ -157,3 +157,6 @@ class CartClient:
         if not UUID.fullmatch(request_id):
             raise CartError("PROTOCOL")
         return self.operation(self._request("GET", "requests/" + request_id))
+
+    def current(self):
+        return self._request("GET", "current")

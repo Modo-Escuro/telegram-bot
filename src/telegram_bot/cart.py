@@ -9,6 +9,7 @@ from datetime import datetime
 
 from .backend import BackendError
 from .cart_client import CartError
+from .cart_view import brl, context_rows, cost_rows, current_text, item_label
 from .conversation import ConversationError
 from .conversation_contract import ProtocolError
 from .conversation_runner import link_fingerprint
@@ -21,10 +22,6 @@ UNKNOWN = (
 )
 
 
-def brl(value):
-    return f"R$ {value // 100},{value % 100:02d}"
-
-
 def review_text(review, snapshot):
     """Revisão completa ou bloqueio; não cortar destinatários, quantidades ou incertezas."""
     if snapshot.version != review["version"]:
@@ -35,6 +32,7 @@ def review_text(review, snapshot):
     people = {p["participantRef"]: p for p in group["participants"]}
     rows = [
         "REVISÃO PARA PREPARAR O CARRINHO",
+        *context_rows(review.get("display")),
         f"Versão: {review['version']} · revisão: {review['fingerprint']}",
         "Válida até: " + review["expiresAt"],
         "",
@@ -62,7 +60,6 @@ def review_text(review, snapshot):
             if qualifiers
             else "Orçamento informado do grupo: " + brl(group_budget)
         )
-    names = {}
     subtotal = 0
     for line in review["lines"]:
         try:
@@ -82,12 +79,14 @@ def review_text(review, snapshot):
                 or any(p not in people for p in consumers)
             ):
                 raise CartError("PROTOCOL")
-            # O contrato ainda não traz rótulos para opções; não mostrar uma confirmação incompleta.
-            if line["optionIds"]:
-                raise CartError("REVIEW_NOT_DISPLAYABLE")
+            label = item_label(
+                review["display"],
+                line["itemId"],
+                [{"optionId": o, "quantity": 1} for o in line["optionIds"]],
+                expected_name=name,
+            )
             subtotal += unit * quantity
-            names[line["itemId"]] = name
-            rows.append(f"{quantity} × {name} — {brl(unit)} por unidade")
+            rows.append(f"{quantity} × {label} — {brl(unit)} por unidade")
             rows.append("Para: " + ", ".join(people[p]["displayName"] for p in consumers))
         except (KeyError, TypeError):
             raise CartError("PROTOCOL") from None
@@ -103,32 +102,14 @@ def review_text(review, snapshot):
         for item in remote:
             if not isinstance(item, dict) or not isinstance(item.get("itemId"), str):
                 raise CartError("PROTOCOL")
-            if item.get("itemId") not in names or item.get("options"):
-                raise CartError("REVIEW_NOT_DISPLAYABLE")
             if type(item.get("quantity")) is not int or not 1 <= item["quantity"] <= 99:
                 raise CartError("PROTOCOL")
-            rows.append(f"{item['quantity']} × {names[item['itemId']]}")
+            rows.append(
+                f"{item['quantity']} × {item_label(review['display'], item['itemId'], item.get('options'))}"
+            )
     costs = review.get("remoteCosts")
     if costs is not None:
-        if not isinstance(costs, dict) or any(
-            type(costs.get(k)) is not int or not 0 <= costs[k] <= 2**53 - 1
-            for k in ("subtotal", "deliveryFee", "serviceFee", "discount", "total")
-        ):
-            raise CartError("PROTOCOL")
-        if (
-            costs["subtotal"] + costs["deliveryFee"] + costs["serviceFee"] - costs["discount"]
-            != costs["total"]
-        ):
-            raise CartError("PROTOCOL")
-        rows += [
-            "",
-            "Custos do carrinho atual, antes destas alterações:",
-            "Itens: " + brl(costs["subtotal"]),
-            "Entrega: " + brl(costs["deliveryFee"]),
-            "Taxa de serviço: " + brl(costs["serviceFee"]),
-            "Desconto: " + brl(costs["discount"]),
-            "Total atual: " + brl(costs["total"]),
-        ]
+        rows += ["", *cost_rows(costs, previous=True)]
     labels = {
         "createCart": "criar o carrinho",
         "addItemToCart": "adicionar item",
@@ -194,7 +175,9 @@ class Carts:
         if command == "/conferircarrinho":
             if not row:
                 return "Não há preparação registrada aqui. Use Revisar carrinho."
-            return self._start("result", lambda: self.client.request(row[0]), row[0])
+            return self._start(
+                "result", lambda: self._with_current(self.client.request(row[0])), row[0]
+            )
         if row and row[1] in {"PENDING", "RESULT_UNKNOWN"}:
             return UNKNOWN
         self.invalidate()
@@ -217,6 +200,16 @@ class Carts:
             return value, link, expires.timestamp(), review_text(value, snapshot), generation
 
         return self._start("review", prepare)
+
+    def _with_current(self, result):
+        # A consulta não altera o estado da intenção reconhecida e nunca repete POST.
+        result = dict(result)
+        if result.get("state") in {"SUCCEEDED", "FAILED"}:
+            try:
+                result["_currentText"] = current_text(self.client.current())
+            except (CartError, ValueError, TypeError, KeyError, AttributeError, OverflowError):
+                result["_currentText"] = None
+        return result
 
     def click(self, callback):
         sender, message = callback.get("from", {}), callback.get("message", {})
@@ -274,15 +267,17 @@ class Carts:
             except (BackendError, ConversationError, ProtocolError):
                 raise CartError("CART_REVIEW_CHANGED") from None
             try:
-                return self.client.confirm(saved["reference"], request_id, callback_id)
+                result = self.client.confirm(saved["reference"], request_id, callback_id)
             except CartError as error:
                 if error.uncertain:
                     # Só consulta; a referência nunca é reenviada, mesmo após timeout.
                     try:
-                        return self.client.request(request_id)
+                        result = self.client.request(request_id)
                     except CartError:
                         raise CartError(uncertain=True) from None
-                raise
+                else:
+                    raise
+            return self._with_current(result)
 
         return self._start("confirm", confirm, request_id)
 
@@ -327,9 +322,14 @@ class Carts:
             text = {
                 "PENDING": UNKNOWN,
                 "RESULT_UNKNOWN": UNKNOWN,
-                "SUCCEEDED": "CARRINHO PREPARADO — PEDIDO NÃO ENVIADO. Esta consulta confirma apenas o estado da preparação. A apresentação da composição e dos custos finais ainda está pendente nesta interface; nenhuma aprovação de compra é liberada.",
+                "SUCCEEDED": "PREPARAÇÃO CONCLUÍDA — PEDIDO NÃO ENVIADO.",
                 "FAILED": "A preparação foi interrompida. Pode haver alterações já reconhecidas. Consulte a equipe antes de uma nova revisão.",
             }[phase]
+            if phase in {"SUCCEEDED", "FAILED"}:
+                text += "\n\n" + (
+                    value.get("_currentText")
+                    or "Não consegui conferir a composição e os custos atuais. Use Conferir carrinho para consultar novamente; nenhuma escrita será repetida."
+                )
         except (
             CartError,
             BackendError,

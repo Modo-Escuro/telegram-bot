@@ -1,5 +1,7 @@
 # Estado remoto, alterações locais e escopo — 18/10/2026
 
+**Continuação local:** [integração CART-01 offline](cart-01-conclusao-offline.md) reúne #18/#17 com revisão e apresentação dos custos finais, validada em HTTP local. O quadro abaixo é histórico e não comprova publicação ou ativação desta continuação.
+
 Retrato conferido em 18/10/2026, horário de São Paulo. Não é monitoramento contínuo. SHAs identificam código publicado; não comprovam configuração, deploy ou ensaio online.
 
 | Superfície | Referência conferida | O que está comprovado |

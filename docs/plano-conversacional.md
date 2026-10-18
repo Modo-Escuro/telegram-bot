@@ -1,5 +1,9 @@
 # Plano integrado — Compra com Contexto
 
+**Continuação local de 18/10:** [CART-01 integrada offline](cart-01-conclusao-offline.md) reúne #18/#17 com revisão completa e custos finais, contra a API com INT-02 #48. O retrato abaixo é histórico; não há ativação real ou fechamento de INT-02 por testes sintéticos.
+
+Continuação de código: [continuidade automática e endereços](continuidade-enderecos.md), em branch separada dos drafts CART-01. O retrato abaixo conserva a origem do planejamento.
+
 Revisão em 18/10/2026. [Estado remoto/local](estado-remoto-local.md) fixa API `f3b8b55` e bot `9314c72`. [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6) · [Backlog](backlog-conversacional.md) · [Decisões](decisoes-conversacionais.md). O [plano inicial](https://github.com/Modo-Escuro/telegram-bot/blob/9314c72e1324a36da09c014e74f98a470dde6306/docs/plano-conversacional.md) permanece no histórico Git.
 
 ## Estado integrado
