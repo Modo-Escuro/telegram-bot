@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: Modo-Escuro/api-backend
-          ref: 2b77c958f358130c91a72e310d5c31f6c39c2d00
+          ref: dc448f9e117e05192004514a639c3ed5acd1098a
           path: .integration-api
           persist-credentials: false
       - uses: actions/setup-python@v5

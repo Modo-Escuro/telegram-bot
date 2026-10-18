@@ -9,6 +9,7 @@ O desenvolvimento da conversa passa pelo [plano integrado](plano-conversacional.
 [Incremento BOT-02](validacao-bot02.md): acompanhamento do login, cancelamento, desconexão e validação offline. Deploy e ensaio online são evidências separadas.
 [Continuação BOT-01](bot-01-fila-duravel.md): texto livre opt-in, fila persistente e worker separado; testes HTTP contra RUN-01/DATA-01 com processador sintético. Não habilita IA em produção.
 [Continuação BOT-02](bot-02-retomada-contexto.md): consulta do grupo após login operacional, com rechecagem do vínculo e sem repetir ações.
+[Habilitação e ensaio BOT-02](ensaio-bot02-operacional.md): configuração persistente, limites de consumo, teste da montagem atual e roteiro humano; separa ativação de evidência operacional.
 
 ## Por onde começar
 

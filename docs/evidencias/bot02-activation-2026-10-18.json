@@ -1,0 +1,61 @@
+{
+  "kind": "BOT02_OPERATIONAL_ENABLEMENT",
+  "date": "2026-10-18",
+  "scope": "DEC-01: sacola simulada, MCP somente leitura, sem envio real",
+  "source": {
+    "botCommit": "9314c72e1324a36da09c014e74f98a470dde6306",
+    "apiCommit": "dc448f9e117e05192004514a639c3ed5acd1098a"
+  },
+  "localChecks": {
+    "botTestsPassed": 177,
+    "botHttpTestsIncluded": 7,
+    "apiRelevantTestsPassed": 32,
+    "ruff": "PASS",
+    "format": "PASS",
+    "diffCheck": "PASS",
+    "geminiTransport": "FAKE",
+    "oauthAndTelegram": "SYNTHETIC",
+    "assembledRestartAndContextRestore": "PASS",
+    "restoreChangesVersion": false,
+    "restoreCallsModel": false
+  },
+  "privateBackups": {
+    "botSqliteCount": 3,
+    "botIntegrity": "ok",
+    "apiLinkFilesVerified": 2,
+    "apiConversationDatabaseExisted": false,
+    "location": "VOLUME_OF_EACH_SERVICE",
+    "offVolumeBackup": false
+  },
+  "apiRuntimeProbe": {
+    "result": "PASS",
+    "runtimeEnabled": true,
+    "modelEnabled": true,
+    "provider": "google",
+    "model": "gemini-3.8-flash",
+    "maxRequestsPerProcess": 100,
+    "maxRequestsPerConversationPerProcess": 40,
+    "budgetMicroUsdPerProcess": 500000,
+    "dbFile": "/data/conversations/runtime.sqlite",
+    "dbIntegrity": "ok",
+    "dbSchema": 2,
+    "conversationCountAtProbe": 0,
+    "authenticatedSnapshotStatus": 404,
+    "snapshotMeaning": "NOT_FOUND: nenhum grupo salvo; rota ativa",
+    "cartEnabled": false,
+    "globalSessionEnabled": false,
+    "agentActiveLogCount": 1,
+    "startupErrorCount": 0
+  },
+  "humanChecks": {
+    "realModelThroughTelegram": "PENDING",
+    "oauthAndHumanClick": "PENDING",
+    "correctedGroupRecovered": "PENDING",
+    "secondTelegramAccountIsolation": "PENDING"
+  },
+  "notes": [
+    "Não contém segredos, identidades ou conteúdo de conversa.",
+    "Limites em memória reiniciam com a API; reserva local não é limite de cobrança.",
+    "Ativação e testes sintéticos não comprovam a jornada humana."
+  ]
+}
