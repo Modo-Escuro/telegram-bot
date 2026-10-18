@@ -30,6 +30,7 @@ class Telegram:
             "getWebhookInfo",
             "getUpdates",
             "sendMessage",
+            "deleteMessage",
             "answerCallbackQuery",
             "editMessageReplyMarkup",
             "editMessageText",

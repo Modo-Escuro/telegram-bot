@@ -1,11 +1,13 @@
 """Senha e isolamento com credenciais e usuários sintéticos; nunca consome Telegram real."""
 
+import io
 import json
 import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
+from urllib.error import HTTPError
 
 from test_conversation_worker import Fixture
 from test_conversation_worker import update as conversation_update
@@ -17,7 +19,7 @@ from telegram_bot.conversation import ConversationClient
 from telegram_bot.conversation_runner import scope_for
 from telegram_bot.multiuser import PasswordRouter, UserSession
 from telegram_bot.state import State
-from telegram_bot.telegram import TelegramError
+from telegram_bot.telegram import Telegram, TelegramError
 
 PASSWORD = "synthetic-password"
 TOKEN = "900001:" + "x" * 30
@@ -176,6 +178,39 @@ class RouterTests(unittest.TestCase):
         self.receive(update(1, text="/entrar " + PASSWORD))
         self.assertTrue(self.router.access.allowed(A))
         self.assertNotIn(PASSWORD, self.api.send.call_args.args[1])
+
+    def test_password_entry_with_real_telegram_client_and_fake_http(self):
+        # Regressão do crash real: Mock de Telegram.call escondia a lista METHODS do transporte.
+        for number, failure in enumerate([None, 400, 403, 429, 500], start=1):
+            with self.subTest(delete_error=failure):
+                calls = []
+
+                class Opener:
+                    def __init__(self, recorded, error):
+                        self.recorded, self.error = recorded, error
+
+                    def open(self, request, timeout):
+                        method = request.full_url.rsplit("/", 1)[-1]
+                        payload = json.loads(request.data)
+                        self.recorded.append((method, payload))
+                        if method == "deleteMessage" and self.error:
+                            raise HTTPError(
+                                request.full_url, self.error, "synthetic", {}, io.BytesIO(b"{}")
+                            )
+                        result = True if method == "deleteMessage" else {"message_id": 900}
+                        return io.BytesIO(json.dumps({"ok": True, "result": result}).encode())
+
+                telegram = Telegram(TOKEN, Opener(calls, failure))
+                message = update(number, text="/entrar " + PASSWORD)
+                self.router.receive(telegram, [message], "demo_bot")
+                self.assertTrue(self.router.access.allowed(A))
+                self.assertEqual(self.state.offset(), number + 1)
+                self.assertEqual([c[0] for c in calls], ["deleteMessage", "sendMessage"])
+                self.assertEqual(calls[0][1], {"chat_id": A, "message_id": 100 + number})
+                self.assertIn("Acesso à demo liberado", calls[1][1]["text"])
+                self.assertNotIn(PASSWORD, json.dumps(calls))
+                self.router.receive(telegram, [message], "demo_bot")
+                self.assertEqual(len(calls), 2)  # Replay não repete remoção/entrada.
 
     def test_real_sessions_keep_legacy_state_and_separate_login_watch(self):
         self.state.watch_login(A, "synthetic-attempt-a", self.state.clock() + 500)
