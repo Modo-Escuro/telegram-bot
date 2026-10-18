@@ -1,4 +1,4 @@
-# Compra com Contexto — bot Telegram
+# Compra Agenciada — bot Telegram
 
 Interface Telegram do projeto SEMCOMP. O objetivo do produto é organizar uma compra em grupo com restrições individuais e orçamento, preservar essas condições quando o pedido muda e exigir aprovação humana antes do envio.
 
