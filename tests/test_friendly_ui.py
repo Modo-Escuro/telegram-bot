@@ -218,7 +218,15 @@ class PresentationTests(unittest.TestCase):
         labels = [button["text"] for row in keyboard()["keyboard"] for button in row]
         self.assertEqual(
             labels,
-            ["Conectar iFood", "Endereços iFood", "Esvaziar sacola", "Ajuda", "Sair da demo"],
+            [
+                "Conectar iFood",
+                "Endereços iFood",
+                "Esvaziar sacola",
+                "Remover pessoa",
+                "Limpar perfil",
+                "Ajuda",
+                "Sair da demo",
+            ],
         )
 
     def test_legacy_group_only_response_still_displays_the_group(self):
