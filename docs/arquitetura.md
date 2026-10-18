@@ -28,11 +28,15 @@ O fluxo de login acima está implementado e foi ensaiado. A direção do produto
 | `state.py` | Cursor SQLite, registro prévio de ações e lock de processo no mesmo diretório |
 | `backend.py` | Contrato HTTP de login, validação de estados, operações e URL de autorização |
 | `connections.py` | Mensagens do fluxo, apresentação da identidade mascarada e botão humano |
+| `conversation.py` | Cliente v1.0 de eventos, consultas e cancelamento local; isolado do polling e validado offline |
+| `conversation_contract.py` | Documentos imutáveis, schemas fixados e validação semântica de respostas |
 | `tests/test_bot.py` | Cenários simulados do canal, transporte, autorização e estado |
 | `tests/test_connections.py` | Cenários simulados do contrato, confirmação, replay e falhas |
 | `Dockerfile` / `railway.toml` | Imagem Python 3.12 e configuração do worker |
 
 Não há servidor MCP, OAuth próprio, LLM, coleta do grupo ou operação de compra no adaptador.
+
+O [cliente de conversa](cliente-conversa.md) prepara o consumo da API-01. Não está conectado ao `runner.py`; integração real depende de RUN-01 e do restante da BOT-01.
 
 ## Contrato HTTP consumido
 

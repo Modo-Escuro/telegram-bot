@@ -19,3 +19,5 @@
 
 - O bot está online: não iniciar outra instância real com o mesmo token. Preservar o volume /data e o SQLite atualizado ao migrar execução. A API ainda estava sem volume na última conferência; preservar vínculos existentes antes de corrigir essa persistência.
 - O botão humano não é enviado automaticamente após o callback: orientar /confirmar no Telegram. A sessão operacional observada não comprova busca, sacola ou compra; não atualizar snapshots históricos como se fossem estado em tempo real.
+
+- Cliente de conversa v1.0 em conversation.py, isolado do polling: consultar docs/cliente-conversa.md. Schemas/exemplos fixados ao api-backend 6ce3d99 e hashes em contracts-provenance.json. Instalar requirements.lock e pacote sem deps na venv. Não confundir validação offline com rotas disponíveis; integração real depende de RUN-01. Outbox durável e acompanhamento sem bloqueio continuam pendentes em BOT-01. Referências humanas/documento integral não entram no modelo ou logs; replay conserva exatamente bytes, versão e origem.

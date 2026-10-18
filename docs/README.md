@@ -21,6 +21,8 @@ Operações anunciadas ou permitidas não provam sua execução. Uma sessão ope
 
 ## Baseline e contratos
 
+O [cliente de conversa v1.0](cliente-conversa.md) implementa um incremento parcial da BOT-01, validado offline contra API-01. As rotas de processamento e sua integração com o polling continuam dependentes de RUN-01; isso ainda não habilita conversa com IA no bot online.
+
 A [StRS v0.2](baseline/stakeholder-requirements-specification.md) continua em validação. Os IDs e as decisões abertas são preservados. [Proveniência e hashes](baseline/proveniencia.json) identificam as cópias históricas, incluindo o snapshot OpenCode que não estava versionado no repositório original. Não editar essas cópias para atualizar status operacional.
 
 O [contrato bot→API](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) é a referência da revisão atual. Não presumir que rotas propostas ou ferramentas externas descritas estejam disponíveis ou implementadas no bot.
