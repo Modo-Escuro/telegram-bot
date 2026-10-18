@@ -73,6 +73,13 @@ do bot e dois arquivos de vínculo da API. Após ativação da API, banco ínteg
 conversas, rota autenticada retornando `NOT_FOUND` esperado; agente Gemini ativo no log.
 Nenhuma inferência paga foi provocada pelos testes automatizados desta habilitação.
 
+**Ativação conferida às 09:49 UTC (06:49 BRT), 18/10/2026:** bot com conversa habilitada, uma
+instância de polling verificada no container e sem traceback/conflito no log observado. API com
+runtime/modelo ativos, SQLite íntegro e F7/sessão global desligadas. Ambos os deploys `SUCCESS`.
+Durante o trabalho, a equipe integrou API #41: produção passou a `28edd06`, com alterações somente
+em testes/documentação e `src` idêntico ao `dc448f9` validado. O probe da configuração/banco/HTTP
+foi repetido após esse deploy e passou. Banco ainda sem grupo; a coleta humana abaixo é necessária.
+
 - [ ] Humano confirmou coleta e correção com Gemini pelo bot online.
 - [ ] Autorização e clique humanos concluídos com a conta teste correta (ou registrar só verify existente).
 - [ ] Grupo recuperado com duas pessoas, alergia preservada e teto corrigido.

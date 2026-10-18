@@ -6,6 +6,22 @@
     "botCommit": "9314c72e1324a36da09c014e74f98a470dde6306",
     "apiCommit": "dc448f9e117e05192004514a639c3ed5acd1098a"
   },
+  "deploymentVerification": {
+    "verifiedAtUtc": "2026-10-18T09:49:30Z",
+    "botDeployment": "2f6aeee3-6291-449b-908d-ae1071294866",
+    "botStatus": "SUCCESS",
+    "botCommit": "9314c72e1324a36da09c014e74f98a470dde6306",
+    "botConversationEnabled": true,
+    "pollingProcessesVerified": 1,
+    "botStartupCount": 1,
+    "botTracebackCount": 0,
+    "botPollingConflictCount": 0,
+    "apiDeployment": "4ac36a18-5403-4df5-927a-c28e0049d802",
+    "apiStatus": "SUCCESS",
+    "apiCommit": "28edd060c2e5e4058f68f18c658d90b03b27e6b0",
+    "apiSourceComparedToTestedCommit": "IDENTICAL_SRC; PR #41 alterou apenas testes/documentação",
+    "apiRuntimeProbeRepeatedAfterTeamDeployment": "PASS"
+  },
   "localChecks": {
     "botTestsPassed": 177,
     "botHttpTestsIncluded": 7,
