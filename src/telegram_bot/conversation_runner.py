@@ -5,6 +5,7 @@ import threading
 import time
 from datetime import datetime
 
+from .backend import BackendError
 from .conversation import ConversationError
 from .conversation_contract import ProtocolError, encode
 from .conversation_view import chunks, render
@@ -24,6 +25,9 @@ NOTICES = {
     "UNAUTHENTICATED": "A autenticação entre bot e API foi recusada. Consulte o responsável pelo serviço.",
     "INVALID_REQUEST": "A API recusou o formato da mensagem. Nenhuma correção automática foi aplicada; consulte o responsável pelo serviço.",
     "LINK_CHANGED": "O vínculo da conta mudou. Confira /ifood antes de enviar uma nova mensagem.",
+    "CONTEXT_EXPIRED": "A retomada do grupo expirou após 24 horas. Use /verificar para solicitar uma nova consulta.",
+    "NO_CONTEXT": "Não há conversa salva para retomar. Envie uma mensagem para começar; nenhum pedido é enviado.",
+    "CONTEXT_LINK_NOT_READY": "Não consegui validar o mesmo vínculo operacional para retomar o grupo. Consulte /ifood e use /verificar quando a conexão estiver pronta.",
     "UNAVAILABLE": "Conversa temporariamente indisponível. Use /retomar para recuperar o mesmo evento, ou consulte /andamento.",
     "PROTOCOL": "Resposta incompatível com o contrato. O acompanhamento está pausado; consulte o responsável pelo serviço.",
     "FAILED": "O processamento terminou sem concluir a solicitação. Envie uma nova correção quando o serviço estiver disponível.",
@@ -37,6 +41,17 @@ def scope_for(config, bot_id):
     return hashlib.sha256(f"{origin}|{bot_id}|{config.organizer_id}".encode()).hexdigest()
 
 
+def link_fingerprint(status):
+    if (
+        status.state != "CONNECTED"
+        or not status.operational
+        or not status.allowed_operations
+        or not status.link_id
+    ):
+        return None
+    return hashlib.sha256(status.link_id.encode()).hexdigest()
+
+
 class Conversations:
     """Adaptador usado só pela thread de recebimento, sem rede de conversa."""
 
@@ -44,6 +59,12 @@ class Conversations:
 
     def __init__(self, box, client):
         self.box, self.client = box, client
+
+    def restore_after_login(self, status, source_key):
+        fingerprint = link_fingerprint(status)
+        if not fingerprint:
+            return None
+        return self.box.enqueue_context(source_key, fingerprint)
 
     def receive(self, update, text_command=None):
         if text_command == "/andamento":
@@ -64,10 +85,21 @@ class Conversations:
 
 
 class ConversationWorker:
-    def __init__(self, box, client, telegram, organizer_id, *, clock=time.time, stop_event=None):
+    def __init__(
+        self,
+        box,
+        client,
+        telegram,
+        organizer_id,
+        *,
+        clock=time.time,
+        stop_event=None,
+        link_status=None,
+    ):
         self.box, self.client, self.telegram = box, client, telegram
         self.organizer_id, self.clock = organizer_id, clock
         self.stop_event = stop_event or threading.Event()
+        self.link_status = link_status
 
     def _version(self):
         try:
@@ -86,6 +118,8 @@ class ConversationWorker:
             state = row["state"]
             if state == "NOTICE":
                 self._notice(row)
+            elif row["kind"] == "CONTEXT":
+                self._context(row)
             elif state == "RECEIVED" or (state == "PAUSED" and row["body"] is not None):
                 self.box.prepare(row, self._version())
             elif state in {"PREPARED", "POST_UNKNOWN"} or (
@@ -99,6 +133,43 @@ class ConversationWorker:
         except ProtocolError:
             self._error(row, ConversationError("PROTOCOL"))
         return True
+
+    def _context(self, row):
+        if self.stop_event.is_set():
+            return
+        if self.link_status is None:
+            raise ConversationError("UNAVAILABLE")
+        try:
+            before = self.link_status()
+            if before.state == "UNAVAILABLE":
+                raise ConversationError("UNAVAILABLE")
+            if link_fingerprint(before) != row["link_hash"]:
+                self.box.save(
+                    row["seq"], state="NOTICE", notice="CONTEXT_LINK_NOT_READY", attempts=0
+                )
+                return
+            if self.stop_event.is_set():
+                return
+            try:
+                snapshot = self.client.get_snapshot()
+            except ConversationError as error:
+                if error.code == "NOT_FOUND":
+                    self.box.save(row["seq"], state="NOTICE", notice="NO_CONTEXT", attempts=0)
+                    return
+                raise
+            if self.stop_event.is_set():
+                return
+            after = self.link_status()
+            if after.state == "UNAVAILABLE":
+                raise ConversationError("UNAVAILABLE")
+            if link_fingerprint(after) != row["link_hash"]:
+                self.box.save(
+                    row["seq"], state="NOTICE", notice="CONTEXT_LINK_NOT_READY", attempts=0
+                )
+                return
+        except BackendError:
+            raise ConversationError("UNAVAILABLE") from None
+        self._deliver(row, chunks(render(snapshot, collection_only=True)))
 
     def _send(self, row):
         # O estado pré-envio sobrevive a queda antes/depois do POST. Recuperar só bytes persistidos.
@@ -173,7 +244,10 @@ class ConversationWorker:
             digest = hashlib.sha256(text.encode()).hexdigest()
             if message_id and self.box.delivery_digest(row["seq"], index) == digest:
                 continue
-            next_state = "NOTICE" if row["state"] == "NOTICE" else "ACCEPTED"
+            if row["state"] == "NOTICE":
+                next_state = "NOTICE"
+            else:
+                next_state = "CONTEXT" if row["kind"] == "CONTEXT" else "ACCEPTED"
             self.box.save(row["seq"], state=next_state if message_id else "SENDING")
             try:
                 if message_id:
@@ -265,10 +339,20 @@ class ConversationWorker:
 class ConversationService:
     """Uma thread e um processo; clientes/conexões são construídos na thread proprietária."""
 
-    def __init__(self, path, scope, client_factory, telegram_factory, organizer_id):
+    def __init__(
+        self,
+        path,
+        scope,
+        client_factory,
+        telegram_factory,
+        organizer_id,
+        *,
+        link_status_factory=None,
+    ):
         self.path, self.scope = path, scope
         self.client_factory, self.telegram_factory = client_factory, telegram_factory
         self.organizer_id = organizer_id
+        self.link_status_factory = link_status_factory
         self.stop_event = threading.Event()
         self.failed = threading.Event()
         self.thread = threading.Thread(target=self._run, name="conversation-worker", daemon=True)
@@ -286,6 +370,7 @@ class ConversationService:
                 self.telegram_factory(),
                 self.organizer_id,
                 stop_event=self.stop_event,
+                link_status=self.link_status_factory() if self.link_status_factory else None,
             )
             while not self.stop_event.is_set():
                 worker.tick()

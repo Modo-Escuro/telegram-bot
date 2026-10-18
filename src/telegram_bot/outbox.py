@@ -28,6 +28,9 @@ class Outbox:
             "deadline REAL, attempts INTEGER NOT NULL DEFAULT 0, notice TEXT, "
             "UNIQUE(scope,event_id))"
         )
+        columns = {r[1] for r in self.db.execute("PRAGMA table_info(conversation_outbox)")}
+        if "link_hash" not in columns:
+            self.db.execute("ALTER TABLE conversation_outbox ADD COLUMN link_hash TEXT")
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS conversation_delivery ("
             "seq INTEGER NOT NULL, part INTEGER NOT NULL, message_id INTEGER NOT NULL, digest TEXT NOT NULL, "
@@ -44,6 +47,33 @@ class Outbox:
 
     def close(self):
         self.db.close()
+
+    def enqueue_context(self, source_key, link_hash):
+        """Retomada só de leitura; sem update, linkId, identidade ou resultado persistidos."""
+        event_id = "login-context-" + source_key
+        digest = hashlib.sha256(link_hash.encode()).hexdigest()
+        with self.transaction():
+            previous = self.db.execute(
+                "SELECT digest FROM conversation_outbox WHERE scope=? AND event_id=?",
+                (self.scope, event_id),
+            ).fetchone()
+            if previous:
+                # Replay depois de troca de conta não reescreve a solicitação antiga.
+                return previous[0] == digest
+            count = self.db.execute(
+                "SELECT count(*),sum(state NOT IN ('DONE','CANCELLED','EXPIRED')) "
+                "FROM conversation_outbox WHERE scope=?",
+                (self.scope,),
+            ).fetchone()
+            if count[0] >= 10000 or (count[1] or 0) >= self.capacity:
+                return False
+            self.db.execute(
+                "INSERT INTO conversation_outbox "
+                "(scope,event_id,digest,kind,state,created,due,link_hash) "
+                "VALUES (?,?,?,'CONTEXT','CONTEXT',?,?,?)",
+                (self.scope, event_id, digest, self.clock(), self.clock(), link_hash),
+            )
+        return True
 
     @contextmanager
     def transaction(self):
@@ -102,7 +132,8 @@ class Outbox:
                     self.db.execute(
                         "UPDATE conversation_outbox SET attempts=0,due=?,state=CASE "
                         "WHEN state='DELIVERY_UNKNOWN' THEN CASE WHEN operation_id IS NULL "
-                        "THEN 'NOTICE' ELSE 'ACCEPTED' END ELSE state END "
+                        "THEN CASE WHEN kind='CONTEXT' THEN 'CONTEXT' ELSE 'NOTICE' END "
+                        "ELSE 'ACCEPTED' END ELSE state END "
                         "WHERE scope=? AND state IN ('PAUSED','POST_UNKNOWN','DELIVERY_UNKNOWN')",
                         (now, self.scope),
                     )
@@ -221,6 +252,11 @@ class Outbox:
             self.db.execute(
                 "UPDATE conversation_outbox SET body=NULL,command=NULL,state='NOTICE',notice='EXPIRED',attempts=0 "
                 "WHERE scope=? AND (state IN ('RECEIVED','PREPARED') OR (state='PAUSED' AND body IS NOT NULL)) AND created<=?",
+                (self.scope, self.clock() - DAY),
+            )
+            self.db.execute(
+                "UPDATE conversation_outbox SET state='NOTICE',notice='CONTEXT_EXPIRED',attempts=0 "
+                "WHERE scope=? AND kind='CONTEXT' AND state IN ('CONTEXT','PAUSED','DELIVERY_UNKNOWN') AND created<=?",
                 (self.scope, self.clock() - DAY),
             )
             self.db.execute(

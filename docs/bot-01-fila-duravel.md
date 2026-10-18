@@ -5,13 +5,14 @@
 ## Alcance e base
 
 Implementação sobre os incrementos das PRs #7 (plano), #8 (BOT-02) e #9 (cliente), preservando seus commits.
-Esses PRs permaneciam abertos na inspeção do remoto; incorporar seus commits nesta branch não comprova merge/deploy.
+Os PRs #7/#8/#9 e este incremento foram incorporados à `main@c29cc04` pelo merge da PR #10. Merge não comprova deploy.
 O estado observado online em 17/10/2026 permanece separado e não foi revalidado neste incremento.
 
-Backend de referência: `Modo-Escuro/api-backend@d2883f120419385c5ec902740330c3743f130b44`, com RUN-01,
+Backend de referência atual do ensaio/CI: `Modo-Escuro/api-backend@2b77c958f358130c91a72e310d5c31f6c39c2d00`, com RUN-01,
 DOM-01 e DATA-01. Seus schemas v1 continuam iguais aos fixados no cliente (`6ce3d99`); não alterar cópias locais
-isoladamente. A DATA-01 já persiste compra/participantes/patches e expurga dados no SQLite da API. **AI-02 ainda
-precisa instalar o processador**: a configuração padrão da API recusa novos eventos com UNAVAILABLE.
+isoladamente. A DATA-01 já persiste compra/participantes/patches e expurga dados no SQLite da API. AI-02 foi
+mergeada, mas **ainda falta instalar o processador no entrypoint padrão**: ele recusa novos eventos com UNAVAILABLE.
+Os testes do incremento original da BOT-01 usaram `d2883f1`; a continuação BOT-02 atualiza a referência para `2b77c95`.
 
 A [DEC-01 adotada](https://github.com/Modo-Escuro/api-backend/blob/d2883f120419385c5ec902740330c3743f130b44/docs/decisoes-conversacionais.md)
 define sacola simulada, MCP somente leitura e nenhum pedido enviado. Aprovação simulada e botões de propostas
@@ -154,6 +155,6 @@ copiada temporariamente para a raiz desse checkout e removida no fim; exige dire
 são sintéticos. A porta é aleatória em `127.0.0.1`; não carrega `.env`, configs pessoais ou tokens reais e não possui
 cliente Telegram/MCP/modelo. A CI executa esse job em Windows/Linux com Node 22.13 e Python 3.12.
 
-O job unitário ignora explicitamente esses quatro testes quando não há checkout da API; o job de integração os
+O job unitário ignora explicitamente os seis testes HTTP quando não há checkout da API; o job de integração os
 executa obrigatoriamente. Resultados finais e commit ficam na descrição do PR e na issue. Testes locais/CI não
 comprovam deploy nem IA online. A BOT-01 permanece aberta até revisão, integração e ensaio operacional do seu alcance.

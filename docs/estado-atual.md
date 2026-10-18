@@ -1,8 +1,8 @@
 # Estado atual e evidências
 
-**Continuação BOT-01 (desenvolvimento):** esta branch acrescenta outbox, texto livre opt-in e worker sem bloquear polling, sobre os incrementos #7/#8/#9 ainda abertos na inspeção remota. [Alcance e validação](bot-01-fila-duravel.md). Backend de integração fixado em `08709c7`, com DATA-01 entregue; falta AI-02 no processo padrão da API. Flag desligada por padrão. As descrições de pendência abaixo são históricas; nenhum deploy ou ensaio online novo foi realizado.
+**Código integrado — 18/10/2026:** BOT-01 e a primeira etapa da BOT-02 estão na `main@c29cc04` pelo merge da PR #10; #7/#8/#9 também foram marcados como mergeados. A CI pós-merge passou em Windows/Linux. [Alcance da BOT-01](bot-01-fila-duravel.md). API `2b77c95` inclui o módulo AI-02, ainda sem processador no entrypoint padrão; conversa continua opt-in e desligada por padrão. Isso não comprova deploy ou ensaio online novo.
 
-**Incremento BOT-02:** o código desta branch acrescenta acompanhamento por edição da mensagem de login, cancelamento e desconexão. O relato abaixo conserva o estado observado anteriormente; não comprova deploy deste incremento. Comportamento e limites novos em [login iFood](login-ifood.md#acompanhamento-bot-02).
+**Continuação BOT-02 em desenvolvimento:** esta branch acrescenta [retomada informativa do grupo](bot-02-retomada-contexto.md) após conexão operacional, sem recuperar ações ou repetir mensagens. O relato abaixo conserva o estado online histórico; não comprova deploy deste incremento.
 
 Conferência em **17/10/2026, horário de São Paulo**. Este documento registra uma observação, não monitoramento contínuo. O [snapshot sanitizado](evidencias/login-ifood-2026-10-17.json) contém somente estados, operações permitidas e referências de versão.
 

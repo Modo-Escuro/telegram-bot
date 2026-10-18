@@ -15,11 +15,13 @@ def money(price):
     return f"{label}: {brl(price['totalCents'])}."
 
 
-def render(snapshot):
+def render(snapshot, *, collection_only=False):
     document = snapshot.to_dict()
     lines = []
     for block in document["blocks"]:
         kind = block["kind"]
+        if collection_only and kind != "GROUP":
+            continue
         if kind == "TEXT":
             # Texto do modelo é identificado e nunca vira evidência de pedido/aprovação.
             prefix = "Assistente: " if block["source"] == "MODEL" else ""
@@ -47,7 +49,18 @@ def render(snapshot):
             lines.append(
                 "Resultado de compra fora do fluxo disponível neste bot; não houve envio por esta interface."
             )
-    lines.extend("Falta esclarecer: " + question for question in document["pending"])
+    if collection_only:
+        if not lines:
+            lines.append("Não há grupo salvo para apresentar. Envie uma mensagem para começar.")
+        lines.insert(0, "Retomada informativa da organização do grupo.")
+        lines.append(
+            "Envie sua próxima mensagem para continuar. Itens, preços, endereço e ações precisam de nova validação na conta atual."
+        )
+        lines.append(
+            "Para conferir mensagens anteriores, use /andamento. Uma falha pendente pode exigir /retomar."
+        )
+    else:
+        lines.extend("Falta esclarecer: " + question for question in document["pending"])
     lines.append("Conversa em preparação. Nenhum pedido é enviado por este bot.")
     text = "\n\n".join(lines)
     # Defesa adicional: nunca exibir referências humanas nem identificadores técnicos do documento.
