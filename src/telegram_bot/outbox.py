@@ -33,6 +33,10 @@ class Outbox:
             self.db.execute("ALTER TABLE conversation_outbox ADD COLUMN link_hash TEXT")
         if "voice" not in columns:
             self.db.execute("ALTER TABLE conversation_outbox ADD COLUMN voice BLOB")
+        if "delivery_recoveries" not in columns:
+            self.db.execute(
+                "ALTER TABLE conversation_outbox ADD COLUMN delivery_recoveries INTEGER NOT NULL DEFAULT 0"
+            )
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS conversation_delivery ("
             "seq INTEGER NOT NULL, part INTEGER NOT NULL, message_id INTEGER NOT NULL, digest TEXT NOT NULL, "
@@ -323,12 +327,22 @@ class Outbox:
         if control:
             return control
         active = self.active()
+        # Uma recuperação de apresentação por registro, inclusive filas legadas.
+        # Só operação conhecida e mensagem já entregue: nunca repetir POST da API.
+        recoverable = (
+            active is not None
+            and active["state"] == "DELIVERY_UNKNOWN"
+            and active["operation_id"] is not None
+            and active["delivery_recoveries"] == 0
+            and self.delivered(active["seq"], 0) is not None
+        )
         return (
             active
             if active
             and active["due"] <= now
-            and active["attempts"] < 3
-            and active["state"] != "DELIVERY_UNKNOWN"
+            and (recoverable or (
+                active["attempts"] < 3 and active["state"] != "DELIVERY_UNKNOWN"
+            ))
             else None
         )
 
@@ -349,6 +363,7 @@ class Outbox:
             "attempts",
             "notice",
             "voice",
+            "delivery_recoveries",
         }
         if not fields or not fields.keys() <= allowed:
             raise ValueError("Transição local inválida.")

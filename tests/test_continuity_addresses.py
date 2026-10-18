@@ -5,7 +5,8 @@ import hashlib
 import io
 import json
 from datetime import UTC, datetime
-from urllib.error import URLError
+from unittest.mock import Mock
+from urllib.error import HTTPError, URLError
 
 from test_conversation_worker import BOT, OWNER, FakeClient, Fixture, update
 
@@ -14,6 +15,7 @@ from telegram_bot.conversation_contract import encode
 from telegram_bot.conversation_runner import Conversations, ConversationWorker
 from telegram_bot.runner import process_batch
 from telegram_bot.telegram import Telegram
+from telegram_bot.telegram import TelegramError
 
 LINK = "synthetic-link-xxxxxxxxxxxxxxxx"
 
@@ -65,6 +67,77 @@ class TelegramWire:
 
 
 class ContinuityTests(Fixture):
+    def test_edit_errors_are_classified_for_http_and_json_without_exposing_description(self):
+        for description, expected in (
+            ("Bad Request: message can't be edited", "EDIT_UNAVAILABLE"),
+            ("Bad Request: message to edit not found", "EDIT_UNAVAILABLE"),
+            ("Bad Request: message is not modified", "NOT_MODIFIED"),
+            ("Bad Request: invalid markup", "OTHER"),
+            ([], "OTHER"),
+        ):
+            for http in (False, True):
+                with self.subTest(description=description, http=http):
+                    body = encode({"ok": False, "error_code": 400, "description": description})
+                    opener = Mock()
+                    if http:
+                        opener.open.side_effect = HTTPError(
+                            "http://synthetic", 400, "synthetic", {}, io.BytesIO(body)
+                        )
+                    else:
+                        opener.open.return_value = io.BytesIO(body)
+                    with self.assertRaises(TelegramError) as caught:
+                        Telegram("synthetic-token", opener).call("editMessageText", {})
+                    self.assertEqual(caught.exception.reason, expected)
+                    self.assertEqual(caught.exception.code, 400)
+                    self.assertNotIn("Bad Request", str(caught.exception))
+
+    def test_legacy_uneditable_progress_recovers_and_drains_next_text_without_command(self):
+        self.real_telegram()
+        self.client.finish = False
+        self.adapter.receive(update())
+        self.tick(3)
+        # Mensagem enviada por versão antiga, com teclado que impede edição.
+        self.wire.messages[1]["reply_markup"] = {"keyboard": [[{"text": "Ajuda"}]]}
+        row = self.box.active()
+        self.box.save(row["seq"], state="DELIVERY_UNKNOWN", attempts=3)
+        self.adapter.receive(update(2, "Mais uma mensagem"))
+        self.client.finish = True
+        self.worker = ConversationWorker(
+            self.restart_box(), self.client, self.worker.telegram, OWNER, clock=lambda: self.now
+        )
+        self.tick(12)
+        self.assertIsNone(self.box.active())
+        self.assertEqual(len(self.client.sent), 2)  # Um POST por texto, sem replay.
+        self.assertEqual(len(self.wire.messages), 3)
+        self.assertIn("Resposta sintética", self.wire.messages[2]["text"])
+        self.assertNotIn("keyboard", self.wire.messages[2]["reply_markup"])
+
+    def test_uneditable_progress_is_replaced_automatically_on_live_delivery(self):
+        self.real_telegram()
+        self.client.finish = False
+        self.adapter.receive(update())
+        self.tick(3)
+        self.wire.messages[1]["reply_markup"] = {"keyboard": [[{"text": "Ajuda"}]]}
+        self.client.finish = True
+        self.tick(6)
+        self.assertIsNone(self.box.active())
+        self.assertEqual(len(self.wire.messages), 2)
+        self.assertEqual(len(self.client.sent), 1)
+
+    def test_known_delivery_recovery_budget_survives_restart(self):
+        self.client.finish = False
+        self.adapter.receive(update())
+        self.tick(3)
+        row = self.box.active()
+        self.box.save(row["seq"], state="DELIVERY_UNKNOWN", attempts=3)
+        self.telegram.call.side_effect = TelegramError(400)  # Erro não classificado.
+        self.client.finish = True
+        self.tick(8)
+        self.assertEqual(self.box.active()["state"], "DELIVERY_UNKNOWN")
+        self.assertEqual(self.box.active()["delivery_recoveries"], 1)
+        self.assertIsNone(self.restart_box().next())
+        self.assertEqual(len(self.client.sent), 1)
+
     def real_telegram(self):
         self.wire = TelegramWire()
         self.worker.telegram = Telegram("synthetic-token", self.wire)
