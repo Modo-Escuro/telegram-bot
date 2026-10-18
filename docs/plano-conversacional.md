@@ -12,7 +12,7 @@ A primeira entrega útil é coleta/correção do grupo com persistência. A entr
 
 | Componente | Referência | Alcance |
 | --- | --- | --- |
-| Bot Python | main 00c5b4e | Comandos privados, login e confirmação por botão; 39 testes no último incremento; sem IA ou compra |
+| Bot Python | main e280807; comportamento revisado em 00c5b4e | Comandos privados, login e confirmação por botão; 39 testes no último incremento; e280807 altera o nome no README; sem IA ou compra |
 | API Hono/TypeScript | main 686300d | Vínculos por organizador, endereço e avaliação; sem conversa integrada |
 | Ranking | branchBruna 8393615 | Ranking e categorias com revisão crítica; integração e correções pendentes |
 | Carrinho | feat/f7-cart-checkout b08957d / PR api-backend#4 | Código em branch, flag desligada, saídas provisórias testadas com mocks; aprovação e submit bloqueados |
