@@ -1,5 +1,7 @@
 # Documentação do bot Compra com Contexto
 
+[Kanban e regras de andamento](kanban.md): tarefas prontas, dependências e acompanhamento no épico.
+
 O desenvolvimento da conversa passa pelo [plano integrado](plano-conversacional.md), [backlog com issues e prioridades](backlog-conversacional.md), [decisões abertas](decisoes-conversacionais.md) e [contrato proposto](contrato-conversa-proposto.md). O [épico #6](https://github.com/Modo-Escuro/telegram-bot/issues/6) acompanha API e bot. Documentação e tarefas publicadas não significam implementação concluída.
 
 ## Por onde começar

@@ -1,5 +1,7 @@
 # Backlog de desenvolvimento e dependências
 
+[Kanban de execução](kanban.md): organização das 22 tarefas por andamento e regras de movimentação.
+
 [Plano integrado](plano-conversacional.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6).
 
 Todas as tarefas abaixo foram criadas no GitHub e estavam abertas nesta publicação. O status vivo está nas issues; esta tabela registra escopo, prioridade e dependências. Cada issue contém problema, escopo, critérios de aceite, validação, fora de escopo e rastreabilidade. Sem atribuição nominal ou prazo inventado.
