@@ -1,6 +1,6 @@
 # Plano integrado — Compra com Contexto
 
-Revisão em 18/10/2026. [Estado remoto/local](estado-remoto-local.md) fixa API `e8d6b6f` e bot `9314c72`. [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6) · [Backlog](backlog-conversacional.md) · [Decisões](decisoes-conversacionais.md). O [plano inicial](https://github.com/Modo-Escuro/telegram-bot/blob/9314c72e1324a36da09c014e74f98a470dde6306/docs/plano-conversacional.md) permanece no histórico Git.
+Revisão em 18/10/2026. [Estado remoto/local](estado-remoto-local.md) fixa API `f3b8b55` e bot `9314c72`. [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6) · [Backlog](backlog-conversacional.md) · [Decisões](decisoes-conversacionais.md). O [plano inicial](https://github.com/Modo-Escuro/telegram-bot/blob/9314c72e1324a36da09c014e74f98a470dde6306/docs/plano-conversacional.md) permanece no histórico Git.
 
 ## Estado integrado
 

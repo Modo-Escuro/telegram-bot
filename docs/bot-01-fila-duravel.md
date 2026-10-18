@@ -8,15 +8,13 @@ Implementação sobre os incrementos das PRs #7 (plano), #8 (BOT-02) e #9 (clien
 Os PRs #7/#8/#9 e este incremento foram incorporados à `main@c29cc04` pelo merge da PR #10. Merge não comprova deploy.
 O estado observado online em 17/10/2026 permanece separado e não foi revalidado neste incremento.
 
-Backend de referência atual do ensaio/CI: `Modo-Escuro/api-backend@2b77c958f358130c91a72e310d5c31f6c39c2d00`, com RUN-01,
+Backend fixado no ensaio/CI histórico deste incremento: `Modo-Escuro/api-backend@2b77c958f358130c91a72e310d5c31f6c39c2d00`, com RUN-01,
 DOM-01 e DATA-01. Seus schemas v1 continuam iguais aos fixados no cliente (`6ce3d99`); não alterar cópias locais
 isoladamente. A DATA-01 já persiste compra/participantes/patches e expurga dados no SQLite da API. AI-02 foi
-mergeada, mas **ainda falta instalar o processador no entrypoint padrão**: ele recusa novos eventos com UNAVAILABLE.
+mergeada nessa base, mas ainda não montada no entrypoint daquele pin. A main remota atual já integra a montagem AI-01/AI-02 com opt-in explícito; ver [remoto/local](estado-remoto-local.md). Não mudar o pin dos testes por esta revisão documental.
 Os testes do incremento original da BOT-01 usaram `d2883f1`; a continuação BOT-02 atualiza a referência para `2b77c95`.
 
-A [DEC-01 adotada](https://github.com/Modo-Escuro/api-backend/blob/d2883f120419385c5ec902740330c3743f130b44/docs/decisoes-conversacionais.md)
-define sacola simulada, MCP somente leitura e nenhum pedido enviado. Aprovação simulada e botões de propostas
-pertencem a BOT-03/BUY-01; este incremento não habilita ações nem `/purchase-approvals`.
+A [DEC-01 vigente](decisoes-conversacionais.md) exige carrinho real após confirmação humana PREPARE_CART; este incremento BOT-01 não instala esse callback. BOT-03 deve apresentar revisão e confirmar pelo caminho dedicado da CART-01, dependente da INT-02 para ativação. `/purchase-approvals` é outra finalidade; envio e pagamento continuam proibidos.
 
 ## Fluxo implementado
 

@@ -6,7 +6,7 @@
 2. Apresentar grupo/propostas no Telegram pela BOT-03, com cobertura por pessoa e preço/estimativa da API.
 3. Integrar CART-01 local e validar saídas na INT-02 antes de expor preparação real. Exigir callback PREPARE_CART específico; falta de evidência alimentar bloqueia. Explicitar custos desconhecidos e não enviar pedido/pagamento.
 4. Ensaiar carrinho no ambiente autorizado após revisão humana específica. Preservar intenção e bloquear resultado desconhecido, mesmo após reinício/reconexão.
-5. Registrar o que cada marco comprova. O fechamento externo do briefing permanece pendente em BUY-01/BUY-02/QA-01; uma sacola simulada ou carrinho preparado não comprovam pedido/pagamento.
+5. Registrar o que cada marco comprova. O fechamento externo do briefing permanece pendente em BUY-01/BUY-02/QA-01; carrinho preparado não comprova pedido/pagamento, e composição apenas local não comprova preparação real.
 
 Não alterar produção nem iniciar segundo polling para validar. Cancelamento local não desfaz uma mutação remota. Login, senha e retomada de contexto nunca confirmam automaticamente o carrinho.
 

@@ -2,8 +2,7 @@
 
 Mudança solicitada pelo usuário em 18/10/2026: qualquer conta Telegram pode entrar na conversa privada com a
 senha da equipe, conectar a própria conta iFood e usar a conversa quando a API estiver habilitada. Isso amplia
-o recorte anterior de um organizador único; cada usuário é organizador somente da própria conversa. A sacola
-continua simulada e o MCP somente leitura (DEC-01). Entrada na demo e login iFood não aprovam compras.
+o recorte anterior de um organizador único; cada usuário é organizador somente da própria conversa. A DEC-01 exige carrinho real preparado somente após confirmação humana específica. CART-01 ainda depende de integração/INT-02; envio e pagamento seguem proibidos. Entrada na demo e login iFood não aprovam compras.
 
 ## Configuração
 
