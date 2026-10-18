@@ -12,6 +12,7 @@ class Config:
     conversation_enabled: bool = False
     access_password: str = field(default="", repr=False)
     access_max_users: int = 100
+    cart_enabled: bool = False
 
     @classmethod
     def from_env(cls, *, identify: bool = False):
@@ -30,6 +31,9 @@ class Config:
         conversation = os.getenv("TELEGRAM_CONVERSATION_ENABLED", "false")
         if conversation not in {"true", "false"}:
             raise ValueError("TELEGRAM_CONVERSATION_ENABLED deve ser true ou false.")
+        cart = os.getenv("TELEGRAM_CART_ENABLED", "false")
+        if cart not in {"true", "false"} or (cart == "true" and conversation != "true"):
+            raise ValueError("TELEGRAM_CART_ENABLED exige true/false e conversa habilitada.")
         if not identify and not password and not raw_id:
             raise ValueError("Configure TELEGRAM_ALLOWED_USER_ID com seu ID numérico positivo.")
         return cls(
@@ -39,4 +43,5 @@ class Config:
             conversation_enabled=conversation == "true",
             access_password=password,
             access_max_users=int(limit),
+            cart_enabled=cart == "true",
         )

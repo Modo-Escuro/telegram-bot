@@ -2,7 +2,7 @@
 
 [Estado remoto/local](estado-remoto-local.md) registra o código atual conferido: bot #13/#14 integrado; API com montagem AI-01 e RUN-01 #41 integrada. BOT-01 e BOT-02 estão fechadas no GitHub. A continuação da retomada já foi mergeada; não está mais em desenvolvimento nesta revisão.
 
-A ativação e a jornada online precisam de evidência própria. CART-01 nova continua local; carrinho real está aprovado no escopo, mas outputs e callback/ensaio ainda são pendências. Nenhuma evidência antiga foi regravada.
+A ativação e a jornada online precisam de evidência própria. A API CART-01 está no PR #46; esta branch acrescenta o [canal humano](cart-01-telegram.md) ainda desligado. Outputs, revisão final completa e ensaio real continuam pendentes. Nenhuma evidência antiga foi regravada.
 
 ## Evidência online histórica — 17/10/2026
 

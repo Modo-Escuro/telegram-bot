@@ -4,11 +4,13 @@
 
 # Documentação do bot Compra com Contexto
 
+[Conclusão offline CART-01](cart-01-conclusao-offline.md): confirmação de endereço integrada à revisão completa, apresentação de composição/custos finais e ensaios HTTP locais, sem ativação real.
+
 [Continuidade automática e endereços](continuidade-enderecos.md): correção da mensagem presa, retomada após OAuth e escolha humana do endereço; publicação/CI não comprovam ativação.
 
-Esta revisão altera somente documentação. A implementação CART-01 local, suas rotas e resultados de testes não fazem parte das mains remotas conferidas.
+Esta branch integra o [canal humano CART-01](cart-01-telegram.md) do #17 com a continuidade e seleção de endereço do #18. A API correspondente integra #46/#47 e INT-02 #48; código local não comprova merge, ativação ou ensaio real.
 
-[Estado remoto/local](estado-remoto-local.md): versões conferidas, código integrado e CART-01 ainda local. [Decisões vigentes](decisoes-conversacionais.md): carrinho real confirmado já aprovado no escopo, com outputs/ativação pendentes; envio/pagamento proibidos.
+[Estado remoto/local](estado-remoto-local.md): versões conferidas, código integrado e CART-01 em desenvolvimento publicado. [Decisões vigentes](decisoes-conversacionais.md): carrinho real confirmado já aprovado no escopo, com outputs/ativação pendentes; envio/pagamento proibidos.
 
 [Acesso compartilhado com senha](acesso-senha.md): entrada de qualquer usuário na conversa privada,
 isolamento por conta e implantação coordenada com a API. A senha não habilita compras.

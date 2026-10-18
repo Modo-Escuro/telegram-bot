@@ -10,18 +10,21 @@ BUTTONS = {
     "Interromper": "/interromper",
     "Ajuda": "/ajuda",
     "Endereços iFood": "/enderecos",
+    "Revisar carrinho": "/revisarcarrinho",
+    "Conferir carrinho": "/conferircarrinho",
     "Sair da demo": "/sair",
     "Esvaziar sacola": "Esvaziar sacola simulada",
 }
 
 
-def keyboard(*, access=False):
+def keyboard(*, access=False, cart=False):
     rows = (
         [["Entrar na demo"]]
         if access
         else [
             ["Conectar iFood", "Endereços iFood"],
             ["Esvaziar sacola"],
+            *([["Revisar carrinho", "Conferir carrinho"]] if cart else []),
             ["Ajuda", "Sair da demo"],
         ]
     )

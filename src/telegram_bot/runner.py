@@ -1,6 +1,7 @@
 import secrets
 import time
 
+from .cart import COMMANDS as CART_COMMANDS
 from .connections import COMMANDS, Connections
 from .conversation_contract import ProtocolError
 from .menu import navigation
@@ -11,8 +12,8 @@ GET_STARTED = (
     "Toque em Conectar iFood para usar a conta teste."
 )
 DEMO_NOTICE = (
-    "Conectar a conta não autoriza compras. Nesta demo, a sacola é simulada "
-    "e nenhum pedido é enviado."
+    "Conectar a conta não autoriza compras. Preparar o carrinho no iFood exige revisão "
+    "e confirmação específicas. Nenhum pedido é enviado."
 )
 START = "Olá! Eu sou o Ailo, seu assistente de compras.\n\n" + GET_STARTED + "\n\n" + DEMO_NOTICE
 STATUS = "Estou por aqui! O login não é verificado nesta tela. Use /ifood para consultar sua conta."
@@ -70,7 +71,9 @@ def reply_for(update, allowed_id, username, connections=None):
     return "A conversa de compras não está disponível nesta configuração. Toque em Ajuda."
 
 
-def process_batch(api, state, updates, allowed_id, username, connections=None, conversations=None):
+def process_batch(
+    api, state, updates, allowed_id, username, connections=None, conversations=None, carts=None
+):
     for update in sorted(updates, key=lambda u: u["update_id"]):
         update = navigation(update)
         update_id = update["update_id"]
@@ -82,11 +85,33 @@ def process_batch(api, state, updates, allowed_id, username, connections=None, c
         callback = update.get("callback_query")
         if isinstance(callback, dict):
             process_callback(
-                api, state, callback, update_id, allowed_id, connections, conversations
+                api,
+                state,
+                callback,
+                update_id,
+                allowed_id,
+                connections,
+                conversations=conversations,
+                carts=carts,
             )
             state.done(update_id)
             continue
         message = private_message(update)
+        if message and message["from"]["id"] == allowed_id:
+            raw = message.get("text", "")
+            word = raw.strip().split(maxsplit=1)[0] if isinstance(raw, str) and raw.strip() else ""
+            action, _, target = word.partition("@")
+            if action in CART_COMMANDS and (not target or target.casefold() == username.casefold()):
+                text = (
+                    carts.receive(action)
+                    if carts
+                    else "Preparação de carrinho indisponível nesta configuração."
+                )
+                api.send(allowed_id, text)
+                state.done(update_id)
+                continue
+            if carts:
+                carts.invalidate()
         if conversations is not None and message and message["from"]["id"] == allowed_id:
             text = message.get("text")
             first = (
@@ -145,6 +170,7 @@ def poll(
     connections=None,
     conversations=None,
     service=None,
+    carts=None,
 ):
     delay = 1
     while True:
@@ -158,7 +184,11 @@ def poll(
                 if conversations is not None or (connections is not None and connections.watching)
                 else api.updates(state.offset())
             )
-            process_batch(api, state, updates, allowed_id, username, connections, conversations)
+            process_batch(
+                api, state, updates, allowed_id, username, connections, conversations, carts
+            )
+            if carts is not None:
+                carts.tick(api)
             if connections is not None:
                 connections.tick(api, allowed_id)
             delay = 1
@@ -187,7 +217,9 @@ def identify(api, *, timeout=180, clock=time.monotonic, emit=print):
     raise ValueError("Identificação expirou. Execute --identify novamente.")
 
 
-def process_callback(api, state, callback, update_id, allowed_id, connections, conversations=None):
+def process_callback(
+    api, state, callback, update_id, allowed_id, connections, conversations=None, carts=None
+):
     sender, message = callback.get("from"), callback.get("message")
     callback_id = callback.get("id")
     if not isinstance(callback_id, str):
@@ -219,6 +251,25 @@ def process_callback(api, state, callback, update_id, allowed_id, connections, c
             if queued
             else "Esta escolha expirou ou não corresponde à mensagem original. Toque em Endereços iFood.",
         )
+        return
+    if isinstance(data, str) and data.startswith("cart:"):
+        text = (
+            carts.click(callback)
+            if carts
+            else "Preparação de carrinho indisponível nesta configuração."
+        )
+        api.send(allowed_id, text)
+        try:
+            api.call(
+                "editMessageReplyMarkup",
+                {
+                    "chat_id": allowed_id,
+                    "message_id": message["message_id"],
+                    "reply_markup": {"inline_keyboard": []},
+                },
+            )
+        except TelegramError:
+            pass
         return
     if not isinstance(data, str) or not data.startswith(("ifc:", "ifx:", "ifd:")):
         return
