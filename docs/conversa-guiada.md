@@ -18,6 +18,8 @@ Conta iFood apresenta Entrar no iFood, Cancelar login ou Sair da conta iFood con
 
 ## Validação e implantação
 
+Quando as sugestões dependem de confirmar o endereço, a resposta oferece “Escolher endereço de entrega” diretamente, usando o fluxo existente de endereços da conta atual. Nesse estado, oculta Mudar busca/Ver outras e a orientação repetida de refazer buscas. Cliques válidos de conversa aguardam a resposta final sem enviar “Vou conferir sua escolha”; recusas e expiração continuam visíveis.
+
 As respostas curtas omitem a narração “Ana entrou na compra”, seguindo direto para a pergunta pendente. Confirmações alimentares, recusas e alertas continuam visíveis. A abertura, a escolha individual/grupo e a espera da operação não anunciam que a resposta chegará automaticamente; o indicador de digitação e a entrega final continuam ativos. Mensagens de progresso já enviadas por versões antigas continuam recuperáveis após atualização ou reinício.
 
 Testes offline cobrem envio, replay, versão, expiração, isolamento de sessão, callbacks e limpeza. `test_guidance_integration.py` com `GUIDANCE_API_ROOT` aponta para esta API e percorre texto → opções → clique → carrinho → limpeza, usando HTTP e SQLite reais e serviços externos falsos. As integrações históricas mantêm seus commits fixados. Resultados finais estão no PR; não comprovam deploy ou identidade real iFood.

@@ -4,6 +4,7 @@ import re
 
 BUDGET_LABELS = ("Orçamento do grupo", "Orçamento")
 SEPARATOR = "━━━━━━━━━━━━"
+ADDRESS_REQUIRED = "Confirme seu endereço pelo botão Endereços iFood antes das sugestões. Podemos continuar organizando participantes, restrições e orçamento."
 
 
 def collection_text(text, group, *, include_conditions=True):
@@ -195,9 +196,17 @@ def render(snapshot, *, collection_only=False, concise=False):
                 )
             )
             if not routine or not asked:
-                lines.append(question)
+                lines.append(
+                    "Para buscar as opções, escolha o endereço de entrega abaixo."
+                    if question == ADDRESS_REQUIRED
+                    else question
+                )
             asked = asked or bool(routine)
-    if not collection_only and document["allowedActions"]:
+    if (
+        not collection_only
+        and document["allowedActions"]
+        and ADDRESS_REQUIRED not in document["pending"]
+    ):
         kinds = {a["kind"] for a in document["allowedActions"]}
         if "REQUEST_REVIEW" in kinds:
             lines.append(

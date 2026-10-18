@@ -396,7 +396,8 @@ def process_callback(
             if conversations
             else "Conversa indisponível nesta configuração."
         )
-        api.send(allowed_id, reply)
+        if reply:
+            api.send(allowed_id, reply)
         return
     if isinstance(data, str) and data.startswith("ifa:"):
         queued = conversations and conversations.address_click(callback, update_id)
