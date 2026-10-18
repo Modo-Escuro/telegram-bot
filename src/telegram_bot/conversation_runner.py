@@ -14,11 +14,11 @@ from .outbox import Outbox
 from .telegram import TelegramError
 from .voice import MAX_BYTES, VoiceError, voice_metadata
 
-PROCESSING = "Estou processando sua mensagem e vou trazer a resposta por aqui automaticamente. Você pode continuar escrevendo ou tocar em Interromper."
+PROCESSING = "Vou responder automaticamente por aqui."
 
 NOTICES = {
     "ADDRESS_UNAVAILABLE": "A verificação de endereços ainda não está disponível nesta versão da API. Avise a equipe; a coleta do grupo pode continuar.",
-    "ADDRESS_SELECTED": "Endereço confirmado para as sugestões. Nenhum pedido foi criado ou enviado. Pode continuar a conversa; para trocar, toque em Endereços iFood.",
+    "ADDRESS_SELECTED": "Endereço confirmado para as sugestões. Para trocar, toque em Endereços iFood.",
     "REFERENCE_EXPIRED": "A lista de endereços mudou ou a escolha expirou. Toque em Endereços iFood para conferir novamente.",
     "VOICE_UNKNOWN": "A transcrição foi interrompida e não será repetida automaticamente. Envie o áudio novamente ou escreva a mensagem.",
     "VOICE_FAILED": "Não consegui entender este áudio com segurança ou o limite de voz foi atingido. Tente mais tarde ou escreva a mensagem.",
@@ -27,21 +27,21 @@ NOTICES = {
     "NO_ACTIVE": "Nenhum processamento ativo foi encontrado para interromper.",
     "LOCAL_CANCELLED": "Mensagem retirada da fila local antes do envio. Nenhum cancelamento remoto foi solicitado.",
     "CANCELLED": "Solicitação de parada local registrada. Isso não cancela nada no iFood.",
-    "RESUMED": "Acompanhamento retomado. Uma entrega anterior incerta pode aparecer novamente. Nenhum pedido é reenviado.",
+    "RESUMED": "Acompanhamento retomado. Se uma resposta já chegou, você pode recebê-la novamente ao recuperar as mensagens pendentes.",
     "STALE_VERSION": "A conversa mudou. O evento antigo não foi alterado ou reaplicado. Envie sua correção novamente sobre o estado atual.",
     "EVENT_CONFLICT": "Este evento já existe com outro conteúdo. Não vou alterar sua identidade; consulte o responsável pelo serviço.",
     "FORBIDDEN": "A conversa não está autorizada para esta conta. Consulte o responsável pelo serviço.",
     "UNAUTHENTICATED": "Não consegui acessar o serviço de compras. Avise a equipe.",
     "INVALID_REQUEST": "A API recusou o formato da mensagem. Nenhuma correção automática foi aplicada; consulte o responsável pelo serviço.",
-    "LINK_CHANGED": "O vínculo da conta mudou. Confira Minha conexão antes de enviar uma nova mensagem.",
-    "CONTEXT_EXPIRED": "A retomada do grupo expirou após 24 horas. Use Verificar conexão para solicitar uma nova consulta.",
-    "NO_CONTEXT": "Não há conversa salva para retomar. Envie uma mensagem para começar; nenhum pedido é enviado.",
-    "CONTEXT_LINK_NOT_READY": "Não consegui validar o mesmo vínculo operacional para retomar o grupo. Consulte Minha conexão e use Verificar conexão quando a conexão estiver pronta.",
-    "UNAVAILABLE": "Conversa temporariamente indisponível. Use Retomar conversa para recuperar o mesmo evento, ou consulte Acompanhar.",
+    "LINK_CHANGED": "O vínculo da conta mudou. Confira /ifood antes de enviar uma nova mensagem.",
+    "CONTEXT_EXPIRED": "A retomada do grupo expirou após 24 horas. Use /verificar para solicitar uma nova consulta.",
+    "NO_CONTEXT": "Não há conversa salva para retomar. Envie uma mensagem para começar.",
+    "CONTEXT_LINK_NOT_READY": "Não consegui validar o mesmo vínculo operacional para retomar o grupo. Consulte /ifood e use /verificar quando a conexão estiver pronta.",
+    "UNAVAILABLE": "Conversa temporariamente indisponível. Use /retomar para recuperar a resposta pendente.",
     "PROTOCOL": "Resposta incompatível com o contrato. O acompanhamento está pausado; consulte o responsável pelo serviço.",
     "FAILED": "O processamento terminou sem concluir a solicitação. Envie uma nova correção quando o serviço estiver disponível.",
     "RESULT_UNKNOWN": "Resultado externo desconhecido. Não repita o pedido; é necessária reconciliação. Nenhum envio automático será feito.",
-    "CANCEL_UNKNOWN": "A parada local ainda não foi confirmada. Use Retomar conversa para recuperar a mesma solicitação.",
+    "CANCEL_UNKNOWN": "A parada local ainda não foi confirmada. Use /retomar para recuperar a mesma solicitação.",
 }
 
 
@@ -183,7 +183,9 @@ class ConversationWorker:
             state = row["state"]
             if state == "DELIVERY_UNKNOWN":
                 self.box.save(
-                    row["seq"], state="ACCEPTED", attempts=0,
+                    row["seq"],
+                    state="ACCEPTED",
+                    attempts=0,
                     delivery_recoveries=row["delivery_recoveries"] + 1,
                 )
                 row = self.box.get(row["seq"])
@@ -348,7 +350,7 @@ class ConversationWorker:
         if operation.status == "SUCCEEDED":
             # Não reutilizar snapshot histórico da operação: ele pode ter sido substituído/expurgado.
             snapshot = self.client.get_snapshot()
-            text = render(snapshot)
+            text = render(snapshot, concise=True)
         elif operation.status == "RESULT_UNKNOWN":
             self.box.save(row["seq"], state="NOTICE", notice="RESULT_UNKNOWN", attempts=0)
             return
@@ -418,7 +420,10 @@ class ConversationWorker:
                             (row["seq"], index),
                         )
                         self.box.update(
-                            row["seq"], state=next_state, attempts=0, due=self.clock() + 1,
+                            row["seq"],
+                            state=next_state,
+                            attempts=0,
+                            due=self.clock() + 1,
                         )
                 elif not message_id and error.code in {0, 500, 502, 503, 504}:
                     self.box.save(row["seq"], state="DELIVERY_UNKNOWN", attempts=3, body=None)

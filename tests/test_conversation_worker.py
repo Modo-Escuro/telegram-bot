@@ -506,7 +506,7 @@ class ControlTests(Fixture):
             conversations=self.adapter,
         )
         self.assertIsNone(self.box.active())
-        self.assertIn("Acompanhar", self.telegram.send.call_args.args[1])
+        self.assertIn("/retomar", self.telegram.send.call_args.args[1])
         process_batch(
             self.telegram,
             self.state,

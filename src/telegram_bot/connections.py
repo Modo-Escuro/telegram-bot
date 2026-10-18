@@ -8,7 +8,6 @@ COMMANDS = frozenset(
     {"/conectar", "/confirmar", "/ifood", "/verificar", "/cancelar", "/desconectar"}
 )
 UNCONFIGURED = "A conexão com o iFood ainda não foi configurada nesta demo. Avise o organizador."
-NO_PURCHASE = "\nLogin não aprova compras. A sacola da demo é simulada; nenhum pedido é enviado."
 
 
 @dataclass
@@ -29,12 +28,12 @@ def status_text(status):
     elif status.state == "RECONNECT_REQUIRED":
         text = "A sessão precisa de novo login. Use Conectar iFood."
     elif status.state == "UNAVAILABLE":
-        text = "iFood indisponível no momento; isso não significa logout. Tente Verificar conexão depois."
+        text = "iFood indisponível no momento; isso não significa logout. Tente /verificar depois."
     elif status.operational and status.allowed_operations:
         text = "Pronto, sua conta iFood está conectada!"
     else:
-        text = "Conta vinculada, mas acesso ainda não liberado. Use Verificar conexão; podem faltar permissões."
-    return text + NO_PURCHASE
+        text = "Conta vinculada, mas acesso ainda não liberado. Use /verificar; podem faltar permissões."
+    return text
 
 
 def status_reply(status):
@@ -67,7 +66,7 @@ def error_text(error):
     if error.uncertain:
         return (
             "Não foi possível confirmar o resultado da solicitação. "
-            "Não a repetirei automaticamente. Consulte Minha conexão antes de enviar outra ação."
+            "Não a repetirei automaticamente. Consulte /ifood antes de enviar outra ação."
         )
     messages = {
         "BOT_API_NOT_CONFIGURED": "A conexão do Ailo ainda não foi configurada.",
@@ -77,16 +76,16 @@ def error_text(error):
         "IFOOD_CLIENT_NOT_CONFIGURED": "O login iFood ainda não foi configurado no backend.",
         "AUTHORIZATION_PENDING": "Conclua o login no navegador antes de confirmar.",
         "ATTEMPT_EXPIRED": "A tentativa expirou. Use Conectar iFood para gerar outra.",
-        "ATTEMPT_USED": "A tentativa já foi usada ou substituída. Consulte Minha conexão.",
+        "ATTEMPT_USED": "A tentativa já foi usada ou substituída. Consulte /ifood.",
         "ATTEMPT_NOT_FOUND": "Tentativa não encontrada. Toque em Conectar iFood.",
-        "CONFIRMATION_NOT_FOUND": "Confirmação não encontrada. Consulte Minha conexão.",
+        "CONFIRMATION_NOT_FOUND": "Confirmação não encontrada. Consulte /ifood.",
         "CONFIRMATION_EXPIRED": "Confirmação expirada. Toque em Conectar iFood.",
-        "CONFIRMATION_INVALID": "Confirmação cancelada ou substituída. Consulte Minha conexão.",
-        "ALREADY_CONFIRMED": "Conexão já confirmada. Toque em Minha conexão.",
+        "CONFIRMATION_INVALID": "Confirmação cancelada ou substituída. Consulte /ifood.",
+        "ALREADY_CONFIRMED": "Conexão já confirmada. Use /ifood.",
         "IFOOD_LINK_REQUIRED": "Conecte sua conta primeiro pelo botão Conectar iFood.",
         "IFOOD_RECONNECT_REQUIRED": "É necessário refazer o login pelo botão Conectar iFood.",
         "IFOOD_SCOPE_MISSING": "A sessão não tem as permissões necessárias.",
-        "IFOOD_UNAVAILABLE": "iFood indisponível. Tente Verificar conexão mais tarde.",
+        "IFOOD_UNAVAILABLE": "iFood indisponível. Tente /verificar mais tarde.",
         "PROTOCOL": "A API retornou uma resposta incompatível. Avise o organizador.",
     }
     return messages.get(error.kind, "Não consegui consultar a API. Confira se ela está disponível.")
@@ -125,7 +124,7 @@ class Connections:
         if queued is True:
             return "\nVou recuperar o grupo que você já organizou para continuarmos daqui."
         if queued is False:
-            return "\nNão consegui agendar a retomada do grupo: a fila está cheia ou o vínculo mudou. Use Verificar conexão depois."
+            return "\nNão consegui agendar a retomada do grupo: a fila está cheia ou o vínculo mudou. Use /verificar depois."
         return ""
 
     def delivered(self, reply, result):
@@ -188,7 +187,7 @@ class Connections:
         if self.backend is None:
             return Reply(UNCONFIGURED)
         if not OPAQUE.fullmatch(confirmation_id):
-            return Reply("Confirmação inválida. Envie Minha conexão novamente.")
+            return Reply("Confirmação inválida. Envie /ifood novamente.")
         try:
             if not self.state.claim_action(update_id):
                 return self._present(
@@ -229,8 +228,7 @@ class Connections:
         reply = self._present(status)
         reply.text = ("Vínculo local removido." if removed else "Não havia vínculo local.") + (
             " Não foi solicitada revogação no provedor. "
-            "Uma tentativa de login pendente continua; use Minha conexão para encerrá-la.\n"
-            + reply.text
+            "Uma tentativa de login pendente continua; use /ifood para encerrá-la.\n" + reply.text
         )
         return reply
 
@@ -241,7 +239,7 @@ class Connections:
             return Reply(UNCONFIGURED)
         prefix, _, reference = data.partition(":")
         if prefix not in {"ifx", "ifd"} or not OPAQUE.fullmatch(reference):
-            return Reply("Ação inválida. Toque em Minha conexão.")
+            return Reply("Ação inválida. Use /ifood.")
         try:
             if not self.state.claim_action(update_id):
                 return self._present(self.backend.status())
@@ -249,7 +247,7 @@ class Connections:
             current = status.attempt_id if prefix == "ifx" else status.link_id
             if current != reference:
                 return Reply(
-                    "Este botão não corresponde à tentativa ou ao vínculo atual. Consulte Minha conexão."
+                    "Este botão não corresponde à tentativa ou ao vínculo atual. Consulte /ifood."
                 )
             return self._cancel() if prefix == "ifx" else self._disconnect()
         except BackendError as error:
@@ -272,7 +270,7 @@ class Connections:
                 api,
                 allowed_id,
                 watch,
-                "Acompanhamento encerrado. Consulte Minha conexão ou Minha conexão.",
+                "Acompanhamento encerrado. Consulte /ifood.",
             )
             return
         try:
@@ -283,7 +281,7 @@ class Connections:
                     api,
                     allowed_id,
                     watch,
-                    "Não consegui acompanhar o login. Consulte Minha conexão ou Minha conexão.",
+                    "Não consegui acompanhar o login. Consulte /ifood.",
                 )
             return
         if status.attempt_id != watch["attempt_id"]:
@@ -296,9 +294,7 @@ class Connections:
             text = (
                 status_text(status)
                 if not status.attempt_id
-                else (
-                    "Esta tentativa foi substituída. Consulte Minha conexão para acompanhar a atual."
-                )
+                else ("Esta tentativa foi substituída. Consulte /ifood para acompanhar a atual.")
             )
             self._finish_watch(api, allowed_id, watch, text + followup)
             return
@@ -313,7 +309,7 @@ class Connections:
                 api,
                 allowed_id,
                 watch,
-                "A tentativa expirou. Consulte Minha conexão e use Conectar iFood se necessário.",
+                "A tentativa expirou. Consulte /ifood e use Conectar iFood se necessário.",
             )
             return
         if watch["phase"] != status.state and watch["message_id"]:

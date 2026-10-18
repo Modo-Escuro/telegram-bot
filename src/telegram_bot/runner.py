@@ -7,25 +7,24 @@ from .conversation_contract import ProtocolError
 from .menu import navigation
 from .telegram import TelegramError
 
-START = (
-    "Olá! Eu sou o Ailo, seu assistente de compras. Vamos organizar seu pedido juntos? "
-    "Me conte quem participa, as restrições alimentares "
-    "e quanto vocês querem gastar. Você pode corrigir as informações quando precisar.\n\n"
-    "Para conectar a conta teste iFood, toque em Conectar iFood. "
-    "A preparação da sacola exige uma revisão e confirmação específicas. Nenhum pedido é enviado."
+GET_STARTED = (
+    "Quem vai participar, quais as restrições alimentares e quanto querem gastar?\n\n"
+    "Toque em Conectar iFood para usar a conta teste."
 )
-STATUS = "Estou por aqui! O login não é verificado nesta tela. Toque em Minha conexão para consultar sua conta."
+DEMO_NOTICE = (
+    "Conectar a conta não autoriza compras. Preparar o carrinho no iFood exige revisão "
+    "e confirmação específicas. Nenhum pedido é enviado."
+)
+START = "Olá! Eu sou o Ailo, seu assistente de compras.\n\n" + GET_STARTED + "\n\n" + DEMO_NOTICE
+STATUS = "Estou por aqui! O login não é verificado nesta tela. Use /ifood para consultar sua conta."
 HELP = (
-    "Converse comigo por aqui para organizar o grupo e ajustar o orçamento.\n\n"
-    "Conectar iFood abre o login da conta teste. Minha conexão mostra a conta e os botões "
-    "para cancelar um login ou desconectar. Verificar conexão consulta o acesso ao iFood."
-    " Endereços iFood confere os endereços cadastrados e permite escolher qual usar nas sugestões."
+    "• Conectar iFood: entre na conta teste.\n"
+    "• Endereços iFood: escolha onde receber.\n"
+    "• Esvaziar sacola: limpe a composição da demo.\n"
+    "• Sair da demo: encerre seu acesso.\n\n"
+    "Faltou uma resposta? Use /retomar. Para desconectar a conta, use /desconectar."
 )
-CONVERSATION_HELP = (
-    "\n\nAcompanhar mostra suas mensagens pendentes. Interromper solicita a parada local. "
-    "Retomar conversa recupera o acompanhamento; se uma entrega ficou incerta, a mensagem pode aparecer novamente."
-    " As respostas chegam automaticamente durante o acompanhamento normal."
-)
+CONVERSATION_HELP = "\n\nAs respostas chegam automaticamente por aqui."
 
 
 def private_message(update):
@@ -142,7 +141,7 @@ def process_batch(
                 # A outbox já gravou o cursor atomicamente, ou a recusa foi respondida acima.
                 continue
         reply = reply_for(update, allowed_id, username, connections)
-        if conversations is not None and isinstance(reply, str) and reply in {START, STATUS, HELP}:
+        if conversations is not None and isinstance(reply, str) and reply == START:
             reply += CONVERSATION_HELP
             if conversations.voice_enabled:
                 reply += "\n\nPode enviar áudios de até um minuto. Uso a Groq para transcrever e mostro o texto para você conferir."
