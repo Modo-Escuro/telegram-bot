@@ -40,7 +40,7 @@ def money(price):
     return f"{label}: {brl(price['totalCents'])}."
 
 
-def render(snapshot, *, collection_only=False):
+def render(snapshot, *, collection_only=False, concise=False):
     document = snapshot.to_dict()
     lines = []
     group = next((b for b in document["blocks"] if b["kind"] == "GROUP"), None)
@@ -61,7 +61,13 @@ def render(snapshot, *, collection_only=False):
             # Texto do modelo é identificado e nunca vira evidência de pedido/aprovação.
             prefix = "Assistente: " if block["source"] == "MODEL" else ""
             text = block["text"]
-            if group and block["source"] == "SERVER":
+            if concise and block["source"] == "SERVER":
+                if text in {"Nada foi alterado.", "Pergunta registrada."}:
+                    continue
+                if budget_text and text.startswith("Orçamento do grupo: "):
+                    continue
+                text = re.sub(r"(R\$ \d+)\.(\d{2})(?!\d)", r"\1,\2", text)
+            elif group and block["source"] == "SERVER":
                 text = collection_text(text, group)
                 if budget_text and group["budgetCents"] is not None:
                     cents = group["budgetCents"]
@@ -80,6 +86,8 @@ def render(snapshot, *, collection_only=False):
             if text:
                 lines.append(prefix + text)
         elif kind == "GROUP":
+            if concise and not collection_only:
+                continue
             lines.append(
                 "Certo! Seu grupo ficou assim:"
                 if not collection_only
@@ -116,7 +124,7 @@ def render(snapshot, *, collection_only=False):
         lines.append(
             "Envie sua próxima mensagem para continuar. Itens, preços, endereço e ações precisam de nova validação na conta atual."
         )
-        lines.append("Se alguma mensagem ficou pendente, toque em Acompanhar.")
+        lines.append("Se faltar uma resposta, consulte Ajuda.")
     else:
         asked = False
         for question in document["pending"]:
@@ -134,7 +142,7 @@ def render(snapshot, *, collection_only=False):
             if not routine or not asked:
                 lines.append(question)
             asked = asked or bool(routine)
-    text = "\n\n".join(lines)
+    text = "\n\n".join(lines) or "O grupo continua igual. O que deseja mudar?"
     # Defesa adicional: nunca exibir referências humanas nem identificadores técnicos do documento.
     references = [document.get("conversationId", "")]
     for action in document["allowedActions"]:

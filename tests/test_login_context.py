@@ -366,5 +366,5 @@ class LoginContextTests(Fixture):
         self.backend.status.return_value = connected()
         self.connections.tick(self.telegram, OWNER)
         self.assertIn("fila está cheia", self.telegram.call.call_args.args[1]["text"])
-        self.assertIn("Verificar conexão", self.telegram.call.call_args.args[1]["text"])
+        self.assertIn("/verificar", self.telegram.call.call_args.args[1]["text"])
         self.assertEqual(self.rows(), [])

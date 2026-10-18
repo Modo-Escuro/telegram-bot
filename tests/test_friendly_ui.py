@@ -19,6 +19,26 @@ from telegram_bot.telegram import Telegram, TelegramError
 
 
 class NavigationTests(conversation.Fixture):
+    def test_clear_bag_button_queues_explicit_simulated_intent_once(self):
+        event = conversation.update(1, "Esvaziar sacola")
+        for _ in range(2):
+            process_batch(
+                self.telegram,
+                self.state,
+                [event],
+                conversation.OWNER,
+                "bot",
+                conversations=self.adapter,
+            )
+        row = self.box.active()
+        self.assertIsNotNone(row)
+        document = json.loads(bytes(row["body"]))
+        self.assertEqual(document["input"]["text"], "Esvaziar sacola simulada")
+        self.assertEqual(self.client.sent, [])
+        self.assertEqual(
+            self.box.db.execute("SELECT count(*) FROM conversation_outbox").fetchone()[0], 1
+        )
+
     def test_buttons_use_controls_and_keep_event_identity(self):
         backend = Mock()
         backend.status.return_value = connected()
@@ -146,6 +166,42 @@ class PresentationTests(unittest.TestCase):
         self.assertNotIn("entrou na compra", text)
         self.assertNotIn("em preparação", text)
         self.assertIn("Vocês preferem economia ou rapidez?", text)
+
+    def test_no_change_is_one_question_instead_of_repeated_group(self):
+        d = self.document()
+        d["blocks"][1]["text"] = "Nada foi alterado."
+        d["pending"] = [
+            "Ana tem alguma alergia ou restrição alimentar?",
+            "Bia tem alguma alergia ou restrição alimentar?",
+            "Vocês preferem economia ou rapidez?",
+        ]
+        text = render(Snapshot(encode(d), 0, "COLLECTING"), concise=True)
+        self.assertEqual(text, "Ana tem alguma alergia ou restrição alimentar?")
+        d["pending"].insert(0, "Não removi a alergia de Ana. É necessária confirmação humana.")
+        self.assertIn(
+            "Não removi a alergia", render(Snapshot(encode(d), 0, "COLLECTING"), concise=True)
+        )
+
+    def test_compact_update_keeps_accepted_change_and_safety_notices(self):
+        d = self.document()
+        d["blocks"][1]["text"] = "Registrei alergia a amendoim para Ana."
+        d["pending"] = [
+            "Item bloqueado para Ana: alergênicos não verificados.",
+            "Total desconhecido; orçamento não validado.",
+        ]
+        text = render(Snapshot(encode(d), 0, "COLLECTING"), concise=True)
+        self.assertIn("Registrei alergia a amendoim", text)
+        self.assertIn("Item bloqueado para Ana", text)
+        self.assertIn("Total desconhecido", text)
+        self.assertNotIn("Seu grupo", text)
+        self.assertLess(len(text), 230)
+
+    def test_menu_only_has_clear_product_labels(self):
+        labels = [button["text"] for row in keyboard()["keyboard"] for button in row]
+        self.assertEqual(
+            labels,
+            ["Conectar iFood", "Endereços iFood", "Esvaziar sacola", "Ajuda", "Sair da demo"],
+        )
 
     def test_unknown_warning_and_model_text_are_not_suppressed(self):
         d = self.document()

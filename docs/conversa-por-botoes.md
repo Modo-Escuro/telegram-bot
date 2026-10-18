@@ -1,5 +1,7 @@
 # Conversa e navegação por botões
 
+Atualização solicitada de síntese e menu: [conversa curta](ux-sintese.md). Essa continuação substitui os rótulos e a apresentação extensa descritos no retrato histórico abaixo; não altera os controles de segurança.
+
 Pedido do usuário em 18/10/2026: respostas mais amigáveis, navegação sem digitar comandos e conclusão do login no navegador sem confirmação duplicada no Telegram.
 
 O teclado persistente oferece Conectar iFood, Minha conexão, Verificar conexão, Acompanhar, Retomar conversa, Interromper, Ajuda e Sair da demo. Minha conexão apresenta os botões de cancelamento da tentativa e desconexão, vinculados à referência atual. Rótulos são traduzidos em controles antes da fila/modelo; aliases antigos continuam aceitos por compatibilidade, sem serem anunciados. O botão Iniciar nativo do Telegram permanece a entrada inicial.

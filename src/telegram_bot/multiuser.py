@@ -242,7 +242,7 @@ class PasswordRouter:
                 self.send(
                     api,
                     owner,
-                    "Acesso à demo encerrado. Seu vínculo iFood não foi desconectado. Para remover o vínculo, entre novamente e use Minha conexão.",
+                    "Acesso à demo encerrado. Seu vínculo iFood não foi desconectado. Para remover o vínculo, entre novamente e use /ifood.",
                 )
             elif self.access.allowed(owner):
                 self.session(owner).receive(api, update, username)

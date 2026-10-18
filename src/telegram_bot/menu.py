@@ -11,6 +11,7 @@ BUTTONS = {
     "Ajuda": "/ajuda",
     "Endereços iFood": "/enderecos",
     "Sair da demo": "/sair",
+    "Esvaziar sacola": "Esvaziar sacola simulada",
 }
 
 
@@ -19,10 +20,8 @@ def keyboard(*, access=False):
         [["Entrar na demo"]]
         if access
         else [
-            ["Conectar iFood", "Minha conexão"],
-            ["Verificar conexão", "Acompanhar"],
-            ["Endereços iFood"],
-            ["Retomar conversa", "Interromper"],
+            ["Conectar iFood", "Endereços iFood"],
+            ["Esvaziar sacola"],
             ["Ajuda", "Sair da demo"],
         ]
     )
