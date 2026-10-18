@@ -14,7 +14,7 @@ jobs:
   cart-integration:
     runs-on: ${{ matrix.os }}
     env:
-      CART_API_COMMIT: ${{ inputs.api_commit || '11a05ce87ed61c1d9ab013fd98aa65ec89ea7d54' }}
+      CART_API_COMMIT: ${{ inputs.api_commit || '09cb430d5c24ca05d504f5aed92fd79bcf3c4705' }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
