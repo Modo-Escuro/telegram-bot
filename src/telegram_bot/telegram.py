@@ -24,6 +24,16 @@ def edit_error_reason(method, code, body):
     return "OTHER"
 
 
+# Valores em reais: "R$ 29,90", "R$ 29.90", "R$ 1.234,50", com faixa "–R$ ..." tratada como dois valores.
+PRICE = re.compile(r"R\$\s?\d{1,3}(?:[.\u00a0]\d{3})*(?:[.,]\d{2})?\+?")
+
+
+def html_text(text):
+    """Texto puro → HTML seguro do Telegram, com preços em negrito. Nada além de <b> é gerado."""
+    escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return PRICE.sub(lambda m: f"<b>{m.group(0)}</b>", escaped)
+
+
 class TelegramError(Exception):
     def __init__(self, code: int = 0, retry_after: int = 0, *, reason="OTHER"):
         self.code = code
@@ -89,6 +99,13 @@ class Telegram:
     def call(self, method, payload=None, *, timeout=None):
         if method not in self.METHODS:
             raise ValueError("Método Telegram não implementado.")
+        if (
+            method in {"sendMessage", "editMessageText"}
+            and payload
+            and isinstance(payload.get("text"), str)
+            and "parse_mode" not in payload
+        ):
+            payload = {**payload, "text": html_text(payload["text"]), "parse_mode": "HTML"}
         request = Request(
             self._base + method,
             data=json.dumps(payload or {}).encode("utf-8"),

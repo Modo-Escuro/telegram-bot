@@ -13,7 +13,7 @@ BUTTONS = {
     "Revisar carrinho": "/revisarcarrinho",
     "Conferir carrinho": "/conferircarrinho",
     "Sair da demo": "/sair",
-    "Esvaziar sacola": "Esvaziar sacola simulada",
+    "Esvaziar carrinho": "Esvaziar carrinho simulado",
     "Remover pessoa": "/remover",
     "Limpar perfil": "/limpar",
 }
@@ -25,7 +25,7 @@ def keyboard(*, access=False, cart=False):
         if access
         else [
             ["Conectar iFood", "Endereços iFood"],
-            ["Esvaziar sacola"],
+            ["Esvaziar carrinho"],
             ["Remover pessoa", "Limpar perfil"],
             *([["Revisar carrinho", "Conferir carrinho"]] if cart else []),
             ["Ajuda", "Sair da demo"],

@@ -4,7 +4,7 @@
 
 Plano de 18/10/2026. Base: bot `9314c72`, API `dc448f9` (Gemini e propostas já montados).
 Escopo autorizado: preparar a conversa, conservar o grupo após login e verificar a retomada.
-DEC-01: sacola simulada, MCP somente leitura, nenhum envio de pedido.
+DEC-01: carrinho simulado, MCP somente leitura, nenhum envio de pedido.
 
 ## Sequência e limites
 

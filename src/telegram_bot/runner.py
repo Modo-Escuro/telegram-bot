@@ -30,7 +30,7 @@ STATUS = "Estou por aqui! O login não é verificado nesta tela. Use /ifood para
 HELP = (
     "• Conectar iFood: entre na conta teste.\n"
     "• Endereços iFood: escolha onde receber.\n"
-    "• Esvaziar sacola: limpe a composição da demo.\n"
+    "• Esvaziar carrinho: limpe a composição da demo.\n"
     "• Remover pessoa / Limpar perfil: apague pessoas ou todo o pedido salvo.\n"
     "• Sair da demo: encerre seu acesso.\n\n"
     "Faltou uma resposta? Use /retomar. Para desconectar a conta, use /desconectar."
