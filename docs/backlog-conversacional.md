@@ -1,74 +1,42 @@
-# Backlog de desenvolvimento e dependências
+# Backlog e dependências — 18/10/2026
 
-[Kanban de execução](kanban.md): organização das 22 tarefas por andamento e regras de movimentação.
+[Plano](plano-conversacional.md) · [Remoto/local](estado-remoto-local.md) · [Kanban](kanban.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6).
 
-[Plano integrado](plano-conversacional.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6).
+Retrato das issues consultadas após os merges API #38/#41/#42: 23 tarefas (15 fechadas, 8 abertas); épico não entra na contagem. Fechamento de issue descreve seu alcance, não prova ensaio real. A INT-01 fechou auditoria/metadados; INT-02 continua outputs/reconciliação. Nenhum responsável ou prazo é inferido.
 
-Todas as tarefas abaixo foram criadas no GitHub e estavam abertas nesta publicação. O status vivo está nas issues; esta tabela registra escopo, prioridade e dependências. Cada issue contém problema, escopo, critérios de aceite, validação, fora de escopo e rastreabilidade. Sem atribuição nominal ou prazo inventado.
+P0 bloqueia a ação afetada; P1 é necessário ao fluxo completo; P2 é posterior. P0 não permite pular dependências. Pedido/pagamento continuam proibidos neste incremento.
 
-## Prioridades
+| Task | Repositório/issue | Prioridade | Estado remoto | Alcance e dependência restante |
+| --- | --- | --- | --- | --- |
+| [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5) | api #5 | P0 | Fechada | Decisão vigente sincronizada; documentação não habilita operação |
+| [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6) | api #6 | P0 | Fechada | Persistência integrada; operação/volume precisam de evidência própria |
+| [INT-01](https://github.com/Modo-Escuro/api-backend/issues/7) | api #7 | P0 | Fechada | Auditoria/metadados; outputs pendentes em INT-02 |
+| [RANK-01](https://github.com/Modo-Escuro/api-backend/issues/8) | api #8 | P0 | Fechada | Preferências e viabilidade |
+| [RANK-02](https://github.com/Modo-Escuro/api-backend/issues/9) | api #9 | P1 | Fechada | Configuração/texto coerentes |
+| [DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10) | api #10 | P0 | Fechada | Centavos/limites/rateio |
+| [RANK-03](https://github.com/Modo-Escuro/api-backend/issues/11) | api #11 | P1 | Fechada | Ranking e contrato |
+| [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) | api #12 | P0 | Fechada | Contrato v1 implementado; proposta v0 histórica |
+| [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) | api #13 | P1 | Fechada | Domínio por pessoa e exclusão |
+| [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14) | api #14 | P1 | Fechada | Infraestrutura e testes #41 integrados |
+| [AI-01](https://github.com/Modo-Escuro/api-backend/issues/15) | api #15 | P1 | Fechada | Gemini e montagem #35/#36 integrados; opt-in |
+| [AI-02](https://github.com/Modo-Escuro/api-backend/issues/16) | api #16 | P1 | Fechada | Agente estruturado integrado |
+| [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) | api #17 | P1 | Fechada | Propostas por pessoa integradas |
+| [CART-01](https://github.com/Modo-Escuro/api-backend/issues/18) | api #18 | P1 | Aberta | Código novo local; integração/INT-02 e callback pendentes |
+| [BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19) | api #19 | P0 | Aberta | Aprovação futura de pedido; distinta de PREPARE_CART |
+| [BUY-02](https://github.com/Modo-Escuro/api-backend/issues/20) | api #20 | P0 | Aberta | Envio futuro/reconciliação; proibido neste incremento |
+| [OPS-02](https://github.com/Modo-Escuro/api-backend/issues/21) | api #21 | P1 | Aberta | PR #38 mergeado; issue aberta por alcance parcial e ensaios operacionais pendentes |
+| [INT-02](https://github.com/Modo-Escuro/api-backend/issues/40) | api #40 | P0 | Aberta | Gate externo de outputs por operação; não concluído por tools/list |
+| [BOT-01](https://github.com/Modo-Escuro/telegram-bot/issues/1) | bot #1 | P1 | Fechada | Cliente/outbox/polling opt-in integrados |
+| [BOT-02](https://github.com/Modo-Escuro/telegram-bot/issues/2) | bot #2 | P1 | Fechada | Login e retomada integrados; ensaio separado |
+| [BOT-03](https://github.com/Modo-Escuro/telegram-bot/issues/3) | bot #3 | P1 | Aberta | Apresentação pode avançar; callback carrinho depende CART-01; pedido depende BUY-01/02 |
+| [QA-01](https://github.com/Modo-Escuro/telegram-bot/issues/4) | bot #4 | P1 | Aberta | Validar por marcos; fechamento do briefing ainda pendente |
+| [FUT-01](https://github.com/Modo-Escuro/telegram-bot/issues/5) | bot #5 | P2 | Aberta | Memória/áudio/múltiplas lojas posteriores; acesso por senha já integrado |
 
-- **P0:** bloqueio de integridade, contrato ou habilitação; resolver antes da ação afetada. BUY-01/02 são P0 antes de qualquer envio, mas têm predecessoras.
-- **P1:** implementação necessária à jornada principal; não é opcional para concluir a demo completa.
-- **P2:** evolução posterior, sem bloquear o épico.
+## Dependências que liberam ações
 
-Os códigos P0/P1/P2 estão no título e corpo das issues; os marcos M0–M4 são agrupamentos lógicos, não milestones do GitHub criados automaticamente.
+- CART-01 pode avançar com DATA-01/GRP-01/DOM-01/RUN-01 integradas; não precisa esperar AI-01. Sua ativação exige INT-02 e confirmação humana específica, sem bypass do legado.
+- BOT-03 apresentação usa grupo/propostas já disponíveis; callback de preparação depende do contrato CART-01 integrado. A futura aprovação de pedido depende de BUY-01/BUY-02 e de novo escopo autorizado.
+- BUY-02 depende de BUY-01 e contrato real de envio/status/reconciliação, não apenas de INT-01 fechada. INT-02 registra lacunas por domínio sem executar envio/pagamento.
+- QA-01 começa com conversa/apresentação e evolui por marcos; o aceite de fechamento final depende do evento e das futuras entregas de pedido.
 
-## Tarefas
-
-| ID / issue | Repositório | Prioridade | Marco | Entrega | Depende de |
-| --- | --- | --- | --- | --- | --- |
-| [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5) | api-backend | P0 | M0 | Fechar decisões de grupo, rateio, evidência alimentar e fronteira da demo | — |
-| [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6) | api-backend | P0 | M0 | Migrar vínculos para armazenamento persistente com recuperação verificada | — |
-| [INT-01](https://github.com/Modo-Escuro/api-backend/issues/7) | api-backend | P0 | M0 | Auditar F7 e validar contratos reais de carrinho, envio e reconciliação | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5) |
-| [RANK-01](https://github.com/Modo-Escuro/api-backend/issues/8) | api-backend | P0 | M0 | Impedir que preferências opcionais bloqueiem configurações válidas | — |
-| [RANK-02](https://github.com/Modo-Escuro/api-backend/issues/9) | api-backend | P1 | M1 | Corrigir preferências textuais e pontuar somente a configuração avaliada | [RANK-01](https://github.com/Modo-Escuro/api-backend/issues/8) |
-| [DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10) | api-backend | P0 | M1 | Aplicar centavos inteiros e validar limites obrigatórios antes do ranking | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5) |
-| [RANK-03](https://github.com/Modo-Escuro/api-backend/issues/11) | api-backend | P1 | M1 | Alinhar economia, rapidez e evidência ao ranking e versionar sua resposta | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10), [RANK-02](https://github.com/Modo-Escuro/api-backend/issues/9) |
-| [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) | api-backend | P0 | M0 | Especificar e validar o contrato versionado de conversa, eventos e ações | — |
-| [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) | api-backend | P1 | M1 | Persistir compra, participantes, restrições e evidências com versionamento | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) |
-| [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14) | api-backend | P1 | M1 | Implementar processamento durável de turnos e recuperação após falhas | [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12), [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) |
-| [AI-01](https://github.com/Modo-Escuro/api-backend/issues/15) | api-backend | P1 | M1 | Selecionar modelo por avaliação de conversa, custo, latência e dados | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) |
-| [AI-02](https://github.com/Modo-Escuro/api-backend/issues/16) | api-backend | P1 | M2 | Implementar agente conversacional com ações estruturadas e ferramentas controladas | [AI-01](https://github.com/Modo-Escuro/api-backend/issues/15), [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14), [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13) |
-| [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) | api-backend | P1 | M2 | Compor propostas coletivas com cobertura por pessoa e custo agregado | [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13), [DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10), [RANK-03](https://github.com/Modo-Escuro/api-backend/issues/11) |
-| [CART-01](https://github.com/Modo-Escuro/api-backend/issues/18) | api-backend | P1 | M3 | Integrar F7 com elegibilidade por pessoa e estado durável de carrinho | [INT-01](https://github.com/Modo-Escuro/api-backend/issues/7), [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6), [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14), [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) |
-| [BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19) | api-backend | P0 | M3 | Vincular aprovação humana à revisão atual e consumir autorização atomicamente | [CART-01](https://github.com/Modo-Escuro/api-backend/issues/18), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) |
-| [BUY-02](https://github.com/Modo-Escuro/api-backend/issues/20) | api-backend | P0 | M3 | Implementar envio idempotente e reconciliação de resultado desconhecido | [INT-01](https://github.com/Modo-Escuro/api-backend/issues/7), [BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19) |
-| [OPS-02](https://github.com/Modo-Escuro/api-backend/issues/21) | api-backend | P1 | M3 | Instrumentar operação, limites, retenção e liberação gradual | [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14), [AI-02](https://github.com/Modo-Escuro/api-backend/issues/16), [CART-01](https://github.com/Modo-Escuro/api-backend/issues/18) |
-| [BOT-01](https://github.com/Modo-Escuro/telegram-bot/issues/1) | telegram-bot | P1 | M2 | Receber texto livre e acompanhar turnos sem bloquear o polling | [API-01](https://github.com/Modo-Escuro/api-backend/issues/12), [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14) |
-| [BOT-02](https://github.com/Modo-Escuro/telegram-bot/issues/2) | telegram-bot | P1 | M2 | Retomar login no Telegram e oferecer cancelamento e desconexão claros | [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) |
-| [BOT-03](https://github.com/Modo-Escuro/telegram-bot/issues/3) | telegram-bot | P1 | M3 | Apresentar grupo, propostas, revisão e aprovação humana por botões | [BOT-01](https://github.com/Modo-Escuro/telegram-bot/issues/1), [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17), [CART-01](https://github.com/Modo-Escuro/api-backend/issues/18), [BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19) |
-| [QA-01](https://github.com/Modo-Escuro/telegram-bot/issues/4) | telegram-bot | P1 | M4 | Validar jornada integrada, falhas e demonstração com evidência sanitizada | [BOT-02](https://github.com/Modo-Escuro/telegram-bot/issues/2), [BOT-03](https://github.com/Modo-Escuro/telegram-bot/issues/3), [AI-02](https://github.com/Modo-Escuro/api-backend/issues/16), [BUY-02](https://github.com/Modo-Escuro/api-backend/issues/20), [OPS-02](https://github.com/Modo-Escuro/api-backend/issues/21) |
-| [FUT-01](https://github.com/Modo-Escuro/telegram-bot/issues/5) | telegram-bot | P2 | Posterior | Avaliar memória entre compras, áudio, novos canais e múltiplos restaurantes | [QA-01](https://github.com/Modo-Escuro/telegram-bot/issues/4) |
-
-## Sequência operacional
-
-1. Iniciar [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6), [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) e [RANK-01](https://github.com/Modo-Escuro/api-backend/issues/8).
-2. Investigar F7/contratos em [INT-01](https://github.com/Modo-Escuro/api-backend/issues/7) assim que definidos ambiente e fronteira; não esperar a conversa.
-3. Avançar domínio/estado/eventos e escolha do modelo conforme as dependências; protótipos isolados podem usar mocks identificados.
-4. Integrar [BOT-01](https://github.com/Modo-Escuro/telegram-bot/issues/1), [AI-02](https://github.com/Modo-Escuro/api-backend/issues/16) e [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) para a primeira conversa útil, preservando estado.
-5. Liberar sacola apenas com contratos, elegibilidade e persistência. Liberar envio somente após [BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19) e [BUY-02](https://github.com/Modo-Escuro/api-backend/issues/20).
-6. Concluir [QA-01](https://github.com/Modo-Escuro/telegram-bot/issues/4) com evidência e estado final do evento; [FUT-01](https://github.com/Modo-Escuro/telegram-bot/issues/5) é posterior.
-
-## Regras para desenvolvimento e encerramento
-
-- Branch/PR de implementação referencia a issue e o commit base. Não alterar a main de produção antes de preservar vínculos.
-- Fechar com evidência dos critérios e checks relevantes; mencionar explicitamente o que foi só simulado.
-- Não fechar tarefa bloqueada por contrato externo como “concluída”; registrar lacuna e próximo passo.
-- Gate de segurança é obrigatório mesmo que implementação comece antes com stub.
-- Manter commits da branchBruna e F7 identificados; resolver conflitos entre ranking, carrinho e auth com testes de integração.
-- Preservar issues api-backend#1–#3 fechadas como histórico; bugs herdados novos têm tarefas próprias.
-- Alteração de dependência ou política exige atualizar issue e este plano; não reescrever snapshots históricos.
-
-## Rastreabilidade resumida
-
-| Necessidade | Tarefas principais |
-| --- | --- |
-| RN01–RN03: restrições e dados insuficientes | [RANK-01](https://github.com/Modo-Escuro/api-backend/issues/8), [DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10), [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13), [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) |
-| RN04, RS17: custos e limites | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [DOM-01](https://github.com/Modo-Escuro/api-backend/issues/10), [RANK-03](https://github.com/Modo-Escuro/api-backend/issues/11), [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17), [CART-01](https://github.com/Modo-Escuro/api-backend/issues/18) |
-| RN05, RS07, RS26: propostas e explicações | [RANK-02](https://github.com/Modo-Escuro/api-backend/issues/9), [RANK-03](https://github.com/Modo-Escuro/api-backend/issues/11), [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17), [BOT-03](https://github.com/Modo-Escuro/telegram-bot/issues/3) |
-| RN06, RS20: mudança e revisão | [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13), [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14), [BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19), [BOT-03](https://github.com/Modo-Escuro/telegram-bot/issues/3) |
-| RN07, RS15–RS19: cobertura individual | [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5), [GRP-01](https://github.com/Modo-Escuro/api-backend/issues/17) |
-| RS22: dados externos e autoridade da IA | [API-01](https://github.com/Modo-Escuro/api-backend/issues/12), [AI-02](https://github.com/Modo-Escuro/api-backend/issues/16), [BUY-01](https://github.com/Modo-Escuro/api-backend/issues/19) |
-| RS23/RS25/RS27: operação, rastreio e desconhecido | [OPS-01](https://github.com/Modo-Escuro/api-backend/issues/6), [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14), [BUY-02](https://github.com/Modo-Escuro/api-backend/issues/20), [OPS-02](https://github.com/Modo-Escuro/api-backend/issues/21), [QA-01](https://github.com/Modo-Escuro/telegram-bot/issues/4) |
-| RS01/RS02: perfil histórico, escopo adiado | [FUT-01](https://github.com/Modo-Escuro/telegram-bot/issues/5) |
+Ao concluir, registrar commit/PR e evidência por critério. Preservar IDs RN/RS/CA/DA e a StRS em validação. Não alterar fixtures/pins ou apagar histórico para obter status verde. Estado de branch local não move automaticamente uma task remota para concluída.

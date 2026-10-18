@@ -1,36 +1,18 @@
-# Compra Agenciada — bot Telegram
+# Compra com Contexto — bot Telegram
 
-Planejamento de desenvolvimento: [conversa e compra em grupo](docs/plano-conversacional.md) · [tarefas e prioridades](docs/backlog-conversacional.md) · [épico no GitHub](https://github.com/Modo-Escuro/telegram-bot/issues/6).
+Interface Python 3.12 do projeto SEMCOMP. Organiza compra em grupo com condições por pessoa, preservando orçamento/restrições quando o pedido muda.
 
-Interface Telegram do projeto SEMCOMP. O objetivo do produto é organizar uma compra em grupo com restrições individuais e orçamento, preservar essas condições quando o pedido muda e exigir aprovação humana antes do envio.
+O código remoto conferido integra login e confirmação humana, cancelamento/desconexão, cliente de conversa v1, outbox/polling opt-in, retomada do grupo e acesso por senha com isolamento por usuário. A API remota já monta Gemini/AI-02/GRP-01 mediante configuração explícita. Isso não comprova ativação nem ensaio completo online.
 
-**Entregue e ensaiado:** bot privado na Railway, login iFood pelo navegador, confirmação humana por botão no Telegram e sessão operacional reconhecida pelo backend. A consulta autenticada registrou `CONNECTED`, `operational: true` e verificação `OK`. A evidência e seus limites estão em [estado atual](docs/estado-atual.md).
+Carrinho real está aprovado no escopo somente após confirmação humana específica. O código novo CART-01 permanece local na API; apresentação/callbacks BOT-03, outputs reais INT-02 e validação QA-01 continuam pendentes. Envio de pedido e pagamento permanecem proibidos neste incremento. Login/senha não confirmam carrinho nem aprovam compra.
 
-**Pendente:** conversa de compras, participantes, busca apresentada pelo bot, sacola, aprovação de pedido e checkout. O login não aprova uma compra. Não apresentar esses requisitos como funcionalidades entregues.
+- [Remoto publicado × alterações locais](docs/estado-remoto-local.md)
+- [Plano integrado](docs/plano-conversacional.md) e [backlog](docs/backlog-conversacional.md)
+- [Decisões vigentes](docs/decisoes-conversacionais.md)
+- [Evidências online históricas](docs/estado-atual.md)
+- [Documentação e operação](docs/README.md)
 
-## Arquitetura
-
-Fluxo implementado: Telegram → adaptador Python → [api-backend](https://github.com/Modo-Escuro/api-backend) → OAuth e verificação da sessão pelo MCP iFood. O agente de compra e as regras de grupo ainda precisam ser integrados a esse fluxo.
-
-Python 3.12, transporte pela biblioteca padrão, validação de contrato com `jsonschema`, long polling e acesso restrito a um organizador em conversa privada. Cursor e ações iniciadas ficam em SQLite; tokens iFood ficam exclusivamente no backend.
-
-O [cliente de conversa v1.0](docs/cliente-conversa.md) está implementado e validado offline como parte da BOT-01. Ainda falta conectá-lo ao polling e às rotas duráveis da RUN-01 para habilitar a conversa com IA.
-
-## Documentação
-
-Comece pelo [índice](docs/README.md). As referências principais são:
-
-| Necessidade | Documento |
-| --- | --- |
-| Saber o que funciona e qual evidência existe | [Estado atual](docs/estado-atual.md) |
-| Entender os módulos e suas fronteiras | [Arquitetura implementada](docs/arquitetura.md) |
-| Usar login, confirmação e verificação | [Login iFood](docs/login-ifood.md) |
-| Operar o serviço e manter o estado | [Railway](docs/deploy-railway.md) |
-| Executar localmente sem disputar polling | [Execução local](docs/executar-bot.md) |
-| Escolher o próximo incremento | [Plano da demo](docs/plano-demo.md) |
-| Preservar regras e decisões abertas | [Regras](docs/regras-preservadas.md) |
-
-As cópias em [docs/baseline](docs/baseline/proveniencia.json) preservam a StRS v0.2, ainda em validação, e os contratos recebidos. O [protótipo original](https://github.com/Modo-Escuro/compra-com-contexto) mantém seu histórico e sua simulação Python; essas evidências não equivalem à implementação deste bot.
+Tokens iFood ficam exclusivamente no backend; o bot usa o canal autenticado. O acesso por senha conserva um polling e dados separados por usuário. Não iniciar outra instância com token real durante testes. Baseline e fixtures fixadas não são atualizadas por esta revisão documental.
 
 ## Desenvolvimento
 
@@ -40,4 +22,4 @@ As cópias em [docs/baseline](docs/baseline/proveniencia.json) preservam a StRS 
 ./.venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-Os testes simulam Telegram e backend, sem polling real nem credenciais. A CI executa em Windows e Linux. Use `.venv/bin/python` no Linux/macOS. Consulte [execução local](docs/executar-bot.md) para preparar o ambiente e configurar variáveis; `.env` não é carregado automaticamente.
+Use `.venv/bin/python` no Linux/macOS. Testes não comprovam resposta do iFood; mudanças só documentais exigem conferir coerência, links e diff.

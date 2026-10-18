@@ -73,7 +73,7 @@ mensagens já exibidas ou validar itens/preços/endereços por esse mecanismo.
 
 O critério da issue “troca de linkId invalida ações antigas de compra” permanece dependente de BOT-03 e da
 validação de versão/vínculo no backend, com BUY-01 para aprovação. Ausência de botão de compra neste bot não
-comprova esse critério. Login e retomada nunca aprovam uma compra. DEC-01 mantém demo simulada e MCP só leitura.
+comprova esse critério. Login e retomada nunca aprovam uma compra. A DEC-01 exige carrinho real confirmado; callback PREPARE_CART depende da CART-01/INT-02 e não é implementado pela retomada. Envio e pagamento continuam proibidos.
 
 ## Validação e ensaio humano
 
