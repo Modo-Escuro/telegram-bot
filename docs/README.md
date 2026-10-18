@@ -4,6 +4,8 @@
 
 # Documentação do bot Compra com Contexto
 
+[Conversa guiada](conversa-guiada.md): opções com botões, respostas contextuais e próxima ação; incremento local após #20, sem deploy. Grupos por conta iFood continuam dependentes de identidade estável validada.
+
 [Conclusão offline CART-01](cart-01-conclusao-offline.md): confirmação de endereço integrada à revisão completa, apresentação de composição/custos finais e ensaios HTTP locais, sem ativação real.
 
 [Continuidade automática e endereços](continuidade-enderecos.md): correção da mensagem presa, retomada após OAuth e escolha humana do endereço; publicação/CI não comprovam ativação.

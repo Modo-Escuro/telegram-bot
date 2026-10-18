@@ -195,12 +195,12 @@ class ConversationClient:
         return PreparedCommand(raw, schema)
 
     @safe_response(mutation=True)
-    def send(self, command: PreparedCommand) -> Operation | Cancellation:
+    def send(self, command: PreparedCommand, *, session_ref=None) -> Operation | Cancellation:
         # Também validar comandos restaurados/instanciados pelo chamador.
         command = self.restore(command._raw, command.schema)
         body = command.to_dict()
         if command.schema == "event":
-            status, result = self._request("POST", "/events", command._raw)
+            status, result = self._request("POST", "/events", command._raw, session_ref=session_ref)
             operation = self._operation(result)
             require(
                 operation.event_id == body["eventId"]
@@ -210,7 +210,9 @@ class ConversationClient:
                 require(change["source"] == body["source"])
             return operation
         target = body["operationId"]
-        status, result = self._request("POST", f"/operations/{target}/cancel", command._raw)
+        status, result = self._request(
+            "POST", f"/operations/{target}/cancel", command._raw, session_ref=session_ref
+        )
         validate("cancelResult", result)
         self._scope(result)
         require(result["eventId"] == body["eventId"] and result["targetOperationId"] == target)
@@ -218,19 +220,19 @@ class ConversationClient:
         return Cancellation(encode(result), result["status"])
 
     @safe_response()
-    def get_operation(self, operation_id: str, *, event_id: str) -> Operation:
+    def get_operation(self, operation_id: str, *, event_id: str, session_ref=None) -> Operation:
         require(
             isinstance(operation_id, str)
             and re.fullmatch(r"[A-Za-z0-9_-]{16,64}", operation_id) is not None
         )
-        _, body = self._request("GET", f"/operations/{operation_id}")
+        _, body = self._request("GET", f"/operations/{operation_id}", session_ref=session_ref)
         operation = self._operation(body)
         require(operation.operation_id == operation_id and operation.event_id == event_id)
         return operation
 
     @safe_response()
-    def get_snapshot(self) -> Snapshot:
-        _, body = self._request("GET", "")
+    def get_snapshot(self, *, session_ref=None) -> Snapshot:
+        _, body = self._request("GET", "", session_ref=session_ref)
         validate("snapshot", body)
         self._scope(body)
         check_snapshot(body, self._now())
@@ -292,7 +294,23 @@ class ConversationClient:
         require(body.get("purchaseAuthorized") is False)
         return body
 
-    def _request(self, method: str, suffix: str, raw: bytes | None = None) -> tuple[int, dict]:
+    @safe_response()
+    def account_context(self):
+        _, body = self._request("GET", "/account-context")
+        require(type(body.get("enabled")) is bool)
+        if not body["enabled"]:
+            return None
+        require(
+            isinstance(body.get("sessionRef"), str)
+            and re.fullmatch(r"[a-f0-9]{64}", body["sessionRef"])
+        )
+        return body["sessionRef"]
+
+    def _request(
+        self, method: str, suffix: str, raw: bytes | None = None, *, session_ref=None
+    ) -> tuple[int, dict]:
+        if session_ref is not None:
+            require(isinstance(session_ref, str) and re.fullmatch(r"[a-f0-9]{64}", session_ref))
         request = Request(
             self._config.base_url.rstrip("/")
             + f"/api/bot/v1/conversations/{self._conversation_id}{suffix}",
@@ -305,6 +323,7 @@ class ConversationClient:
                 **({"X-Telegram-Access": "PASSWORD"} if self._config.password_access else {}),
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                **({"X-Conversation-Session": session_ref} if session_ref else {}),
             },
         )
         try:
@@ -316,6 +335,8 @@ class ConversationClient:
                 status = response.status
                 content_type = response.headers.get_content_type()
                 data = response.read(MAX_BODY + 1)
+            if status == 404 and suffix == "/account-context":
+                return 200, {"enabled": False}
             if status == 404 and suffix == "/addresses":
                 # API anterior: recurso adicional ausente, contrato RUN-01 continua válido.
                 raise ConversationError("ACTION_UNAVAILABLE")

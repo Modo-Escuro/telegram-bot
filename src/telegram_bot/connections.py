@@ -16,6 +16,7 @@ class Reply:
     markup: dict | None = None
     watch_attempt: str | None = field(default=None, repr=False)
     watch_phase: str = field(default="", repr=False)
+    connection_state: str | None = None
 
 
 def status_text(status):
@@ -54,12 +55,19 @@ def status_reply(status):
             [{"text": "Confirmar conexão", "callback_data": "ifc:" + status.confirmation_id}]
         )
     if status.attempt_id and len(status.attempt_id) <= 60:
-        buttons.append(
-            [{"text": "Cancelar tentativa", "callback_data": "ifx:" + status.attempt_id}]
-        )
+        buttons.append([{"text": "Cancelar login", "callback_data": "ifx:" + status.attempt_id}])
     if status.link_id and len(status.link_id) <= 60:
-        buttons.append([{"text": "Desconectar vínculo", "callback_data": "ifd:" + status.link_id}])
-    return Reply(text, {"inline_keyboard": buttons} if buttons else None)
+        buttons.append([{"text": "Sair da conta iFood", "callback_data": "ifd:" + status.link_id}])
+    elif not status.attempt_id:
+        buttons.append([{"text": "Entrar no iFood", "callback_data": "nav:connect"}])
+    if status.state == "CONNECTED" and status.identity:
+        labels = [status.identity.get("displayName"), status.identity.get("emailMasked")]
+        text += "\nConta ativa: " + " · ".join(
+            s for s in labels if isinstance(s, str) and 0 < len(s) <= 150
+        )
+    return Reply(
+        text, {"inline_keyboard": buttons} if buttons else None, connection_state=status.state
+    )
 
 
 def error_text(error):
@@ -161,6 +169,9 @@ class Connections:
                     resume_key=f"status-update-{update_id}" if command == "/verificar" else None,
                 )
             if command == "/conectar":
+                current = self.backend.status()
+                if current.link_id or current.attempt_id:
+                    return self._present(current)
                 status, url = self.backend.connect()
                 reply = self._present(status)
                 reply.text = (
@@ -215,16 +226,18 @@ class Connections:
                     return Reply(error_text(next_error))
             return Reply(error_text(error))
 
-    def _cancel(self):
-        status, cancelled = self.backend.cancel()
+    def _cancel(self, reference=None):
+        reference = reference or self.backend.status().attempt_id
+        status, cancelled = self.backend.cancel(reference=reference)
         reply = self._present(status)
         reply.text = ("Tentativa cancelada." if cancelled else "Não havia tentativa pendente.") + (
             " O cancelamento preserva um vínculo já confirmado.\n" + reply.text
         )
         return reply
 
-    def _disconnect(self):
-        status, removed = self.backend.disconnect()
+    def _disconnect(self, reference=None):
+        reference = reference or self.backend.status().link_id
+        status, removed = self.backend.disconnect(reference=reference)
         reply = self._present(status)
         reply.text = ("Vínculo local removido." if removed else "Não havia vínculo local.") + (
             " Não foi solicitada revogação no provedor. "
@@ -249,7 +262,7 @@ class Connections:
                 return Reply(
                     "Este botão não corresponde à tentativa ou ao vínculo atual. Consulte /ifood."
                 )
-            return self._cancel() if prefix == "ifx" else self._disconnect()
+            return self._cancel(reference) if prefix == "ifx" else self._disconnect(reference)
         except BackendError as error:
             return Reply(error_text(error))
 
@@ -275,6 +288,8 @@ class Connections:
             return
         try:
             status = self.backend.status(timeout=5)
+            if hasattr(api, "set_connection_state"):
+                api.set_connection_state(allowed_id, status.state)
         except BackendError:
             if now >= watch["expires"]:
                 self._finish_watch(
@@ -296,7 +311,11 @@ class Connections:
                 if not status.attempt_id
                 else ("Esta tentativa foi substituída. Consulte /ifood para acompanhar a atual.")
             )
-            self._finish_watch(api, allowed_id, watch, text + followup)
+            reply = status_reply(status)
+            reply.text = text + followup
+            if watch["message_id"]:
+                self._edit(api, allowed_id, watch, reply)
+            self.state.stop_login_watch()
             return
         expires = min(
             status.attempt_expires_at

@@ -11,7 +11,7 @@ from .cart_client import CartClient
 from .connections import Connections
 from .conversation import ConversationClient
 from .conversation_runner import Conversations, ConversationService, scope_for
-from .menu import keyboard, navigation
+from .menu import inline_menu, navigation
 from .outbox import Outbox
 from .runner import CONVERSATION_HELP, DEMO_NOTICE, GET_STARTED, private_message, process_batch
 from .state import State
@@ -169,6 +169,30 @@ class PasswordRouter:
                 continue
             message = private_message(update)
             text = message.get("text", "") if message else ""
+            callback = update.get("callback_query")
+            if isinstance(callback, dict) and callback.get("data") in {
+                "nav:enter",
+                "nav:cancel-entry",
+                "nav:exit",
+            }:
+                origin = callback.get("message", {}).get("from", {})
+                if (
+                    not isinstance(origin, dict)
+                    or origin.get("is_bot") is not True
+                    or origin.get("id") != self.bot_id
+                    or callback.get("message", {}).get("forward_origin")
+                ):
+                    self.state.done(number)
+                    continue
+                text = {
+                    "nav:enter": "Entrar na demo",
+                    "nav:cancel-entry": "Cancelar entrada",
+                    "nav:exit": "/sair",
+                }[callback["data"]]
+                try:
+                    api.call("answerCallbackQuery", {"callback_query_id": callback["id"]})
+                except TelegramError:
+                    pass
             words = text.strip().split(maxsplit=1) if isinstance(text, str) else []
             command, _, target = (words[0] if words else "").partition("@")
             if target and target.casefold() != username.casefold():
@@ -188,7 +212,11 @@ class PasswordRouter:
                         api,
                         owner,
                         "Digite a senha da equipe aqui. Vou tentar apagar sua mensagem depois de conferir. Para desistir, toque em Cancelar entrada.",
-                        {"keyboard": [[{"text": "Cancelar entrada"}]], "resize_keyboard": True},
+                        {
+                            "inline_keyboard": [
+                                [{"text": "Cancelar entrada", "callback_data": "nav:cancel-entry"}]
+                            ]
+                        },
                     )
                 self.state.done(number)
                 continue
@@ -279,7 +307,9 @@ class PasswordRouter:
                 owner,
                 text,
                 markup
-                or keyboard(access=not self.access.allowed(owner), cart=self.config.cart_enabled),
+                or inline_menu(
+                    access=not self.access.allowed(owner), cart=self.config.cart_enabled
+                ),
             )
         except TelegramError as exc:
             if exc.code != 403:

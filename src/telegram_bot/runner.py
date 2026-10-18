@@ -3,6 +3,7 @@ import time
 
 from .cart import COMMANDS as CART_COMMANDS
 from .connections import COMMANDS, Connections
+from .conversation import ConversationError
 from .conversation_contract import ProtocolError
 from .conversation_runner import (
     CLEAR_MARKUP,
@@ -14,12 +15,12 @@ from .conversation_runner import (
     remove_markup,
     remove_text,
 )
-from .menu import navigation
+from .menu import inline_menu, navigation
 from .telegram import TelegramError
 
 GET_STARTED = (
     "O pedido pode ser só para você ou para um grupo. Conte as restrições alimentares e quanto quer gastar.\n\n"
-    "Toque em Conectar iFood para usar a conta teste."
+    "Em Conta iFood, toque em Entrar no iFood para usar sua conta teste."
 )
 DEMO_NOTICE = (
     "Conectar a conta não autoriza compras. Preparar o carrinho no iFood exige revisão "
@@ -28,12 +29,12 @@ DEMO_NOTICE = (
 START = "Olá! Eu sou o Ailo, seu assistente de compras.\n\n" + GET_STARTED + "\n\n" + DEMO_NOTICE
 STATUS = "Estou por aqui! O login não é verificado nesta tela. Use /ifood para consultar sua conta."
 HELP = (
-    "• Conectar iFood: entre na conta teste.\n"
+    "• Conta iFood: entre, acompanhe o login ou saia da conta teste.\n"
     "• Endereços iFood: escolha onde receber.\n"
     "• Esvaziar carrinho: limpe a composição da demo.\n"
     "• Remover pessoa / Limpar perfil: apague pessoas ou todo o pedido salvo.\n"
     "• Sair da demo: encerre seu acesso.\n\n"
-    "Faltou uma resposta? Use /retomar. Para desconectar a conta, use /desconectar."
+    "Faltou uma resposta? Use /retomar. Você pode escrever ou usar os botões das mensagens."
 )
 CONVERSATION_HELP = "\n\nAs respostas chegam automaticamente por aqui."
 
@@ -47,17 +48,15 @@ def profile_command(api, state, allowed_id, action, conversations):
     if conversations is None:
         api.send(allowed_id, "A conversa de compras não está disponível nesta configuração.")
         return
+    try:
+        context, names = conversations.profile_context()
+    except (ConversationError, ValueError, ProtocolError, OSError):
+        api.send(allowed_id, "Não consegui consultar o pedido agora. Tente de novo em instantes.")
+        return
     if action == "/limpar":
         sent = api.send(allowed_id, CLEAR_QUESTION, CLEAR_MARKUP)
         kind, names = "clear", []
     else:
-        try:
-            names = conversations.participant_names()
-        except (ValueError, ProtocolError, OSError):
-            api.send(
-                allowed_id, "Não consegui consultar o pedido agora. Tente de novo em instantes."
-            )
-            return
         if not names:
             api.send(allowed_id, NO_PEOPLE)
             return
@@ -65,6 +64,7 @@ def profile_command(api, state, allowed_id, action, conversations):
         kind = "remove"
     if isinstance(sent, dict) and type(sent.get("message_id")) is int:
         state.confirm_prompt(sent["message_id"], kind, names)
+        state.bind_prompt(sent["message_id"], context)
 
 
 def profile_click(api, state, allowed_id, callback, update_id, data, conversations):
@@ -86,8 +86,11 @@ def profile_click(api, state, allowed_id, callback, update_id, data, conversatio
         reply = "Cancelado. Nada foi apagado."
     elif conversations is not None:
         try:
-            conversations.text_click(callback, update_id, text, "tg-" + kind + "-")
-        except (ValueError, ProtocolError):
+            context = state.prompt_context(message["message_id"])
+            if context is None:
+                raise ValueError("Confirmação expirada")
+            conversations.text_click(callback, update_id, text, "tg-" + kind + "-", context)
+        except (ConversationError, ValueError, ProtocolError):
             reply = "Não consegui enviar a confirmação. Nada foi apagado; tente de novo."
     api.send(allowed_id, reply)
     try:
@@ -140,6 +143,8 @@ def reply_for(update, allowed_id, username, connections=None):
         )
     if command == "/start":
         return START
+    if command == "/menu":
+        return "O que você quer fazer?"
     if command in {"/ajuda", "/help"}:
         return HELP
     if command == "/status":
@@ -230,13 +235,27 @@ def process_batch(
         if reply:
             try:
                 if isinstance(reply, str):
-                    api.send(allowed_id, reply)
+                    api.send(
+                        allowed_id,
+                        reply,
+                        inline_menu(cart=carts is not None)
+                        if reply.startswith(START) or reply in {HELP, "O que você quer fazer?"}
+                        else None,
+                    )
                     if conversations is not None and reply.startswith(START):
                         # Conversa nova: pergunta uma vez se o uso é individual ou em grupo.
+                        try:
+                            context, _ = conversations.profile_context()
+                        except (ConversationError, ValueError, ProtocolError):
+                            context = None
                         sent = api.send(allowed_id, MODE_QUESTION, MODE_MARKUP)
                         if isinstance(sent, dict) and type(sent.get("message_id")) is int:
                             state.mode_prompt(sent["message_id"])
+                            if context is not None:
+                                state.bind_prompt(sent["message_id"], context)
                 else:
+                    if reply.connection_state and hasattr(api, "set_connection_state"):
+                        api.set_connection_state(allowed_id, reply.connection_state)
                     result = api.send(allowed_id, reply.text, reply.markup)
                     if connections is not None:
                         connections.delivered(reply, result)
@@ -330,6 +349,58 @@ def process_callback(
     if not authorized:
         return
     data = callback.get("data")
+    if isinstance(data, str) and data.startswith("nav:"):
+        if (
+            message.get("forward_origin")
+            or not isinstance(message.get("from"), dict)
+            or message["from"].get("is_bot") is not True
+        ):
+            return
+        action = data[4:]
+        if action in {"remove", "clear"}:
+            profile_command(
+                api,
+                state,
+                allowed_id,
+                "/remover" if action == "remove" else "/limpar",
+                conversations,
+            )
+        elif action in {"account", "connect"}:
+            handler = connections or Connections(None, state)
+            reply = handler.reply("/conectar" if action == "connect" else "/ifood", [], update_id)
+            result = api.send(allowed_id, reply.text, reply.markup)
+            handler.delivered(reply, result)
+        elif action == "addresses" and conversations:
+            queued = conversations.box.enqueue_addresses("menu-" + str(update_id))
+            api.send(
+                allowed_id,
+                "Vou conferir seus endereços."
+                if queued
+                else "Aguarde a resposta anterior e tente novamente.",
+            )
+        elif action == "review" and carts:
+            api.send(allowed_id, carts.receive("/revisarcarrinho"))
+        elif action in {"help", "menu"}:
+            api.send(
+                allowed_id,
+                HELP if action == "help" else "O que você quer fazer?",
+                inline_menu(cart=carts is not None),
+            )
+        elif action == "exit":
+            api.send(
+                allowed_id,
+                "Sair da demo está disponível no acesso por senha. Para sair do iFood, abra Conta iFood.",
+                inline_menu(),
+            )
+        return
+    if isinstance(data, str) and data.startswith("cv:"):
+        reply = (
+            conversations.flow_click(callback, update_id, carts)
+            if conversations
+            else "Conversa indisponível nesta configuração."
+        )
+        api.send(allowed_id, reply)
+        return
     if isinstance(data, str) and data.startswith("ifa:"):
         queued = conversations and conversations.address_click(callback, update_id)
         api.send(
@@ -351,8 +422,10 @@ def process_callback(
         )
         if ok:
             try:
-                conversations.mode_click(callback, update_id, choice)
-            except (ValueError, ProtocolError):
+                conversations.mode_click(
+                    callback, update_id, choice, state.prompt_context(message["message_id"])
+                )
+            except (ConversationError, ValueError, ProtocolError):
                 ok = False
         api.send(
             allowed_id,
@@ -400,6 +473,8 @@ def process_callback(
         return
     handler = connections or Connections(None, state)
     reply = handler.action_click(data, update_id)
+    if reply.connection_state and hasattr(api, "set_connection_state"):
+        api.set_connection_state(allowed_id, reply.connection_state)
     result = api.send(allowed_id, reply.text, reply.markup)
     handler.delivered(reply, result)
     try:

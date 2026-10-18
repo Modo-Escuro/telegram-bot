@@ -1,13 +1,14 @@
 """Limpar perfil e remover pessoa: confirmação por botão, texto fixo do contrato, envio único."""
 
 import json
+from unittest.mock import Mock
 
 from test_conversation_worker import OWNER, Fixture
 from test_individual_mode import click
 
 from telegram_bot.conversation_contract import Snapshot, encode
 from telegram_bot.conversation_runner import CLEAR_QUESTION, CLEAR_TEXT, remove_text
-from telegram_bot.menu import BUTTONS, keyboard
+from telegram_bot.menu import BUTTONS, inline_menu
 from telegram_bot.runner import NO_PEOPLE, process_batch
 
 
@@ -48,6 +49,35 @@ def group_snapshot(*names):
 
 
 class ProfileTests(Fixture):
+    def test_confirmation_from_account_a_cannot_clear_account_b(self):
+        self.client.account_context = Mock(return_value="a" * 64)
+        self.client.get_snapshot = Mock(return_value=group_snapshot("Ana"))
+        self.run_batch(command(1, "/limpar"))
+        _, prompt = self.prompt(CLEAR_QUESTION)
+        self.client.account_context.return_value = "b" * 64
+        self.run_batch(click(2, "clr:yes", prompt))
+        self.assertIsNone(self.box.active())
+        self.assertEqual(self.client.sent, [])
+        self.assertIn("Nada foi apagado", self.telegram.send.call_args.args[1])
+
+    def test_profile_confirmation_is_not_rebased_to_changed_group(self):
+        self.client.current = group_snapshot("Ana")
+        self.run_batch(command(1, "/remover"))
+        _, prompt = self.prompt("Quem você quer remover do pedido?")
+        self.run_batch(click(2, "rm:0", prompt))
+        current = group_snapshot("Ana", "Bia").to_dict()
+        current["version"] = 4
+        self.client.current = Snapshot(encode(current), 4, "COLLECTING")
+        self.tick()
+        self.assertEqual(self.box.active()["notice"], "STALE_VERSION")
+        self.assertEqual(self.client.sent, [])
+
+    def test_menu_does_not_restart_individual_group_question(self):
+        self.run_batch(command(1, "Menu"))
+        self.assertEqual(self.telegram.send.call_count, 1)
+        self.assertEqual(self.telegram.send.call_args.args[1], "O que você quer fazer?")
+        self.assertIn("inline_keyboard", self.telegram.send.call_args.args[2])
+
     def run_batch(self, *updates):
         process_batch(
             self.telegram, self.state, list(updates), OWNER, "bot", conversations=self.adapter
@@ -65,7 +95,7 @@ class ProfileTests(Fixture):
     def test_menu_has_buttons(self):
         self.assertEqual(BUTTONS["Limpar perfil"], "/limpar")
         self.assertEqual(BUTTONS["Remover pessoa"], "/remover")
-        labels = [b["text"] for row in keyboard()["keyboard"] for b in row]
+        labels = [b["text"] for row in inline_menu()["inline_keyboard"] for b in row]
         self.assertIn("Limpar perfil", labels)
         self.assertIn("Remover pessoa", labels)
 

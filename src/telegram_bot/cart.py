@@ -170,7 +170,7 @@ class Carts:
         self.future = (kind, request_id, self.executor.submit(work))
         return NOTICE
 
-    def receive(self, command):
+    def receive(self, command, *, expected_version=None):
         row = self._row()
         if command == "/conferircarrinho":
             if not row:
@@ -184,6 +184,11 @@ class Carts:
         generation = self.generation
 
         def prepare():
+            if (
+                expected_version is not None
+                and self.conversation.get_snapshot().version != expected_version
+            ):
+                raise CartError("CART_REVIEW_STALE")
             link = link_fingerprint(self.backend.status(timeout=5))
             if not link:
                 raise CartError("CART_LINK_CHANGED")

@@ -259,6 +259,7 @@ class CommandTests(unittest.TestCase):
         self.backend.confirm.assert_called_once()
 
     def test_connect_timeout_is_not_retried_on_replay(self):
+        self.backend.status.return_value = LinkStatus.parse(payload("DISCONNECTED"))
         self.backend.connect.side_effect = BackendError(uncertain=True)
         first = self.connections.reply("/conectar", [], 1)
         second = self.connections.reply("/conectar", [], 1)
