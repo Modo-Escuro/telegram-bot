@@ -1,5 +1,7 @@
 # Regras preservadas
 
+Atualização: [remoto/local](estado-remoto-local.md) e [decisões vigentes](decisoes-conversacionais.md) distinguem preparação real confirmada de aprovação de pedido futura. Envio/pagamento continuam proibidos. O levantamento de 17/10 ao final é histórico, não estado do domínio já integrado.
+
 A StRS v0.2 em baseline é uma cópia integral, com IDs e decisões abertas preservados. Continua em validação. O protótipo original demonstra regras em simulação; sua persistência SQLite não garante execução única no iFood.
 
 ## Requisitos que permanecem

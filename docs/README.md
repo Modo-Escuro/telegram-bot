@@ -1,5 +1,9 @@
 # Documentação do bot Compra com Contexto
 
+Esta revisão altera somente documentação. A implementação CART-01 local, suas rotas e resultados de testes não fazem parte das mains remotas conferidas.
+
+[Estado remoto/local](estado-remoto-local.md): versões conferidas, código integrado e CART-01 ainda local. [Decisões vigentes](decisoes-conversacionais.md): carrinho real confirmado já aprovado no escopo, com outputs/ativação pendentes; envio/pagamento proibidos.
+
 [Acesso compartilhado com senha](acesso-senha.md): entrada de qualquer usuário na conversa privada,
 isolamento por conta e implantação coordenada com a API. A senha não habilita compras.
 
@@ -35,4 +39,4 @@ O [cliente de conversa v1.0](cliente-conversa.md) está integrado à outbox e ao
 
 A [StRS v0.2](baseline/stakeholder-requirements-specification.md) continua em validação. Os IDs e as decisões abertas são preservados. [Proveniência e hashes](baseline/proveniencia.json) identificam as cópias históricas, incluindo o snapshot OpenCode que não estava versionado no repositório original. Não editar essas cópias para atualizar status operacional.
 
-O [contrato bot→API](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) é a referência da revisão atual. Não presumir que rotas propostas ou ferramentas externas descritas estejam disponíveis ou implementadas no bot.
+O [contrato bot→API](https://github.com/Modo-Escuro/api-backend/blob/e8d6b6fd544431092960a872398e920fc3bad41e/docs/bot-api.md) identifica a API remota conferida. Os commits/pins históricos dos testes do consumidor são preservados e não significam que a CI ensaiou esta main atual. Não presumir que rotas propostas ou ferramentas externas descritas estejam disponíveis ou implementadas no bot.
