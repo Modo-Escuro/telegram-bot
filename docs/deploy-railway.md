@@ -1,6 +1,6 @@
 # Publicar o bot na Railway
 
-Status: configuração do worker preparada para publicação na Railway, com uma réplica e volume obrigatório. A configuração do backend foi conferida separadamente; não comprova login iFood completo. O callback HTTPS permanece dependente da aprovação no iFood.
+Status: configuração do worker preparada para publicação na Railway, com uma réplica e volume obrigatório. A configuração do backend foi conferida separadamente; não comprova login iFood completo. O usuário informou a aprovação do callback HTTPS no iFood em 17/10/2026; o ensaio de login completo continua pendente.
 
 ## Serviço e variáveis
 
