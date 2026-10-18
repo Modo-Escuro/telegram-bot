@@ -32,6 +32,7 @@ class Telegram:
             "sendMessage",
             "answerCallbackQuery",
             "editMessageReplyMarkup",
+            "editMessageText",
         }
     )
 
@@ -76,8 +77,12 @@ class Telegram:
             )
         return body.get("result")
 
-    def updates(self, offset):
-        payload = {"timeout": 25, "limit": 100, "allowed_updates": ["message", "callback_query"]}
+    def updates(self, offset, *, timeout=25):
+        payload = {
+            "timeout": timeout,
+            "limit": 100,
+            "allowed_updates": ["message", "callback_query"],
+        }
         if offset is not None:
             payload["offset"] = offset
         result = self.call("getUpdates", payload)

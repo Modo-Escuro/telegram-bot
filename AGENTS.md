@@ -18,6 +18,6 @@
 - Contrato de login implementado contra api-backend 20e46fd e revisado para 686300d: confirmação por botão humano com confirmationId. Não pedir código digitado. BACKEND_API_TOKEN no bot corresponde a BOT_API_TOKEN na API. Não repetir mutações automaticamente após timeout.
 
 - O bot está online: não iniciar outra instância real com o mesmo token. Preservar o volume /data e o SQLite atualizado ao migrar execução. A API ainda estava sem volume na última conferência; preservar vínculos existentes antes de corrigir essa persistência.
-- O botão humano não é enviado automaticamente após o callback: orientar /confirmar no Telegram. A sessão operacional observada não comprova busca, sacola ou compra; não atualizar snapshots históricos como se fossem estado em tempo real.
 
 - Antes de implementar conversa ou compra, consultar docs/plano-conversacional.md, docs/backlog-conversacional.md e docs/decisoes-conversacionais.md. Seguir dependências e critérios das issues; propostas não são decisões aprovadas. O contrato de conversa ainda é proposto.
+- BOT-02 acompanha a tentativa e edita a mensagem de login para apresentar o botão humano; /confirmar é fallback. Persistir apenas metadados de acompanhamento, nunca URL, confirmationId, código ou identidade. Cancelar tentativa e desconectar vínculo são ações distintas; nenhuma implica aprovação de compra. A sessão operacional observada não comprova busca, sacola ou compra; não atualizar snapshots históricos como se fossem estado em tempo real.

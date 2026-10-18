@@ -47,17 +47,17 @@ Origem HTTPS configurada em `BACKEND_BASE_URL`. Headers: `Authorization: Bearer 
 | Clique em Confirmar conexão | `POST /api/bot/ifood/confirm` | Envia o `confirmationId` da tentativa atual após validação humana |
 | `/verificar` | `POST /api/bot/ifood/verify` | Solicita verificação/renovação ao backend |
 
-O cliente não consome ainda as rotas de cancelamento/desconexão nem as rotas de avaliação e endereços. O [contrato de referência](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) também descreve essas rotas do backend; existência na API não significa comando entregue no bot.
+BOT-02 consome também POST /api/bot/ifood/cancel e DELETE /api/bot/ifood/link, com efeitos separados. Consultas automáticas de status atualizam a mensagem de login. Rotas de avaliação e endereços continuam fora do adaptador. O [contrato de referência](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) também descreve essas rotas do backend; existência na API não significa comando entregue no bot.
 
-O timeout HTTP do backend é de 50 segundos, sem retries automáticos. O cliente rejeita redirect e link de autorização fora da origem pública configurada ou sem correspondência com a tentativa.
+O timeout HTTP do backend é de 50 segundos nos comandos e 5 segundos nas consultas automáticas; não há retry automático de mutações. O cliente rejeita redirect e link de autorização fora da origem pública configurada ou sem correspondência com a tentativa.
 
 ## Estado e repetição
 
-Antes de conexão, verificação ou confirmação, o adaptador grava o `update_id` como ação iniciada. Replay do mesmo update consulta o estado em vez de repetir a mutação. O cursor avança após resposta ou descarte autorizado do evento; falha entre envio Telegram e gravação pode repetir mensagem textual.
+Antes de conexão, verificação, confirmação, cancelamento ou desconexão, o adaptador grava o `update_id` como ação iniciada. Replay do mesmo update consulta o estado em vez de repetir a mutação. O cursor avança após resposta ou descarte autorizado do evento; falha entre envio Telegram e gravação pode repetir mensagem textual.
 
 O `confirmationId` não é persistido no SQLite: vem do status e do callback do botão. Clique antigo não confirma uma tentativa nova. Uso único e validade também dependem da autoridade do backend. O lock protege processos no mesmo diretório; não impede outra máquina de usar o mesmo token.
 
-O SQLite contém cursor e IDs de ações, sem mensagens ou credenciais. No backend, tokens iFood pertencem ao vínculo confirmado, fora do modelo e do bot. A persistência online da API ainda precisa de volume, conforme [estado atual](estado-atual.md).
+O SQLite contém cursor, IDs de ações e uma tentativa acompanhada (organizador, attemptId, messageId, fase e prazos), sem texto de mensagens ou credenciais. No backend, tokens iFood pertencem ao vínculo confirmado, fora do modelo e do bot. A persistência online da API ainda precisa de volume, conforme [estado atual](estado-atual.md).
 
 ## Regras para os próximos incrementos
 

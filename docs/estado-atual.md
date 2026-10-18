@@ -1,5 +1,7 @@
 # Estado atual e evidências
 
+**Incremento BOT-02:** o código desta branch acrescenta acompanhamento por edição da mensagem de login, cancelamento e desconexão. O relato abaixo conserva o estado observado anteriormente; não comprova deploy deste incremento. Comportamento e limites novos em [login iFood](login-ifood.md#acompanhamento-bot-02).
+
 Conferência em **17/10/2026, horário de São Paulo**. Este documento registra uma observação, não monitoramento contínuo. O [snapshot sanitizado](evidencias/login-ifood-2026-10-17.json) contém somente estados, operações permitidas e referências de versão.
 
 ## O que está entregue

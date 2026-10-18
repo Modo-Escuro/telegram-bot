@@ -1,6 +1,7 @@
 # Plano da demo e próximos incrementos
 
 **Atualização de planejamento — 18/10/2026:** a decomposição executável, prioridades, dependências e critérios estão no [plano conversacional](plano-conversacional.md) e no [backlog](backlog-conversacional.md). A sequência abaixo é o contexto do incremento anterior; o plano novo inclui revisão da branchBruna e reaproveitamento condicionado da F7, sem alterar a evidência histórica de login.
+**Incremento BOT-02:** o código desta branch acrescenta acompanhamento por edição da mensagem de login, cancelamento e desconexão. O relato abaixo conserva o estado observado anteriormente; não comprova deploy deste incremento. Comportamento e limites novos em [login iFood](login-ifood.md#acompanhamento-bot-02).
 
 [Índice](README.md) · [Estado atual](estado-atual.md) · [Regras](regras-preservadas.md)
 
