@@ -166,14 +166,29 @@ class Run01Integration(unittest.TestCase):
     def test_expunged_history_is_not_reintroduced_after_bot_restart(self):
         self.adapter.receive(update(1))
         self.worker.tick()
+        original = self.client.send
+        accepted = []
+
+        def lose(command):
+            accepted.append(original(command))
+            raise ConversationError("UNAVAILABLE", uncertain=True)
+
+        self.client.send = lose
         self.worker.tick()
-        operation_id, event_id = self.box.active()["operation_id"], self.box.active()["event_id"]
+        operation_id, event_id = accepted[0].operation_id, self.box.active()["event_id"]
         deadline = time.monotonic() + 5
         while not self.client.get_operation(operation_id, event_id=event_id).terminal:
             self.assertLess(time.monotonic(), deadline)
             time.sleep(0.03)
         self.assertEqual(self.request("/synthetic/expire", "POST")["purged"], 1)
+        self.client.send = original
+        self.box.save(self.box.active()["seq"], due=time.time())
+        # Reabrir o SQLite após o expurgo: nem o POST sem resposta pode restaurar a compra.
+        recovered = Outbox(self.path, "run01-integration")
+        self.addCleanup(recovered.close)
+        self.worker = ConversationWorker(recovered, self.client, self.telegram, OWNER)
         self.drive()
+        self.assertEqual(self.request("/synthetic/stats")["executions"], 1)
         sent = " ".join(call.args[1] for call in self.telegram.send.call_args_list)
         self.assertNotIn("Pessoa sintética", sent)
         self.assertEqual(self.client.get_snapshot().to_dict()["blocks"], [])
