@@ -26,6 +26,16 @@ A chave é gerada/derivada pelo adaptador antes do primeiro envio e preservada e
 
 API só confirma aceitação após persistência. Bot só avança o tratamento durável depois de registrar o vínculo evento/operação ou uma resposta final. Definir atomicidade, recuperação de falha entre passos e retenção de chaves; nunca expirar identidade de uma intenção remota ainda desconhecida.
 
+## Proveniência de cada alteração
+
+Cada alteração declarada pelo usuário deve conservar o `eventId` aceito pela API e uma referência interna à mensagem ou ação específica que a originou. A referência é escopada ao canal, bot e conversa; no Telegram, o adaptador a deriva do update validado (mensagem ou callback). IDs isolados não são globalmente únicos nem autorização.
+
+O adaptador autenticado fornece os metadados de origem; o modelo não os inventa. A API associa patch, versão resultante e origem. Correções posteriores preservam a cadeia de origem das versões anteriores; replay conserva a associação sem criar nova alteração. Recalculos derivados apontam para o evento causador, sem fabricar uma mensagem humana.
+
+O registro de proveniência não exige armazenar o texto integral. Retenção, acesso e expurgo dos metadados seguem DA07 e precisam preservar o mínimo necessário às intenções ainda em andamento. Dados privados do canal não entram em logs ou fixtures.
+
+Critérios de contrato: rastrear mudança de orçamento até a mensagem correta após reinício; conservar a origem de restrição anterior; rejeitar referência de outro escopo; não duplicar proveniência em replay. Implementação em [DATA-01](https://github.com/Modo-Escuro/api-backend/issues/13), com schemas em [API-01](https://github.com/Modo-Escuro/api-backend/issues/12).
+
 ## Versionamento e resultado
 
 Schema estrito, versão de contrato e versão de compra independentes. Patches usam versão esperada; resultado de busca vincula-se à versão consultada e não substitui estado novo. Resultado informa fase, versão, pendências, cobertura por pessoa, custos/validade e ações realmente permitidas.
