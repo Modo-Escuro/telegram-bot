@@ -20,6 +20,8 @@ Expiração, refresh, reconexão, indisponibilidade e desconexão não foram tod
 
 ## Ordem de execução proposta
 
+Atualização de 18/10/2026: [API-01 foi concluída](https://github.com/Modo-Escuro/api-backend/issues/12) como contrato v1.0 e conformidade offline. O [cliente correspondente do bot](cliente-conversa.md) está implementado em incremento isolado; as rotas/processamento durável continuam em RUN-01. As referências a “contrato futuro” abaixo representam a ordem histórica do plano; o contrato de conversa agora é a v1.0 fixada em API-01.
+
 1. **Persistir vínculos da API.** Preservar arquivos existentes antes de adicionar volume e mudar `IFOOD_LINKS_DIR`; ensaiar reinício controlado, consulta e nova verificação da mesma conexão. Não perder a conta já conectada por uma migração sem cópia.
 2. **Fechar o contrato de conversa e grupo.** Definir eventos, estado e respostas entre Telegram e API. O contrato do login já existe; conversa, sacola e aprovação não têm rotas acordadas. Não presumir `/chat` ou `/approve`.
 3. **Definir o recorte de grupo.** Decidir explicitamente rateio, conciliação entre limites individuais e coletivo, papéis e quantidade de restaurantes. São decisões abertas da StRS, não escolhas aprovadas por este plano.

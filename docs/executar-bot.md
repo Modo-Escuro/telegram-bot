@@ -15,10 +15,11 @@ Python 3.12 no Git Bash do Windows:
 ```bash
 cd ~/OneDrive/Desktop/telegram-bot
 python -m venv .venv
-./.venv/Scripts/python.exe -m pip install -e .
+./.venv/Scripts/python.exe -m pip install -r requirements.lock
+./.venv/Scripts/python.exe -m pip install --no-deps -e .
 ```
 
-Não recriar uma venv que já funciona. Se `python` não for 3.12, usar o executável correspondente. Linux/macOS: `.venv/bin/python`. O pacote usa somente a biblioteca padrão em execução.
+Não recriar uma venv que já funciona. Se `python` não for 3.12, usar o executável correspondente. Linux/macOS: `.venv/bin/python`. O transporte usa a biblioteca padrão; o cliente de conversa usa `jsonschema`, com dependências fixadas em `requirements.lock`.
 
 ## Configurar o ambiente sem registrar segredos
 

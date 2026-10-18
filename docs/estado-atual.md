@@ -4,6 +4,8 @@
 
 Conferência em **17/10/2026, horário de São Paulo**. Este documento registra uma observação, não monitoramento contínuo. O [snapshot sanitizado](evidencias/login-ifood-2026-10-17.json) contém somente estados, operações permitidas e referências de versão.
 
+Incremento de desenvolvimento em **18/10/2026**: [cliente de conversa v1.0](cliente-conversa.md) implementado e testado offline contra API-01 `6ce3d99`. Não altera a evidência online abaixo; integração com polling/outbox e RUN-01 permanece pendente. O contrato de conversa já foi especificado; sua implementação no serviço ainda não foi validada por este incremento.
+
 ## O que está entregue
 
 | Capacidade | Implementação e evidência |

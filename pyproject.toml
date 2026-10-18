@@ -7,13 +7,16 @@ name = "compra-contexto-telegram"
 version = "0.1.0"
 description = "Interface Telegram do Compra com Contexto"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["jsonschema==4.26.0"]
 
 [project.scripts]
 telegram-bot = "telegram_bot.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+telegram_bot = ["contracts/v1/*.json"]
 
 [tool.ruff]
 line-length = 100

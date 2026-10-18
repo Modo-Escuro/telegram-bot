@@ -1,2 +1,5 @@
 # Preservar bytes dos snapshots para conferir SHA-256 em qualquer sistema.
 docs/baseline/** -text whitespace=cr-at-eol
+# Contrato fixado: preservar bytes LF e hashes também em checkout Windows.
+src/telegram_bot/contracts/v1/*.json -text
+tests/conversation-examples.json -text
