@@ -13,7 +13,7 @@ from .conversation import ConversationClient
 from .conversation_runner import Conversations, ConversationService, scope_for
 from .menu import inline_menu, navigation
 from .outbox import Outbox
-from .runner import CONVERSATION_HELP, DEMO_NOTICE, GET_STARTED, private_message, process_batch
+from .runner import DEMO_NOTICE, GET_STARTED, private_message, process_batch
 from .state import State
 from .telegram import Telegram, TelegramError
 from .voice import VoiceConfig, VoiceTranscriber
@@ -277,8 +277,6 @@ class PasswordRouter:
                 if result == "OK":
                     self.access.clear_entry(owner)
                     self.session(owner)
-                    if self.config.conversation_enabled:
-                        reply += CONVERSATION_HELP
                     if VoiceConfig.from_env() is not None and self.config.conversation_enabled:
                         reply += "\n\nPode enviar áudios de até um minuto; uso a Groq para transcrever e mostro o texto para você conferir."
                 if result != "OK" and not self.access.allowed(owner):

@@ -221,6 +221,31 @@ class PresentationTests(unittest.TestCase):
             ["Menu"],
         )
 
+    def test_compact_participant_additions_leave_only_next_question(self):
+        d = self.document()
+        d["blocks"] = d["blocks"][:2]
+        d["blocks"][1]["text"] = "Bia entrou na compra. Ana entrou na compra."
+        d["pending"] = ["Ana tem alguma alergia ou restrição alimentar?"]
+        self.assertEqual(
+            render(Snapshot(encode(d), 0, "COLLECTING"), concise=True), d["pending"][0]
+        )
+        d["blocks"][1]["text"] += " Registrei alergia a amendoim para Ana."
+        text = render(Snapshot(encode(d), 0, "COLLECTING"), concise=True)
+        self.assertNotIn("entrou na compra", text)
+        self.assertIn("Registrei alergia a amendoim para Ana.", text)
+        self.assertIn(d["pending"][0], text)
+
+    def test_budget_clarification_asks_only_kind_before_priority(self):
+        d = self.document()
+        d["blocks"] = d["blocks"][:1]
+        d["pending"] = [
+            "R$ 60,00 para o grupo é um teto máximo ou só uma referência?",
+            "Vocês preferem economia ou rapidez?",
+        ]
+        self.assertEqual(
+            render(Snapshot(encode(d), 0, "COLLECTING"), concise=True), d["pending"][0]
+        )
+
     def test_legacy_group_only_response_still_displays_the_group(self):
         d = self.document()
         d["blocks"] = d["blocks"][:1]
