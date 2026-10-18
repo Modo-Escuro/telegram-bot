@@ -167,6 +167,24 @@ class PresentationTests(unittest.TestCase):
         self.assertNotIn("em preparação", text)
         self.assertIn("Vocês preferem economia ou rapidez?", text)
 
+    def test_individual_budget_label_is_shown_once_without_group_wording(self):
+        d = self.document()
+        group = d["blocks"][0]
+        group["participants"] = [
+            {
+                "participantRef": "person_a",
+                "displayName": "Você",
+                "conditions": ["Sem restrições alimentares"],
+            }
+        ]
+        group["budgetCents"] = 5000
+        d["blocks"][1]["text"] = "Teto máximo de R$ 50.00 para você."
+        d["blocks"][2]["text"] = "Orçamento: R$ 50.00 (máximo)."
+        d["pending"] = ["Você prefere economia ou rapidez?"]
+        text = render(Snapshot(encode(d), 0, "COLLECTING"))
+        self.assertEqual(text.count("50,00"), 1)
+        self.assertNotIn("grupo", text.lower())
+
     def test_no_change_is_one_question_instead_of_repeated_group(self):
         d = self.document()
         d["blocks"][1]["text"] = "Nada foi alterado."

@@ -1,5 +1,6 @@
 """Cursor persistente e exclusão de processo; não armazena mensagens nem tokens."""
 
+import json
 import os
 import sqlite3
 import time
@@ -50,12 +51,24 @@ class State:
             "CREATE TABLE IF NOT EXISTS actions "
             "(update_id INTEGER PRIMARY KEY, created REAL NOT NULL)"
         )
+        # Pergunta individual/grupo: só o último teclado enviado vale, e uma única vez.
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS mode_prompt "
+            "(id INTEGER PRIMARY KEY CHECK(id=1), message_id INTEGER NOT NULL, used INTEGER NOT NULL)"
+        )
+        # Confirmações de limpar/remover: só o último teclado vale, uma vez; nomes ficam aqui, não no callback.
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS confirm_prompt "
+            "(id INTEGER PRIMARY KEY CHECK(id=1), message_id INTEGER NOT NULL, kind TEXT NOT NULL, "
+            "names TEXT NOT NULL, used INTEGER NOT NULL)"
+        )
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS login_watch "
             "(id INTEGER PRIMARY KEY CHECK(id=1), owner INTEGER NOT NULL, "
             "attempt_id TEXT NOT NULL, started REAL NOT NULL, expires REAL NOT NULL, "
             "message_id INTEGER, phase TEXT NOT NULL, next_check REAL NOT NULL)"
         )
+        self.db.execute("CREATE TABLE IF NOT EXISTS prompt_context (message_id INTEGER PRIMARY KEY, data TEXT NOT NULL, expires REAL NOT NULL)")
         self.db.commit()
 
     def close(self):
@@ -84,6 +97,52 @@ class State:
                 "INSERT OR IGNORE INTO actions VALUES (?, ?)", (update_id, self.clock())
             )
         return result.rowcount == 1
+
+    def mode_prompt(self, message_id):
+        with self.db:
+            self.db.execute(
+                "INSERT INTO mode_prompt VALUES (1, ?, 0) "
+                "ON CONFLICT(id) DO UPDATE SET message_id=excluded.message_id, used=0",
+                (message_id,),
+            )
+
+    def bind_prompt(self, message_id, context):
+        with self.db:
+            self.db.execute("DELETE FROM prompt_context WHERE expires<=?", (self.clock(),))
+            self.db.execute("INSERT OR REPLACE INTO prompt_context VALUES(?,?,?)", (message_id, json.dumps(context), self.clock() + 300))
+
+    def prompt_context(self, message_id):
+        row = self.db.execute("SELECT data FROM prompt_context WHERE message_id=? AND expires>?", (message_id, self.clock())).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def claim_mode(self, message_id):
+        """Consome o teclado atual uma vez; antigo, repetido ou desconhecido não envia nada."""
+        with self.db:
+            result = self.db.execute(
+                "UPDATE mode_prompt SET used=1 WHERE id=1 AND message_id=? AND used=0",
+                (message_id,),
+            )
+        return result.rowcount == 1
+
+    def confirm_prompt(self, message_id, kind, names=()):
+        with self.db:
+            self.db.execute(
+                "INSERT INTO confirm_prompt VALUES (1, ?, ?, ?, 0) ON CONFLICT(id) DO UPDATE SET "
+                "message_id=excluded.message_id, kind=excluded.kind, names=excluded.names, used=0",
+                (message_id, kind, json.dumps(list(names), ensure_ascii=False)),
+            )
+
+    def claim_confirm(self, message_id, kind):
+        """Consome o teclado atual uma vez; devolve os nomes salvos ou None (antigo/repetido/outro tipo)."""
+        with self.db:
+            row = self.db.execute(
+                "SELECT names FROM confirm_prompt WHERE id=1 AND message_id=? AND kind=? AND used=0",
+                (message_id, kind),
+            ).fetchone()
+            if row is None:
+                return None
+            self.db.execute("UPDATE confirm_prompt SET used=1 WHERE id=1")
+        return json.loads(row[0])
 
     def login_watch(self):
         row = self.db.execute("SELECT * FROM login_watch WHERE id=1").fetchone()

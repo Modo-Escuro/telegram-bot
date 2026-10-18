@@ -17,6 +17,8 @@ BUTTONS = {
     "Conferir carrinho": "/conferircarrinho",
     "Sair da demo": "/sair",
     "Esvaziar sacola": "Esvaziar sacola simulada",
+    "Remover pessoa": "/remover",
+    "Limpar perfil": "/limpar",
 }
 
 
@@ -32,6 +34,7 @@ def keyboard(*, access=False, cart=False, connection=None):
 def inline_menu(*, access=False, cart=False):
     rows = [[("Entrar na demo", "enter")]] if access else [
         [("Conta iFood", "account"), ("Endereços iFood", "addresses")],
+        [("Remover pessoa", "remove"), ("Limpar perfil", "clear")],
         *([[("Revisar carrinho", "review")]] if cart else []),
         [("Ajuda", "help"), ("Sair da demo", "exit")],
     ]

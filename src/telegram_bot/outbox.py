@@ -401,7 +401,7 @@ class Outbox:
     def _prepare(self, row, version):
         document = decode(bytes(row["body"]))
         if (
-            document.get("input", {}).get("kind") == "ACTION"
+            (document.get("input", {}).get("kind") == "ACTION" or document.get("eventId", "").startswith(("tg-clear-", "tg-remove-", "tg-mode-")))
             and document["expectedVersion"] != version
         ):
             self.update(row["seq"], state="NOTICE", notice="STALE_VERSION", body=None)

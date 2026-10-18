@@ -17,6 +17,47 @@ from .voice import MAX_BYTES, VoiceError, voice_metadata
 
 PROCESSING = "Vou responder automaticamente por aqui."
 
+# Contrato fixo com a API: o clique vira esta mensagem, como se tivesse sido digitada.
+MODE_TEXTS = {
+    "individual": "É um pedido individual, só para mim.",
+    "group": "É um pedido em grupo.",
+}
+MODE_QUESTION = "Vai pedir só para você ou para um grupo?"
+MODE_MARKUP = {
+    "inline_keyboard": [
+        [
+            {"text": "Só para mim", "callback_data": "mode:individual"},
+            {"text": "Para um grupo", "callback_data": "mode:group"},
+        ]
+    ]
+}
+
+# Contrato fixo com a API: confirmação humana por botão, tratada sem modelo.
+CLEAR_TEXT = "Confirmo: apagar todos os dados deste pedido."
+CLEAR_QUESTION = (
+    "Isto apaga pessoas, restrições, orçamento e propostas deste pedido. "
+    "Não afeta sua conexão iFood nem carrinhos já preparados. Confirmar?"
+)
+CLEAR_MARKUP = {
+    "inline_keyboard": [
+        [
+            {"text": "Apagar tudo", "callback_data": "clr:yes"},
+            {"text": "Cancelar", "callback_data": "clr:no"},
+        ]
+    ]
+}
+MAX_REMOVE_BUTTONS = 10
+
+
+def remove_text(name):
+    return f"Confirmo: remover {name} do pedido."
+
+
+def remove_markup(names):
+    rows = [[{"text": f"Remover {n}", "callback_data": f"rm:{i}"}] for i, n in enumerate(names)]
+    return {"inline_keyboard": [*rows, [{"text": "Cancelar", "callback_data": "rm:no"}]]}
+
+
 NOTICES = {
     "ADDRESS_UNAVAILABLE": "A verificação de endereços ainda não está disponível nesta versão da API. Avise a equipe; a coleta do grupo pode continuar.",
     "ADDRESS_SELECTED": "Endereço confirmado para as sugestões. Para trocar, toque em Endereços iFood.",
@@ -139,6 +180,47 @@ class Conversations:
         except ConversationError:
             return "Não consegui confirmar a conta desta escolha. Confira sua conexão e tente novamente."
         return "Vou conferir sua escolha."
+
+    def mode_click(self, callback, update_id, choice, context=None):
+        """Clique já autorizado e consumido: enfileira o texto fixo pelo caminho normal de mensagem."""
+        return self.text_click(callback, update_id, MODE_TEXTS[choice], "tg-mode-", context)
+
+    def text_click(self, callback, update_id, text, prefix, context=None):
+        """Enfileira um texto fixo do contrato como mensagem humana (sem modelo no bot)."""
+        message, sender = callback["message"], callback["from"]
+        update = {
+            "update_id": update_id,
+            "message": {
+                "message_id": message["message_id"],
+                "from": sender,
+                "chat": message["chat"],
+                "date": message.get("date", 0),
+                "text": text,
+            },
+        }
+        command = self.client.prepare_text(update, context["version"] if context else 0)
+        body = command.to_dict()
+        # Mesmo teclado ⇒ mesmo evento: repetição no backend/outbox é deduplicada pelo eventId.
+        body["eventId"] = prefix + str(message["message_id"])
+        command = self.client.restore(encode(body), command.schema)
+        session = self._account_session(command)
+        if (context and context["session"] != session) or (session and not context):
+            raise ConversationError("LINK_CHANGED")
+        self.box.receive(command, update_id, kind="TEXT", account_session=session)
+        return text
+
+    def profile_context(self):
+        capture = getattr(self.client, "account_context", None)
+        session = capture() if capture else None
+        snapshot = self.client.get_snapshot(**({"session_ref": session} if session else {}))
+        return {"session": session, "version": snapshot.version}, self.participant_names(snapshot)
+
+    def participant_names(self, snapshot=None):
+        """Nomes do bloco GROUP do snapshot atual (fatos do servidor)."""
+        body = (snapshot or self.client.get_snapshot()).to_dict()
+        group = next((b for b in body.get("blocks", []) if b.get("kind") == "GROUP"), None)
+        names = [p.get("displayName") for p in (group or {}).get("participants", [])]
+        return [n for n in names if isinstance(n, str) and n.strip()][:MAX_REMOVE_BUTTONS]
 
     def receive(self, update, text_command=None):
         if text_command == "/enderecos":
