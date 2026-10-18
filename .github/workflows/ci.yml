@@ -3,6 +3,13 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag compra-contexto-telegram:ci .
+      - run: docker run --rm --network none compra-contexto-telegram:ci python -m pip check
+      - run: docker run --rm --network none compra-contexto-telegram:ci python -m telegram_bot --help
   test:
     runs-on: ${{ matrix.os }}
     strategy:
