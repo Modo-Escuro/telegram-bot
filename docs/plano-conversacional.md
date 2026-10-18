@@ -67,6 +67,8 @@ Persistência de vínculos é a primeira correção operacional. Para conversa e
 
 Persistir compra/conversa, participantId, condições por pessoa, origem de cada informação, orçamento/limites, política de rateio, conta/link, endereço selecionado, configurações candidatas, versão e evidências com validade.
 
+Cada alteração originada pelo usuário conserva o eventId e a referência escopada à mensagem/ação específica de origem, recebidos do adaptador autenticado, associados ao patch e à versão. Correções preservam a cadeia anterior; replay não cria nova proveniência. Não é necessário armazenar o texto integral. Recalculos derivados apontam para o evento causador. Detalhes em [proveniência do contrato](contrato-conversa-proposto.md#proveniência-de-cada-alteração), DATA-01 e API-01.
+
 Histórico curto e resumo auxiliam linguagem, mas nunca são a única memória das condições. Patches parciais validados alteram o estado; versão esperada impede overwrite tardio. Desconhecido, não informado e “sem restrições” explícito são distintos. Contradição ou pessoa ambígua exige esclarecimento.
 
 Estados conceituais a fechar no contrato: coletando dados, aguardando vínculo, buscando, propostas disponíveis, editando sacola, aguardando aprovação, enviando, confirmado, falha conhecida e resultado desconhecido. Login tem ciclo separado; vínculo operacional é pré-condição para ferramentas da conta, não para conversar sobre o grupo.
