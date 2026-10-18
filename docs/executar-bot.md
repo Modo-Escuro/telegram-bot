@@ -4,6 +4,10 @@
 
 ## Antes de iniciar
 
+A conversa de texto livre é opt-in com `TELEGRAM_CONVERSATION_ENABLED=false` por padrão.
+Condições de ativação, retenção da fila e ensaio isolado estão no [guia BOT-01](bot-01-fila-duravel.md).
+Não habilitar apenas porque o bot iniciou: a API precisa ter o processador AI-02 instalado.
+
 O bot já está online na Railway. Não iniciar polling local com o mesmo token enquanto o serviço estiver ativo. Para transferir a execução, seguir a migração do [estado atualizado](deploy-railway.md#transferir-execução-entre-computador-e-nuvem); preservar `data/` e não voltar a usar uma cópia antiga do SQLite.
 
 `--check` consulta apenas token e webhook, sem consumir updates. `--identify` consome updates de preparação e não deve rodar junto com o serviço online.
@@ -15,10 +19,11 @@ Python 3.12 no Git Bash do Windows:
 ```bash
 cd ~/OneDrive/Desktop/telegram-bot
 python -m venv .venv
-./.venv/Scripts/python.exe -m pip install -e .
+./.venv/Scripts/python.exe -m pip install -r requirements.lock
+./.venv/Scripts/python.exe -m pip install --no-deps -e .
 ```
 
-Não recriar uma venv que já funciona. Se `python` não for 3.12, usar o executável correspondente. Linux/macOS: `.venv/bin/python`. O pacote usa somente a biblioteca padrão em execução.
+Não recriar uma venv que já funciona. Se `python` não for 3.12, usar o executável correspondente. Linux/macOS: `.venv/bin/python`. O transporte usa a biblioteca padrão; o cliente de conversa usa `jsonschema`, com dependências fixadas em `requirements.lock`.
 
 ## Configurar o ambiente sem registrar segredos
 
@@ -58,7 +63,7 @@ Depois de encerrar a instância online e concluir a transferência de estado, in
 
 `/start`, `/status` e `/ajuda` respondem ao organizador em conversa privada. Outro usuário ou grupo é ignorado. Ctrl+C encerra. `/status` mostra o estágio da demo; `/ifood` consulta o vínculo e `/verificar` pede verificação da sessão ao backend.
 
-O [fluxo de login](login-ifood.md) exige enviar `/confirmar` depois de autorizar no navegador. O botão não aparece automaticamente e nenhum código deve ser digitado no Telegram.
+No [fluxo de login](login-ifood.md), volte à mensagem após autorizar no navegador: ela é atualizada com o botão humano. `/confirmar` é a alternativa se o acompanhamento terminar. `/cancelar` encerra só a tentativa; `/desconectar` remove só o vínculo local. Nenhum código deve ser digitado no Telegram.
 
 ## Criar um bot ou identificar um novo organizador
 

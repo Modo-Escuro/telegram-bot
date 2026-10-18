@@ -1,5 +1,9 @@
 # Arquitetura implementada
 
+Incremento BOT-01: o [fluxo de outbox/worker](bot-01-fila-duravel.md) acrescenta tabelas ao SQLite do bot e comunica as rotas v1 da RUN-01/DATA-01. Não duplica o domínio na API nem instala modelo. O fluxo de login e seu histórico abaixo permanecem separados; a conversa é opt-in, não ativada neste desenvolvimento.
+
+Esta página descreve a implementação existente. A evolução para IA, contexto por pessoa e compra aprovada está no [plano integrado](plano-conversacional.md) e no [contrato ainda proposto](contrato-conversa-proposto.md). Não tratar o desenho futuro como módulo entregue.
+
 [Índice](README.md) · [Estado e evidências](estado-atual.md)
 
 ## Fronteiras atuais
@@ -28,11 +32,15 @@ O fluxo de login acima está implementado e foi ensaiado. A direção do produto
 | `state.py` | Cursor SQLite, registro prévio de ações e lock de processo no mesmo diretório |
 | `backend.py` | Contrato HTTP de login, validação de estados, operações e URL de autorização |
 | `connections.py` | Mensagens do fluxo, apresentação da identidade mascarada e botão humano |
+| `conversation.py` | Cliente v1.0 de eventos, consultas e cancelamento local; isolado do polling e validado offline |
+| `conversation_contract.py` | Documentos imutáveis, schemas fixados e validação semântica de respostas |
 | `tests/test_bot.py` | Cenários simulados do canal, transporte, autorização e estado |
 | `tests/test_connections.py` | Cenários simulados do contrato, confirmação, replay e falhas |
 | `Dockerfile` / `railway.toml` | Imagem Python 3.12 e configuração do worker |
 
 Não há servidor MCP, OAuth próprio, LLM, coleta do grupo ou operação de compra no adaptador.
+
+O [cliente de conversa](cliente-conversa.md) prepara o consumo da API-01. Não está conectado ao `runner.py`; integração real depende de RUN-01 e do restante da BOT-01.
 
 ## Contrato HTTP consumido
 
@@ -45,17 +53,17 @@ Origem HTTPS configurada em `BACKEND_BASE_URL`. Headers: `Authorization: Bearer 
 | Clique em Confirmar conexão | `POST /api/bot/ifood/confirm` | Envia o `confirmationId` da tentativa atual após validação humana |
 | `/verificar` | `POST /api/bot/ifood/verify` | Solicita verificação/renovação ao backend |
 
-O cliente não consome ainda as rotas de cancelamento/desconexão nem as rotas de avaliação e endereços. O [contrato de referência](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) também descreve essas rotas do backend; existência na API não significa comando entregue no bot.
+BOT-02 consome também POST /api/bot/ifood/cancel e DELETE /api/bot/ifood/link, com efeitos separados. Consultas automáticas de status atualizam a mensagem de login. Rotas de avaliação e endereços continuam fora do adaptador. O [contrato de referência](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) também descreve essas rotas do backend; existência na API não significa comando entregue no bot.
 
-O timeout HTTP do backend é de 50 segundos, sem retries automáticos. O cliente rejeita redirect e link de autorização fora da origem pública configurada ou sem correspondência com a tentativa.
+O timeout HTTP do backend é de 50 segundos nos comandos e 5 segundos nas consultas automáticas; não há retry automático de mutações. O cliente rejeita redirect e link de autorização fora da origem pública configurada ou sem correspondência com a tentativa.
 
 ## Estado e repetição
 
-Antes de conexão, verificação ou confirmação, o adaptador grava o `update_id` como ação iniciada. Replay do mesmo update consulta o estado em vez de repetir a mutação. O cursor avança após resposta ou descarte autorizado do evento; falha entre envio Telegram e gravação pode repetir mensagem textual.
+Antes de conexão, verificação, confirmação, cancelamento ou desconexão, o adaptador grava o `update_id` como ação iniciada. Replay do mesmo update consulta o estado em vez de repetir a mutação. O cursor avança após resposta ou descarte autorizado do evento; falha entre envio Telegram e gravação pode repetir mensagem textual.
 
 O `confirmationId` não é persistido no SQLite: vem do status e do callback do botão. Clique antigo não confirma uma tentativa nova. Uso único e validade também dependem da autoridade do backend. O lock protege processos no mesmo diretório; não impede outra máquina de usar o mesmo token.
 
-O SQLite contém cursor e IDs de ações, sem mensagens ou credenciais. No backend, tokens iFood pertencem ao vínculo confirmado, fora do modelo e do bot. A persistência online da API ainda precisa de volume, conforme [estado atual](estado-atual.md).
+O SQLite contém cursor, IDs de ações e uma tentativa acompanhada (organizador, attemptId, messageId, fase e prazos), sem texto de mensagens ou credenciais. No backend, tokens iFood pertencem ao vínculo confirmado, fora do modelo e do bot. A persistência online da API ainda precisa de volume, conforme [estado atual](estado-atual.md).
 
 ## Regras para os próximos incrementos
 

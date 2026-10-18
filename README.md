@@ -1,5 +1,7 @@
 # Compra Agenciada — bot Telegram
 
+Planejamento de desenvolvimento: [conversa e compra em grupo](docs/plano-conversacional.md) · [tarefas e prioridades](docs/backlog-conversacional.md) · [épico no GitHub](https://github.com/Modo-Escuro/telegram-bot/issues/6).
+
 Interface Telegram do projeto SEMCOMP. O objetivo do produto é organizar uma compra em grupo com restrições individuais e orçamento, preservar essas condições quando o pedido muda e exigir aprovação humana antes do envio.
 
 **Entregue e ensaiado:** bot privado na Railway, login iFood pelo navegador, confirmação humana por botão no Telegram e sessão operacional reconhecida pelo backend. A consulta autenticada registrou `CONNECTED`, `operational: true` e verificação `OK`. A evidência e seus limites estão em [estado atual](docs/estado-atual.md).
@@ -10,7 +12,9 @@ Interface Telegram do projeto SEMCOMP. O objetivo do produto é organizar uma co
 
 Fluxo implementado: Telegram → adaptador Python → [api-backend](https://github.com/Modo-Escuro/api-backend) → OAuth e verificação da sessão pelo MCP iFood. O agente de compra e as regras de grupo ainda precisam ser integrados a esse fluxo.
 
-Python 3.12, biblioteca padrão em execução, long polling e acesso restrito a um organizador em conversa privada. Cursor e ações iniciadas ficam em SQLite; tokens iFood ficam exclusivamente no backend.
+Python 3.12, transporte pela biblioteca padrão, validação de contrato com `jsonschema`, long polling e acesso restrito a um organizador em conversa privada. Cursor e ações iniciadas ficam em SQLite; tokens iFood ficam exclusivamente no backend.
+
+O [cliente de conversa v1.0](docs/cliente-conversa.md) está implementado e validado offline como parte da BOT-01. Ainda falta conectá-lo ao polling e às rotas duráveis da RUN-01 para habilitar a conversa com IA.
 
 ## Documentação
 
@@ -31,6 +35,8 @@ As cópias em [docs/baseline](docs/baseline/proveniencia.json) preservam a StRS 
 ## Desenvolvimento
 
 ```bash
+./.venv/Scripts/python.exe -m pip install -r requirements.lock
+./.venv/Scripts/python.exe -m pip install --no-deps -e .
 ./.venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 

@@ -1,6 +1,12 @@
 # Estado atual e evidências
 
+**Continuação BOT-01 (desenvolvimento):** esta branch acrescenta outbox, texto livre opt-in e worker sem bloquear polling, sobre os incrementos #7/#8/#9 ainda abertos na inspeção remota. [Alcance e validação](bot-01-fila-duravel.md). Backend de integração fixado em `08709c7`, com DATA-01 entregue; falta AI-02 no processo padrão da API. Flag desligada por padrão. As descrições de pendência abaixo são históricas; nenhum deploy ou ensaio online novo foi realizado.
+
+**Incremento BOT-02:** o código desta branch acrescenta acompanhamento por edição da mensagem de login, cancelamento e desconexão. O relato abaixo conserva o estado observado anteriormente; não comprova deploy deste incremento. Comportamento e limites novos em [login iFood](login-ifood.md#acompanhamento-bot-02).
+
 Conferência em **17/10/2026, horário de São Paulo**. Este documento registra uma observação, não monitoramento contínuo. O [snapshot sanitizado](evidencias/login-ifood-2026-10-17.json) contém somente estados, operações permitidas e referências de versão.
+
+Incremento de desenvolvimento em **18/10/2026**: [cliente de conversa v1.0](cliente-conversa.md) implementado e testado offline contra API-01 `6ce3d99`. Não altera a evidência online abaixo; integração com polling/outbox e RUN-01 permanece pendente. O contrato de conversa já foi especificado; sua implementação no serviço ainda não foi validada por este incremento.
 
 ## O que está entregue
 

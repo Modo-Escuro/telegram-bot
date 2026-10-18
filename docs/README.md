@@ -1,5 +1,11 @@
 # Documentação do bot Compra com Contexto
 
+[Kanban e regras de andamento](kanban.md): tarefas prontas, dependências e acompanhamento no épico.
+
+O desenvolvimento da conversa passa pelo [plano integrado](plano-conversacional.md), [backlog com issues e prioridades](backlog-conversacional.md), [decisões abertas](decisoes-conversacionais.md) e [contrato proposto](contrato-conversa-proposto.md). O [épico #6](https://github.com/Modo-Escuro/telegram-bot/issues/6) acompanha API e bot. Documentação e tarefas publicadas não significam implementação concluída.
+[Incremento BOT-02](validacao-bot02.md): acompanhamento do login, cancelamento, desconexão e validação offline. Deploy e ensaio online são evidências separadas.
+[Continuação BOT-01](bot-01-fila-duravel.md): texto livre opt-in, fila persistente e worker separado; testes HTTP contra RUN-01/DATA-01 com processador sintético. Não habilita IA em produção.
+
 ## Por onde começar
 
 1. [Estado atual](estado-atual.md): implementação, ensaio real, evidência sanitizada e limites.
@@ -20,6 +26,8 @@
 Operações anunciadas ou permitidas não provam sua execução. Uma sessão operacional não autoriza compra. Não registrar tokens, URLs OAuth, códigos, identidade ou dados da conta como evidência.
 
 ## Baseline e contratos
+
+O [cliente de conversa v1.0](cliente-conversa.md) implementa um incremento parcial da BOT-01, validado offline contra API-01. As rotas de processamento e sua integração com o polling continuam dependentes de RUN-01; isso ainda não habilita conversa com IA no bot online.
 
 A [StRS v0.2](baseline/stakeholder-requirements-specification.md) continua em validação. Os IDs e as decisões abertas são preservados. [Proveniência e hashes](baseline/proveniencia.json) identificam as cópias históricas, incluindo o snapshot OpenCode que não estava versionado no repositório original. Não editar essas cópias para atualizar status operacional.
 

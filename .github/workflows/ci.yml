@@ -13,5 +13,32 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python -m pip install -e .
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pip install --no-deps -e .
       - run: python -m unittest discover -s tests -v
+  integration-run01:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Modo-Escuro/api-backend
+          ref: d2883f120419385c5ec902740330c3743f130b44
+          path: .integration-api
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pip install --no-deps -e .
+      - run: npm ci --ignore-scripts
+        working-directory: .integration-api
+      - run: python -m unittest discover -s tests -p test_run01_integration.py -v
+        env:
+          BOT01_API_ROOT: .integration-api

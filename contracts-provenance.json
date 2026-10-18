@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/Modo-Escuro/api-backend",
+  "commit": "6ce3d99863253f3c3c93495621afa33ee92e361d",
+  "source": "contracts/conversation/v1",
+  "files": {
+    "src/telegram_bot/contracts/v1/approval.schema.json": "b803cb695f10002d011cdb0ad1e6c2440460cc4e03e7f8f028ed32f11338dc82",
+    "src/telegram_bot/contracts/v1/cancel.schema.json": "eff763cfa095f3168bb22f8814350d7a10b7ce29af10f84d9b488228a6796dfa",
+    "src/telegram_bot/contracts/v1/cancelResult.schema.json": "41e4b0410a7f0371d18e9072978ae4c79922f6ccd9d17f4039cd4a43b611f779",
+    "src/telegram_bot/contracts/v1/change.schema.json": "231169c19006e7d61441e8ea08141cf17267c8c6fc474717b06114b39f858a3e",
+    "src/telegram_bot/contracts/v1/error.schema.json": "26feb6cb9a2b176852d2d0fdb20a2955ed37f26c10d448b3d71985afafc94884",
+    "src/telegram_bot/contracts/v1/event.schema.json": "7977b4f3b0b4e4086751f4e3f5fc46ba5f3d69262ee3e0703824c750fd5325e2",
+    "src/telegram_bot/contracts/v1/modelContext.schema.json": "692063a430ea00b368e73184f8d20e7a60a67fea91cb8d42d4fab8f7bf087bd1",
+    "src/telegram_bot/contracts/v1/operation.schema.json": "3815b43da15b75a8bc0023384b4a6bbf0f6d44c5a6e55a272f7b78fa1ee07d82",
+    "src/telegram_bot/contracts/v1/snapshot.schema.json": "cdf446bd43ded8293257088140a3714d43f227caebb0798b59001707b5f8d90b",
+    "tests/conversation-examples.json": "9c74c790e1edafa4a2b6890ea9f715b5b9768807f762b5fbffc17658b87e99b8"
+  }
+}

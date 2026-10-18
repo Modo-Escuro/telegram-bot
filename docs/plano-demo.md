@@ -1,5 +1,10 @@
 # Plano da demo e próximos incrementos
 
+**Atualização BOT-01:** fila durável e integração HTTP sintética em [BOT-01](bot-01-fila-duravel.md). RUN-01/DOM-01/DATA-01 e ranking estão na API `d2883f1`; AI-02 continua pendente. DEC-01 adotada no backend fixa demo simulada e MCP só leitura. Abaixo permanece o histórico do planejamento, sem representar deploy ou envio real.
+
+**Atualização de planejamento — 18/10/2026:** a decomposição executável, prioridades, dependências e critérios estão no [plano conversacional](plano-conversacional.md) e no [backlog](backlog-conversacional.md). A sequência abaixo é o contexto do incremento anterior; o plano novo inclui revisão da branchBruna e reaproveitamento condicionado da F7, sem alterar a evidência histórica de login.
+**Incremento BOT-02:** o código desta branch acrescenta acompanhamento por edição da mensagem de login, cancelamento e desconexão. O relato abaixo conserva o estado observado anteriormente; não comprova deploy deste incremento. Comportamento e limites novos em [login iFood](login-ifood.md#acompanhamento-bot-02).
+
 [Índice](README.md) · [Estado atual](estado-atual.md) · [Regras](regras-preservadas.md)
 
 Objetivo: organizar compra em grupo, alterar orçamento ou itens preservando restrições individuais, revisar a sacola e enviar somente após aprovação humana válida no ambiente autorizado do evento.
@@ -16,6 +21,8 @@ Objetivo: organizar compra em grupo, alterar orçamento ou itens preservando res
 Expiração, refresh, reconexão, indisponibilidade e desconexão não foram todos ensaiados online. As rotas de cancelamento/desconexão existem no backend, mas não têm comandos no bot. Participantes, agente de compra, sacola e pedido continuam pendentes.
 
 ## Ordem de execução proposta
+
+Atualização de 18/10/2026: [API-01 foi concluída](https://github.com/Modo-Escuro/api-backend/issues/12) como contrato v1.0 e conformidade offline. O [cliente correspondente do bot](cliente-conversa.md) está implementado em incremento isolado; as rotas/processamento durável continuam em RUN-01. As referências a “contrato futuro” abaixo representam a ordem histórica do plano; o contrato de conversa agora é a v1.0 fixada em API-01.
 
 1. **Persistir vínculos da API.** Preservar arquivos existentes antes de adicionar volume e mudar `IFOOD_LINKS_DIR`; ensaiar reinício controlado, consulta e nova verificação da mesma conexão. Não perder a conta já conectada por uma migração sem cópia.
 2. **Fechar o contrato de conversa e grupo.** Definir eventos, estado e respostas entre Telegram e API. O contrato do login já existe; conversa, sacola e aprovação não têm rotas acordadas. Não presumir `/chat` ou `/approve`.
