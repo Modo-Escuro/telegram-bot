@@ -4,12 +4,13 @@ import time
 from .cart import COMMANDS as CART_COMMANDS
 from .connections import COMMANDS, Connections
 from .conversation_contract import ProtocolError
-from .menu import navigation
+from .menu import navigation, inline_menu
 from .telegram import TelegramError
 
 GET_STARTED = (
-    "Quem vai participar, quais as restrições alimentares e quanto querem gastar?\n\n"
-    "Toque em Conectar iFood para usar a conta teste."
+    "O que vocês querem comer? Pode me contar também quem participa, "
+    "as restrições alimentares e quanto querem gastar.\n\n"
+    "Em Conta iFood, toque em Entrar no iFood para usar sua conta teste."
 )
 DEMO_NOTICE = (
     "Conectar a conta não autoriza compras. Preparar o carrinho no iFood exige revisão "
@@ -18,11 +19,11 @@ DEMO_NOTICE = (
 START = "Olá! Eu sou o Ailo, seu assistente de compras.\n\n" + GET_STARTED + "\n\n" + DEMO_NOTICE
 STATUS = "Estou por aqui! O login não é verificado nesta tela. Use /ifood para consultar sua conta."
 HELP = (
-    "• Conectar iFood: entre na conta teste.\n"
+    "• Conta iFood: entre, acompanhe o login ou saia da conta teste.\n"
     "• Endereços iFood: escolha onde receber.\n"
     "• Esvaziar sacola: limpe a composição da demo.\n"
     "• Sair da demo: encerre seu acesso.\n\n"
-    "Faltou uma resposta? Use /retomar. Para desconectar a conta, use /desconectar."
+    "Faltou uma resposta? Use /retomar. Você pode escrever ou usar os botões das mensagens."
 )
 CONVERSATION_HELP = "\n\nAs respostas chegam automaticamente por aqui."
 
@@ -148,8 +149,10 @@ def process_batch(
         if reply:
             try:
                 if isinstance(reply, str):
-                    api.send(allowed_id, reply)
+                    api.send(allowed_id, reply, inline_menu(cart=carts is not None) if reply.startswith(START) or reply == HELP else None)
                 else:
+                    if reply.connection_state and hasattr(api, "set_connection_state"):
+                        api.set_connection_state(allowed_id, reply.connection_state)
                     result = api.send(allowed_id, reply.text, reply.markup)
                     if connections is not None:
                         connections.delivered(reply, result)
@@ -243,6 +246,33 @@ def process_callback(
     if not authorized:
         return
     data = callback.get("data")
+    if isinstance(data, str) and data.startswith("nav:"):
+        if message.get("forward_origin") or not isinstance(message.get("from"), dict) or message["from"].get("is_bot") is not True:
+            return
+        action = data[4:]
+        if action in {"account", "connect"}:
+            handler = connections or Connections(None, state)
+            reply = handler.reply("/conectar" if action == "connect" else "/ifood", [], update_id)
+            result = api.send(allowed_id, reply.text, reply.markup)
+            handler.delivered(reply, result)
+        elif action == "addresses" and conversations:
+            queued = conversations.box.enqueue_addresses("menu-" + str(update_id))
+            api.send(allowed_id, "Vou conferir seus endereços." if queued else "Aguarde a resposta anterior e tente novamente.")
+        elif action == "review" and carts:
+            api.send(allowed_id, carts.receive("/revisarcarrinho"))
+        elif action in {"help", "menu"}:
+            api.send(allowed_id, HELP if action == "help" else "O que você quer fazer?", inline_menu(cart=carts is not None))
+        elif action == "exit":
+            api.send(allowed_id, "Sair da demo está disponível no acesso por senha. Para sair do iFood, abra Conta iFood.", inline_menu())
+        return
+    if isinstance(data, str) and data.startswith("cv:"):
+        reply = (
+            conversations.flow_click(callback, update_id, carts)
+            if conversations
+            else "Conversa indisponível nesta configuração."
+        )
+        api.send(allowed_id, reply)
+        return
     if isinstance(data, str) and data.startswith("ifa:"):
         queued = conversations and conversations.address_click(callback, update_id)
         api.send(
@@ -275,6 +305,8 @@ def process_callback(
         return
     handler = connections or Connections(None, state)
     reply = handler.action_click(data, update_id)
+    if reply.connection_state and hasattr(api, "set_connection_state"):
+        api.set_connection_state(allowed_id, reply.connection_state)
     result = api.send(allowed_id, reply.text, reply.markup)
     handler.delivered(reply, result)
     try:

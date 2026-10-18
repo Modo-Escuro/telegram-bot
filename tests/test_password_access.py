@@ -235,6 +235,7 @@ class RouterTests(unittest.TestCase):
         with (
             patch.dict("os.environ", backend_env, clear=True),
             patch("telegram_bot.multiuser.ConversationService"),
+            patch("telegram_bot.conversation.ConversationClient.account_context", return_value=None),
             patch("telegram_bot.conversation.build_opener", return_value=Mock()),
             patch("telegram_bot.backend.build_opener", return_value=Mock()),
         ):

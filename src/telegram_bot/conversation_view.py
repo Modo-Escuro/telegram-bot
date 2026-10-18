@@ -33,7 +33,7 @@ def money(price):
         return f"R$ {value // 100},{value % 100:02d}"
 
     if price["kind"] == "UNKNOWN":
-        return "Custo desconhecido; revisão/aprovação indisponível."
+        return "Total final ainda desconhecido; não confirma o orçamento."
     if price["kind"] == "RANGE":
         return f"Faixa: {brl(price['minCents'])} a {brl(price['maxCents'])}."
     label = "Estimativa" if price["kind"] == "ESTIMATE" else "Cotação informada pela API"
@@ -109,13 +109,22 @@ def render(snapshot, *, collection_only=False, concise=False):
                     )
                 )
         elif kind in {"PROPOSAL", "REVIEW"}:
-            lines.append("Proposta informativa." if kind == "PROPOSAL" else "Revisão informativa.")
+            lines.append("Opção para comparar:" if kind == "PROPOSAL" else "Sua sacola:")
             lines.append(money(block["price"]))
             for blocker in block.get("blockers", []):
                 lines.append("Pendência: " + blocker)
-            for coverage in block["coverage"]:
-                if coverage["status"] != "COVERED":
-                    lines.append("Há participante sem atendimento verificado.")
+            uncovered = {c["participantRef"] for c in block["coverage"] if c["status"] != "COVERED"}
+            if uncovered:
+                names = [
+                    p["displayName"]
+                    for p in (group or {}).get("participants", [])
+                    if p["participantRef"] in uncovered
+                ]
+                lines.append(
+                    "Sem atendimento verificado: "
+                    + (", ".join(names) or "há participante com restrições pendentes")
+                    + "."
+                )
         elif kind == "OUTCOME":
             lines.append(
                 "Resultado de compra fora do fluxo disponível no Ailo; não houve envio por esta interface."
@@ -145,7 +154,24 @@ def render(snapshot, *, collection_only=False, concise=False):
             if not routine or not asked:
                 lines.append(question)
             asked = asked or bool(routine)
-    text = "\n\n".join(lines) or "O grupo continua igual. O que deseja mudar?"
+    if not collection_only and document["allowedActions"]:
+        kinds = {a["kind"] for a in document["allowedActions"]}
+        if "REQUEST_REVIEW" in kinds:
+            lines.append(
+                "Confira os itens da sacola. Você pode mudar a busca ou revisar o carrinho quando essa função estiver disponível."
+            )
+        elif "SELECT_PROPOSAL" in kinds:
+            lines.append(
+                "Qual opção você prefere? Toque em uma opção ou diga, por exemplo, ‘a segunda’. Também pode pedir outra busca."
+            )
+        else:
+            lines.append(
+                "Você pode mudar o tipo de comida ou pedir uma nova busca, mantendo as restrições."
+            )
+    text = (
+        "\n\n".join(lines)
+        or "O que vocês querem comer? Pode dizer um tipo de comida ou ajustar o grupo."
+    )
     # Defesa adicional: nunca exibir referências humanas nem identificadores técnicos do documento.
     references = [document.get("conversationId", "")]
     for action in document["allowedActions"]:

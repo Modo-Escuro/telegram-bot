@@ -65,6 +65,10 @@ class Telegram:
         self._timeout = timeout
         self._typing_at = {}
         self.cart_enabled = cart_enabled
+        self.connection_states = {}
+
+    def set_connection_state(self, chat_id, state):
+        self.connection_states[chat_id] = state
 
     def typing(self, chat_id):
         """Sinal nativo e efêmero; falha visual nunca interrompe a conversa."""
@@ -172,7 +176,7 @@ class Telegram:
 
     def send(self, chat_id, text, markup=None):
         payload = {"chat_id": chat_id, "text": text}
-        payload["reply_markup"] = markup if markup is not None else keyboard(cart=self.cart_enabled)
+        payload["reply_markup"] = markup if markup is not None else keyboard(cart=self.cart_enabled, connection=self.connection_states.get(chat_id))
         return self.call("sendMessage", payload)
 
     def check(self):

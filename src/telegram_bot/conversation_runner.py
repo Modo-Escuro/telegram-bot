@@ -5,6 +5,7 @@ import threading
 import time
 from datetime import datetime
 
+from . import conversation_buttons as buttons
 from .address_flow import AddressFlow
 from .backend import BackendError
 from .conversation import ConversationError
@@ -19,7 +20,8 @@ PROCESSING = "Vou responder automaticamente por aqui."
 NOTICES = {
     "ADDRESS_UNAVAILABLE": "A verificação de endereços ainda não está disponível nesta versão da API. Avise a equipe; a coleta do grupo pode continuar.",
     "ADDRESS_SELECTED": "Endereço confirmado para as sugestões. Para trocar, toque em Endereços iFood.",
-    "REFERENCE_EXPIRED": "A lista de endereços mudou ou a escolha expirou. Toque em Endereços iFood para conferir novamente.",
+    "REFERENCE_EXPIRED": "Essa escolha expirou. Use as opções da resposta mais recente; para endereços, toque em Endereços iFood novamente.",
+    "ACTION_UNAVAILABLE": "Essa opção não está mais disponível. Use a resposta mais recente ou peça uma nova busca.",
     "VOICE_UNKNOWN": "A transcrição foi interrompida e não será repetida automaticamente. Envie o áudio novamente ou escreva a mensagem.",
     "VOICE_FAILED": "Não consegui entender este áudio com segurança ou o limite de voz foi atingido. Tente mais tarde ou escreva a mensagem.",
     "QUEUE_FULL": "A fila de conversa está cheia. Aguarde e envie esta mensagem novamente depois.",
@@ -70,6 +72,13 @@ class Conversations:
         self.box, self.client = box, client
         self.voice_enabled = voice_enabled
 
+    def _account_session(self, command):
+        previous = self.box.db.execute("SELECT account_session FROM conversation_outbox WHERE scope=? AND event_id=?", (self.box.scope, command.to_dict()["eventId"])).fetchone()
+        if previous:
+            return previous["account_session"]
+        capture = getattr(self.client, "account_context", None)
+        return capture() if capture else None
+
     def restore_after_login(self, status, source_key):
         fingerprint = link_fingerprint(status)
         if not fingerprint:
@@ -97,6 +106,39 @@ class Conversations:
         ):
             return False
         return self.box.address_click(callback, update_id, self.client.bot_id)
+
+    def flow_click(self, callback, update_id, carts=None):
+        binding = buttons.resolve(self.box, callback, self.client.bot_id)
+        if not binding:
+            return (
+                "Esse botão expirou. Use as opções da resposta mais recente ou escreva sua escolha."
+            )
+        try:
+            command = self.client.prepare_action(
+                {"update_id": update_id, "callback_query": callback},
+                binding["version"],
+                action=binding["kind"],
+                action_ref=callback["data"][3:],
+            )
+            body = command.to_dict()
+            body["eventId"] += (
+                "-callback-" + hashlib.sha256(callback["id"].encode()).hexdigest()[:24]
+            )
+            command = self.client.restore(encode(body), command.schema)
+            if binding["kind"] == "REQUEST_REVIEW":
+                return (
+                    carts.receive("/revisarcarrinho", expected_version=binding["version"])
+                    if carts
+                    else "Revisão de carrinho indisponível nesta configuração."
+                )
+            self.box.receive(command, update_id, account_session=self._account_session(command))
+            if carts:
+                carts.invalidate()
+        except (ValueError, ProtocolError):
+            return "Não consegui validar essa escolha. Use a resposta mais recente."
+        except ConversationError:
+            return "Não consegui confirmar a conta desta escolha. Confira sua conexão e tente novamente."
+        return "Vou conferir sua escolha."
 
     def receive(self, update, text_command=None):
         if text_command == "/enderecos":
@@ -131,7 +173,11 @@ class Conversations:
         command = self.client.restore(encode(body), command.schema)
         if len(command.serialize()) > 16384:
             raise ValueError("Mensagem excede o limite do backend.")
-        self.box.receive(command, update["update_id"], kind=kind, voice=voice)
+        try:
+            account_session = self._account_session(command)
+        except ConversationError:
+            return "Não consegui confirmar a conta para esta mensagem. Use Entrar no iFood ou confira sua conexão e envie novamente."
+        self.box.receive(command, update["update_id"], kind=kind, voice=voice, account_session=account_session)
         return None
 
 
@@ -162,9 +208,12 @@ class ConversationWorker:
             self.access_allowed is None or self.access_allowed()
         )
 
-    def _version(self):
+    def _session_args(self, row):
+        return {"session_ref": row["account_session"]} if row["account_session"] else {}
+
+    def _version(self, row):
         try:
-            return self.client.get_snapshot().version
+            return self.client.get_snapshot(**self._session_args(row)).version
         except ConversationError as error:
             if error.code == "NOT_FOUND":
                 return 0
@@ -199,9 +248,11 @@ class ConversationWorker:
                 self._context(row)
             elif state == "RECEIVED" or (state == "PAUSED" and row["body"] is not None):
                 if row["voice"]:
+                    if row["account_session"]:
+                        self._version(row)
                     self._voice(row)
                 else:
-                    self.box.prepare(row, self._version())
+                    self.box.prepare(row, self._version(row))
             elif state in {"PREPARED", "POST_UNKNOWN"} or (
                 state == "PAUSED" and not row["operation_id"]
             ):
@@ -306,7 +357,7 @@ class ConversationWorker:
             bytes(row["command"]), "cancel" if row["kind"] == "CANCEL" else "event"
         )
         self.box.save(row["seq"], state="POST_UNKNOWN")
-        response = self.client.send(command)
+        response = self.client.send(command, **self._session_args(row))
         if row["kind"] == "CANCEL":
             self.box.save(
                 row["seq"], state="NOTICE", notice="CANCELLED", command=None, body=None, attempts=0
@@ -326,7 +377,8 @@ class ConversationWorker:
         )
 
     def _poll(self, row):
-        operation = self.client.get_operation(row["operation_id"], event_id=row["event_id"])
+        options = []
+        operation = self.client.get_operation(row["operation_id"], event_id=row["event_id"], **self._session_args(row))
         if self.stop_event.is_set():
             return
         if not operation.terminal:
@@ -349,8 +401,11 @@ class ConversationWorker:
             return
         if operation.status == "SUCCEEDED":
             # Não reutilizar snapshot histórico da operação: ele pode ter sido substituído/expurgado.
-            snapshot = self.client.get_snapshot()
+            snapshot = self.client.get_snapshot(**self._session_args(row))
             text = render(snapshot, concise=True)
+            options = buttons.offered(
+                snapshot, cart=getattr(self.telegram, "cart_enabled", False) is True
+            )
         elif operation.status == "RESULT_UNKNOWN":
             self.box.save(row["seq"], state="NOTICE", notice="RESULT_UNKNOWN", attempts=0)
             return
@@ -361,7 +416,18 @@ class ConversationWorker:
             code = (document.get("error") or {}).get("code")
             text = NOTICES.get(code, NOTICES["FAILED"])
         self.box.save(row["seq"], notice=operation.status)
-        self._deliver(row, chunks(text))
+        parts = chunks(text)
+        known = self.box.delivered(row["seq"], len(parts) - 1)
+        if known and options:
+            buttons.bind(self.box, known, self.client.bot_id, options)
+        self._deliver(
+            row,
+            parts,
+            markup=buttons.markup(options),
+            on_delivery=(lambda mid: buttons.bind(self.box, mid, self.client.bot_id, options))
+            if options
+            else None,
+        )
 
     def _deliver(self, row, parts, *, final=True, markup=None, on_delivery=None):
         # Texto só em memória. Edições de mensagens conhecidas são recuperáveis, envios novos são incertos.
@@ -369,7 +435,10 @@ class ConversationWorker:
             if not self._authorized():
                 return
             message_id = self.box.delivered(row["seq"], index)
-            digest = hashlib.sha256(text.encode() + (encode(markup) if markup else b"")).hexdigest()
+            part_markup = markup if index == len(parts) - 1 else None
+            digest = hashlib.sha256(
+                text.encode() + (encode(part_markup) if part_markup else b"")
+            ).hexdigest()
             if message_id and self.box.delivery_digest(row["seq"], index) == digest:
                 continue
             if row["state"] == "NOTICE":
@@ -385,13 +454,13 @@ class ConversationWorker:
                             "chat_id": self.organizer_id,
                             "message_id": message_id,
                             "text": text,
-                            "reply_markup": markup or {"inline_keyboard": []},
+                            "reply_markup": part_markup or {"inline_keyboard": []},
                         },
                     )
                 else:
                     # ReplyKeyboardMarkup torna a mensagem não editável na Bot API.
                     response = self.telegram.send(
-                        self.organizer_id, text, markup or {"inline_keyboard": []}
+                        self.organizer_id, text, part_markup or {"inline_keyboard": []}
                     )
                     if (
                         not isinstance(response, dict)
@@ -400,13 +469,13 @@ class ConversationWorker:
                         raise TelegramError()
                     message_id = response["message_id"]
                 self.box.record_delivery(row["seq"], index, message_id, digest)
-                if on_delivery:
+                if on_delivery and index == len(parts) - 1:
                     on_delivery(message_id)
             except TelegramError as error:
                 if message_id and error.reason == "NOT_MODIFIED":
                     # Retry da edição cujo ack se perdeu: mesmo ID/conteúdo já aplicado.
                     self.box.record_delivery(row["seq"], index, message_id, digest)
-                    if on_delivery:
+                    if on_delivery and index == len(parts) - 1:
                         on_delivery(message_id)
                     self.box.save(row["seq"], state=next_state)
                 elif error.code == 403:
@@ -471,6 +540,7 @@ class ConversationWorker:
                 "INVALID_REQUEST",
                 "LINK_CHANGED",
                 "REFERENCE_EXPIRED",
+                "ACTION_UNAVAILABLE",
             }
             and not error.uncertain
         ):

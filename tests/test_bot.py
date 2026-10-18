@@ -31,7 +31,7 @@ class FakeAPI:
         self.sent = []
         self.failure = None
 
-    def send(self, chat_id, text):
+    def send(self, chat_id, text, markup=None):
         if self.failure:
             raise self.failure
         self.sent.append((chat_id, text))

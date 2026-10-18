@@ -3,6 +3,9 @@
 BUTTONS = {
     "Menu": "/start",
     "Conectar iFood": "/conectar",
+    "Entrar no iFood": "/conectar",
+    "Sair da conta iFood": "/ifood",
+    "Cancelar login": "/ifood",
     "Minha conexão": "/ifood",
     "Verificar conexão": "/verificar",
     "Acompanhar": "/andamento",
@@ -17,22 +20,22 @@ BUTTONS = {
 }
 
 
-def keyboard(*, access=False, cart=False):
-    rows = (
-        [["Entrar na demo"]]
-        if access
-        else [
-            ["Conectar iFood", "Endereços iFood"],
-            ["Esvaziar sacola"],
-            *([["Revisar carrinho", "Conferir carrinho"]] if cart else []),
-            ["Ajuda", "Sair da demo"],
-        ]
-    )
+def keyboard(*, access=False, cart=False, connection=None):
+    rows = [["Menu"]]
     return {
         "keyboard": [[{"text": label} for label in row] for row in rows],
         "resize_keyboard": True,
         "is_persistent": True,
     }
+
+
+def inline_menu(*, access=False, cart=False):
+    rows = [[("Entrar na demo", "enter")]] if access else [
+        [("Conta iFood", "account"), ("Endereços iFood", "addresses")],
+        *([[("Revisar carrinho", "review")]] if cart else []),
+        [("Ajuda", "help"), ("Sair da demo", "exit")],
+    ]
+    return {"inline_keyboard": [[{"text": label, "callback_data": "nav:" + action} for label, action in row] for row in rows]}
 
 
 def navigation(update):

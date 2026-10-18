@@ -33,6 +33,8 @@ class Outbox:
             self.db.execute("ALTER TABLE conversation_outbox ADD COLUMN link_hash TEXT")
         if "voice" not in columns:
             self.db.execute("ALTER TABLE conversation_outbox ADD COLUMN voice BLOB")
+        if "account_session" not in columns:
+            self.db.execute("ALTER TABLE conversation_outbox ADD COLUMN account_session TEXT")
         if "delivery_recoveries" not in columns:
             self.db.execute(
                 "ALTER TABLE conversation_outbox ADD COLUMN delivery_recoveries INTEGER NOT NULL DEFAULT 0"
@@ -46,6 +48,12 @@ class Outbox:
             "CREATE TABLE IF NOT EXISTS address_buttons (scope TEXT NOT NULL, ref_hash TEXT NOT NULL, "
             "message_id INTEGER NOT NULL, bot_id INTEGER NOT NULL, expires REAL NOT NULL, "
             "PRIMARY KEY(scope,ref_hash,message_id))"
+        )
+        self.db.commit()
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS conversation_buttons (scope TEXT NOT NULL, ref_hash TEXT NOT NULL, "
+            "message_id INTEGER NOT NULL, bot_id INTEGER NOT NULL, kind TEXT NOT NULL, version INTEGER NOT NULL, "
+            "expires REAL NOT NULL, PRIMARY KEY(scope,ref_hash,message_id))"
         )
         self.db.commit()
         # Crash entre envio Telegram e gravação do message_id: entrega possivelmente ocorreu.
@@ -221,12 +229,12 @@ class Outbox:
             self.db.rollback()
             raise
 
-    def receive(self, command, update_id, *, kind="TEXT", voice=None):
+    def receive(self, command, update_id, *, kind="TEXT", voice=None, account_session=None):
         """Mensagem/controle e cursor na MESMA transação; nenhuma rede antes do commit."""
         body = command.serialize()
         document = command.to_dict()
         event_id = document["eventId"]
-        digest = hashlib.sha256(body + (encode(voice) if voice else b"")).hexdigest()
+        digest = hashlib.sha256(body + (encode(voice) if voice else b"") + (account_session.encode() if account_session else b"")).hexdigest()
         now = self.clock()
         with self.transaction():
             previous = self.db.execute(
@@ -300,6 +308,8 @@ class Outbox:
                         "UPDATE conversation_outbox SET voice=? WHERE scope=? AND event_id=?",
                         (encode(voice), self.scope, event_id),
                     )
+                if account_session:
+                    self.db.execute("UPDATE conversation_outbox SET account_session=? WHERE scope=? AND event_id=?", (account_session, self.scope, event_id))
             self.db.execute(
                 "INSERT INTO cursor VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET "
                 "offset=MAX(cursor.offset,excluded.offset),updated=excluded.updated",
@@ -390,6 +400,12 @@ class Outbox:
 
     def _prepare(self, row, version):
         document = decode(bytes(row["body"]))
+        if (
+            document.get("input", {}).get("kind") == "ACTION"
+            and document["expectedVersion"] != version
+        ):
+            self.update(row["seq"], state="NOTICE", notice="STALE_VERSION", body=None)
+            return
         document["expectedVersion"] = version
         if row["kind"] == "CANCEL":
             target = self.get(row["target"])
@@ -402,6 +418,10 @@ class Outbox:
     def expire(self):
         """Não expirar comandos enviados sem resposta nem operações em andamento."""
         with self.db:
+            self.db.execute(
+                "DELETE FROM conversation_buttons WHERE scope=? AND expires<=?",
+                (self.scope, self.clock()),
+            )
             self.db.execute(
                 "DELETE FROM address_buttons WHERE scope=? AND expires<=?",
                 (self.scope, self.clock()),

@@ -57,9 +57,13 @@ class WatchEnvironment:
         self.temp.cleanup()
 
     def start(self):
+        current = self.backend.status.return_value
+        self.backend.status.return_value = LinkStatus.parse(payload("DISCONNECTED"))
         process_batch(
             self.api, self.state, [update(text="/conectar")], USER, "demo", self.connections
         )
+        self.backend.status.return_value = current
+        self.backend.status.reset_mock()
         self.api.reset_mock()
 
     def awaiting_confirmation(self, expires=900):
@@ -197,6 +201,7 @@ class WatchTests(WatchEnvironment, unittest.TestCase):
         self.assertIn("Confirmar conexão", repr(reply.markup))
 
     def test_send_failure_and_replay_attach_recovery_message_without_new_login(self):
+        self.backend.status.side_effect = [LinkStatus.parse(payload("DISCONNECTED")), authorizing()]
         self.api.send.side_effect = TelegramError(500)
         with self.assertRaises(TelegramError):
             process_batch(

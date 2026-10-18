@@ -19,7 +19,7 @@ from telegram_bot.cart_client import CartClient, CartError
 from telegram_bot.cart_view import current_text
 from telegram_bot.config import Config
 from telegram_bot.conversation_contract import Snapshot, encode
-from telegram_bot.menu import keyboard
+from telegram_bot.menu import keyboard, inline_menu
 from telegram_bot.runner import process_batch
 from telegram_bot.state import State
 
@@ -547,7 +547,8 @@ class ConfigurationTests(unittest.TestCase):
             ):
                 Config.from_env()
         self.assertNotIn("Revisar carrinho", str(keyboard()))
-        self.assertIn("Revisar carrinho", str(keyboard(cart=True)))
+        self.assertIn("Revisar carrinho", str(inline_menu(cart=True)))
+        self.assertEqual(keyboard(cart=True)["keyboard"], [[{"text": "Menu"}]])
 
     def test_link_status_accepts_only_item_cart_scopes_without_authorizing_payment(self):
         data = {

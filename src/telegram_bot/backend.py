@@ -157,7 +157,8 @@ class LinkStatus:
             or len(confirmation_id.encode("utf-8")) > 60
         ):
             raise BackendError("PROTOCOL")
-        identity = attempt.get("accountIdentity") if attempt else None
+        account = body.get("account")
+        identity = attempt.get("accountIdentity") if attempt else account.get("identity") if isinstance(account, dict) else None
         if identity is not None and not isinstance(identity, dict):
             raise BackendError("PROTOCOL")
         link_id = body.get("linkId")
@@ -192,7 +193,9 @@ class Backend:
         self.config = config
         self._opener = opener or build_opener(NoRedirect())
 
-    def _request(self, method, action, payload=None, *, timeout=50):
+    def _request(self, method, action, payload=None, *, timeout=50, reference=None):
+        if reference is not None and (not isinstance(reference, str) or not OPAQUE.fullmatch(reference)):
+            raise BackendError("PROTOCOL")
         if (method, action) not in {
             ("GET", "status"),
             ("POST", "connect"),
@@ -208,6 +211,7 @@ class Backend:
             headers={
                 "Authorization": f"Bearer {self.config.token}",
                 "X-Telegram-User-Id": str(self.config.organizer_id),
+                **({"X-Ifood-Session-Reference": reference} if reference else {}),
                 **({"X-Telegram-Access": "PASSWORD"} if self.config.password_access else {}),
                 "Content-Type": "application/json",
                 "Accept": "application/json",
@@ -283,14 +287,14 @@ class Backend:
     def verify(self):
         return LinkStatus.parse(self._request("POST", "verify"))
 
-    def cancel(self):
-        body = self._request("POST", "cancel")
+    def cancel(self, *, reference=None):
+        body = self._request("POST", "cancel", reference=reference)
         if type(body.get("cancelled")) is not bool:
             raise BackendError("PROTOCOL", uncertain=True)
         return LinkStatus.parse(body), body["cancelled"]
 
-    def disconnect(self):
-        body = self._request("DELETE", "link")
+    def disconnect(self, *, reference=None):
+        body = self._request("DELETE", "link", reference=reference)
         if (
             type(body.get("removed")) is not bool
             or body.get("providerRevocation") != "NOT_ATTEMPTED"
