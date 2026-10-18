@@ -6,14 +6,14 @@ from .conversation_contract import ProtocolError
 from .telegram import TelegramError
 
 START = (
-    "Olá! Sou o bot Compra com Contexto. Esta demo está restrita ao organizador.\n\n"
+    "Olá! Sou o bot Compra com Contexto. Você está na sua conversa privada da demo.\n\n"
     "Use /conectar para iniciar o login iFood. Depois de autorizar no navegador, volte à mensagem "
     "do login para conferir a conta no botão. Se ele não aparecer, envie /confirmar. A conversa de compras "
     "ainda está em implementação; nenhum pedido é enviado.\n\n"
     "Use /status para ver o andamento ou /ajuda para os comandos."
 )
 STATUS = (
-    "Telegram: disponível para o organizador autorizado.\n"
+    "Telegram: disponível para seu usuário autenticado.\n"
     "iFood: use /ifood para consultar a conexão; login não verificado por /status.\n"
     "Sacola e envio de pedidos: indisponíveis."
 )

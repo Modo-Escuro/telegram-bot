@@ -250,6 +250,7 @@ class ConversationClient:
                 "Authorization": f"Bearer {self._config.token}",
                 "X-Telegram-User-Id": self._conversation_id,
                 "X-Telegram-Chat-Id": self._conversation_id,
+                **({"X-Telegram-Access": "PASSWORD"} if self._config.password_access else {}),
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             },

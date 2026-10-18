@@ -6,6 +6,7 @@ from .config import Config
 from .connections import Connections
 from .conversation import ConversationClient
 from .conversation_runner import Conversations, ConversationService, scope_for
+from .multiuser import poll_password
 from .outbox import Outbox
 from .runner import identify, poll
 from .state import State, single_instance
@@ -31,6 +32,18 @@ def main():
         with single_instance(config.state_dir / f"bot-{me['id']}.lock"):
             if args.identify:
                 identify(api)
+                return 0
+            if config.access_password:
+                # Valida o transporte antes do polling. O ID de cada usuário virá do update autenticado.
+                backend_config = BackendConfig.from_env(config.allowed_user_id or 1)
+                if config.conversation_enabled and backend_config is None:
+                    raise ValueError("Conversa requer BACKEND_BASE_URL e BACKEND_API_TOKEN.")
+                state = State(config.state_dir / f"bot-{me['id']}.sqlite3")
+                try:
+                    print("Bot iniciado com acesso por senha. Uma instância de polling.")
+                    poll_password(api, state, config, me["id"], me["username"])
+                finally:
+                    state.close()
                 return 0
             backend_config = BackendConfig.from_env(config.allowed_user_id)
             if config.conversation_enabled and backend_config is None:

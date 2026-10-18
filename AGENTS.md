@@ -1,5 +1,10 @@
 # Instruções para o telegram-bot
 
+- Ampliação autorizada em 18/10/2026: acesso compartilhado por senha em `docs/acesso-senha.md` substitui o
+  recorte de um único organizador quando `TELEGRAM_ACCESS_PASSWORD` está definido. Cada conta Telegram tem
+  próprio vínculo, fila e conversa; nunca reutilizar o ID fixo para enviar dados dos demais usuários.
+  Preservar o SQLite legado e uma única instância de polling. Senha não é aprovação de compra.
+
 - Escreva em português. Projeto Python 3.12 em src/telegram_bot; canal Telegram e login iFood implementados e ensaiados na Railway; conversa de compras pendente. Documentação começa em docs/README.md; estado observado e seus limites em docs/estado-atual.md.
 - Este repositório implementará a interface Telegram. Consumir o api-backend; não criar outro servidor MCP nem duplicar seu OAuth.
 - Ler docs/regras-preservadas.md e docs/plano-demo.md antes de implementar. Preservar os IDs da StRS copiada em docs/baseline, sem converter propostas ou decisões abertas em comportamento aprovado.
