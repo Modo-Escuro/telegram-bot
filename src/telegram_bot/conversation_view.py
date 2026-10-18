@@ -2,6 +2,8 @@
 
 import re
 
+BUDGET_LABELS = ("Orçamento do grupo", "Orçamento")
+
 
 def collection_text(text, group):
     """Remover apenas confirmações redundantes reconstruíveis dos fatos atuais.
@@ -56,7 +58,10 @@ def render(snapshot, *, collection_only=False, concise=False):
         for b in document["blocks"]:
             if b["kind"] == "TEXT" and b["source"] == "SERVER":
                 for qualifier in ("máximo", "referência"):
-                    if b["text"] == f"Orçamento do grupo: {amount} ({qualifier}).":
+                    # API usa "Orçamento:" quando há uma pessoa só (uso individual).
+                    if b["text"] in {
+                        f"{label}: {amount} ({qualifier})." for label in BUDGET_LABELS
+                    }:
                         budget_text = b["text"].replace(amount, amount.replace(".", ","))
     for block in document["blocks"]:
         kind = block["kind"]
@@ -69,7 +74,7 @@ def render(snapshot, *, collection_only=False, concise=False):
             if concise and block["source"] == "SERVER":
                 if text in {"Nada foi alterado.", "Pergunta registrada."}:
                     continue
-                if budget_text and text.startswith("Orçamento do grupo: "):
+                if budget_text and text.startswith(tuple(f"{label}: " for label in BUDGET_LABELS)):
                     continue
                 text = re.sub(r"(R\$ \d+)\.(\d{2})(?!\d)", r"\1,\2", text)
             elif group and block["source"] == "SERVER":
@@ -78,16 +83,20 @@ def render(snapshot, *, collection_only=False, concise=False):
                     cents = group["budgetCents"]
                     amount = f"R$ {cents // 100}.{cents % 100:02d}"
                     if text in {
-                        f"Orçamento do grupo: {amount} (máximo).",
-                        f"Orçamento do grupo: {amount} (referência).",
+                        f"{label}: {amount} ({q})."
+                        for label in BUDGET_LABELS
+                        for q in ("máximo", "referência")
                     }:
                         text = ""
-                    if "(máximo)" in budget_text:
-                        text = text.removeprefix(f"Teto máximo de {amount} para o grupo.").lstrip()
-                    if "(referência)" in budget_text:
-                        text = text.removeprefix(
-                            f"Valor de referência de {amount} para o grupo."
-                        ).lstrip()
+                    for who in ("o grupo", "você"):  # "você" no uso individual
+                        if "(máximo)" in budget_text:
+                            text = text.removeprefix(
+                                f"Teto máximo de {amount} para {who}."
+                            ).lstrip()
+                        if "(referência)" in budget_text:
+                            text = text.removeprefix(
+                                f"Valor de referência de {amount} para {who}."
+                            ).lstrip()
             if text:
                 lines.append(prefix + text)
         elif kind == "GROUP":
