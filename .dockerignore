@@ -1,0 +1,13 @@
+# Somente o pacote e os arquivos necessários para construir a imagem.
+**
+!Dockerfile
+!pyproject.toml
+!src/
+!src/**
+**/__pycache__/
+**/*.py[cod]
+**/.env
+**/.env.*
+**/*.sqlite3*
+**/*.log
+**/*.egg-info/

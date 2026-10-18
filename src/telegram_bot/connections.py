@@ -106,7 +106,8 @@ class Connections:
             if command == "/conectar":
                 _, url = self.backend.connect()
                 return Reply(
-                    "Abra o login no navegador do computador que executa o backend. "
+                    "Abra o link e conclua o login no mesmo navegador. "
+                    "Se a API estiver em localhost, use o computador em que ela está rodando. "
                     "Depois envie /confirmar para conferir a conta e confirmar por botão."
                     + NO_PURCHASE,
                     {"inline_keyboard": [[{"text": "Abrir login do iFood", "url": url}]]},

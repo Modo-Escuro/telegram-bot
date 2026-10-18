@@ -1,6 +1,6 @@
 # Login iFood pelo Telegram
 
-Implementado no bot: cliente HTTP autenticado, /conectar, /confirmar, /ifood e /verificar, com confirmação humana por botão. Contrato conferido contra api-backend commit 20e46fdad96b96534fb8730e66d94460f98a6939, em 17/10/2026. Testes usam respostas simuladas; login real ainda depende das configurações e do ensaio local.
+Implementado no bot: cliente HTTP autenticado, /conectar, /confirmar, /ifood e /verificar, com confirmação humana por botão. Contrato inicialmente conferido contra api-backend commit 20e46fdad96b96534fb8730e66d94460f98a6939. Compatibilidade de login revisada contra 686300d1a10c12bb6c3bd899e40fbd3a68c648f5 em 17/10/2026; a revisão não comprova login real nem operações de compra. Testes usam respostas simuladas; login real ainda depende das configurações e do ensaio local.
 
 ## Configurar os dois processos
 
@@ -8,7 +8,7 @@ No api-backend, configurar conforme sua documentação:
 
 - BOT_API_TOKEN: segredo de serviço com pelo menos 32 caracteres.
 - ALLOWED_ORGANIZER_IDS: o mesmo ID numérico permitido no bot.
-- PUBLIC_BASE_URL: origem alcançável pelo navegador, na demo http://localhost:8000.
+- PUBLIC_BASE_URL: origem alcançável pelo navegador; deve coincidir com BACKEND_BASE_URL. Para API local, http://localhost:8000; para Railway, a origem HTTPS pública.
 - Credenciais e callback iFood: somente no backend; seguir seu cadastro OAuth.
 
 No Git Bash do bot, após configurar TELEGRAM_BOT_TOKEN e TELEGRAM_ALLOWED_USER_ID:
@@ -23,10 +23,41 @@ export BACKEND_API_TOKEN
 
 Insira o mesmo segredo configurado como BOT_API_TOKEN na API. Ele é diferente do token do BotFather e do Client Secret iFood. Nenhum segredo deve ser enviado no Telegram. O programa não carrega .env automaticamente. Sem as duas variáveis BACKEND_*, os comandos informam que a integração está desabilitada; configuração parcial impede iniciar o polling.
 
+## API publicada na Railway
+
+O serviço conferido em 17/10/2026 executava o commit `686300d`, com uma instância e sem volume. `/api/health` comprova apenas disponibilidade; uma consulta autenticada de `/api/bot/ifood/status` retornou `DISCONNECTED`, `operational: false` e nenhuma operação permitida. Não houve login ou confirmação humana nesse teste.
+
+Configuração pública do backend conferida:
+
+```text
+PUBLIC_BASE_URL=https://api-backend-production-9c4c.up.railway.app
+IFOOD_REDIRECT_URI=https://api-backend-production-9c4c.up.railway.app/callback
+DEV_GLOBAL_SESSION=false
+```
+
+A variável de callback não comprova que a mesma URI esteja cadastrada no cliente OAuth do iFood. O responsável deve conferir esse cadastro e o agente público no painel antes do ensaio. O frontend de diagnóstico não é necessário para conectar pelo Telegram; o fluxo usa `/auth/ifood/start` e `/callback`.
+
+No mesmo terminal Git Bash em que estão as variáveis Telegram, antes de iniciar o bot:
+
+```bash
+export BACKEND_BASE_URL="https://api-backend-production-9c4c.up.railway.app"
+read -r -s -p "Segredo de serviço da API (BOT_API_TOKEN): " BACKEND_API_TOKEN
+echo
+export BACKEND_API_TOKEN
+./.venv/Scripts/python.exe -m telegram_bot --check
+./.venv/Scripts/python.exe -m telegram_bot
+```
+
+Use exatamente o `BOT_API_TOKEN` do serviço como `BACKEND_API_TOKEN` e o mesmo ID numérico em `TELEGRAM_ALLOWED_USER_ID` e `ALLOWED_ORGANIZER_IDS`. Não cole nenhum desses segredos em comandos literais ou no chat. Variáveis de outro terminal não são herdadas; `.env` não é carregado automaticamente. Se já houver polling em execução, encerre-o com Ctrl+C antes de iniciar outra instância, preservando `data/`.
+
+Com callback HTTPS público, o navegador pode estar no computador ou no celular, mas o início e o retorno precisam ocorrer no mesmo navegador, com o cookie da tentativa. Tentativas pendentes ficam na memória do backend: não faça redeploy durante o login. Para preservar vínculos confirmados após redeploy, configure um volume no painel e aponte `IFOOD_LINKS_DIR` para um diretório dentro dele (por exemplo, volume `/data`, diretório `/data/ifood-links`). Se já existirem vínculos, preserve os arquivos antes de mudar o caminho.
+
+Critério de conclusão: `/conectar` → autorização humana no navegador → `/confirmar` → clique humano em **Confirmar conexão** → `/verificar`. O backend precisa retornar sessão operacional e operações permitidas; login não aprova compra. Não registrar URLs OAuth, códigos, identidade da conta nem respostas com dados pessoais como evidência.
+
 ## Fluxo no Telegram
 
 1. /conectar chama POST /api/bot/ifood/connect e mostra botão Abrir login do iFood. Novo comando cria outra tentativa e invalida a anterior.
-2. Abrir o botão no navegador do computador do backend e autorizar no iFood. Com loopback, abrir pelo celular não alcança o backend.
+2. Abrir o botão e autorizar no iFood no mesmo navegador que iniciou a tentativa. Com callback localhost, use o computador do backend; com callback HTTPS público configurado, também é possível usar o celular.
 3. /confirmar consulta GET /api/bot/ifood/status e apresenta a identidade mascarada quando disponível. Se indisponível, isso é informado.
 4. Somente tocar em Confirmar conexão se reconhecer a conta. O callback humano envia POST /api/bot/ifood/confirm com confirmationId do botão, após conferir que corresponde à tentativa atual.
 5. /ifood consulta o estado sem chamar o iFood. /verificar chama POST /api/bot/ifood/verify para verificar/renovar a sessão.
@@ -48,4 +79,4 @@ Insira o mesmo segredo configurado como BOT_API_TOKEN na API. Ele é diferente d
 
 Não há coleta do grupo, busca de ofertas, sacola, aprovação de pedido ou checkout no bot. Login não comprova autorização para compras. linkId ainda não é usado por uma sacola, pois ela não existe neste incremento; qualquer implementação futura deve vincular revisão e aprovação a esse ID e invalidá-las quando mudar.
 
-Referência: [contrato bot→API](https://github.com/Modo-Escuro/api-backend/blob/20e46fdad96b96534fb8730e66d94460f98a6939/docs/bot-api.md).
+Referência: [contrato bot→API](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md).

@@ -77,4 +77,4 @@ Referência: [Telegram Bot API — getUpdates](https://core.telegram.org/bots/ap
 
 ## 6. Habilitar login iFood
 
-Consulte [login-ifood.md](login-ifood.md) para configurar os dois processos. No Telegram, envie /conectar, abra o botão no navegador do computador do backend e conclua a autorização. Envie /confirmar, confira a conta e toque em Confirmar conexão. /ifood consulta o estado; /verificar valida a sessão via backend. Não envie código no chat.
+Consulte [login-ifood.md](login-ifood.md) para configurar os dois processos. No Telegram, envie /conectar, abra o botão e conclua a autorização no mesmo navegador. Para backend local, use o computador do backend; para Railway com callback HTTPS cadastrado, também é possível usar o celular. Envie /confirmar, confira a conta e toque em Confirmar conexão. /ifood consulta o estado; /verificar valida a sessão via backend. Não envie código no chat.

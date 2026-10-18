@@ -18,9 +18,10 @@ Siga o [guia de execução no Git Bash](docs/executar-bot.md) para criar o bot n
 
 ## Documentação
 
+- [Publicar o bot na Railway](docs/deploy-railway.md): serviço, variáveis e transferência do estado local.
 - [Regras preservadas e critérios de migração](docs/regras-preservadas.md).
 - [Etapas da demo e contrato pendente](docs/plano-demo.md).
-- [Login iFood e vínculo com o organizador](docs/login-ifood.md): pré-requisito das operações vinculadas à conta; implementação pendente.
+- [Login iFood e vínculo com o organizador](docs/login-ifood.md): pré-requisito das operações vinculadas à conta; cliente implementado, ensaio de login real pendente.
 - [Especificação v0.2 preservada](docs/baseline/stakeholder-requirements-specification.md), ainda em validação.
 - [Proveniência e hashes das cópias](docs/baseline/proveniencia.json).
 
