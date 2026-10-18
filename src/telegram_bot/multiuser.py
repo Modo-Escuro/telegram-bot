@@ -6,6 +6,8 @@ from dataclasses import replace
 
 from .access import AccessStore
 from .backend import Backend, BackendConfig
+from .cart import Carts
+from .cart_client import CartClient
 from .connections import Connections
 from .conversation import ConversationClient
 from .conversation_runner import Conversations, ConversationService, scope_for
@@ -40,7 +42,7 @@ def private_owner(update):
 
 class UserSession:
     def __init__(self, config, bot_id, owner, access_check):
-        self.owner, self.box, self.service = owner, None, None
+        self.owner, self.box, self.service, self.carts = owner, None, None, None
         # A cópia original conserva cursor, fila e acompanhamento do organizador anterior.
         legacy = config.state_dir / f"bot-{bot_id}.sqlite3"
         if owner == config.allowed_user_id:
@@ -69,7 +71,7 @@ class UserSession:
                     path,
                     scope,
                     client_factory,
-                    lambda: Telegram(config.token, timeout=5),
+                    lambda: Telegram(config.token, timeout=5, cart_enabled=config.cart_enabled),
                     owner,
                     link_status_factory=lambda: lambda: Backend(backend_cfg).status(timeout=5),
                     access_allowed_factory=lambda: access_check,
@@ -89,22 +91,43 @@ class UserSession:
                 conversations=conversations,
             )
             self.conversations = conversations
+            if config.cart_enabled:
+                self.carts = Carts(
+                    self.state,
+                    CartClient(backend_cfg),
+                    ConversationClient(backend_cfg, bot_id, timeout=5),
+                    Backend(backend_cfg),
+                    bot_id,
+                    owner,
+                    scope=scope_for(backend_cfg, bot_id),
+                )
         except BaseException:
             self.close()
             raise
 
     def receive(self, api, update, username):
         process_batch(
-            api, self.state, [update], self.owner, username, self.connections, self.conversations
+            api,
+            self.state,
+            [update],
+            self.owner,
+            username,
+            self.connections,
+            self.conversations,
+            self.carts,
         )
 
     def tick(self, api):
         if self.service and self.service.failed.is_set():
             raise ValueError("Worker de conversa indisponível; conferir armazenamento.")
         self.connections.tick(api, self.owner)
+        if self.carts:
+            self.carts.tick(api)
 
     def close(self):
         try:
+            if self.carts:
+                self.carts.close()
             if self.service:
                 self.service.stop()
         finally:
@@ -250,7 +273,12 @@ class PasswordRouter:
 
     def send(self, api, owner, text, markup=None):
         try:
-            api.send(owner, text, markup or keyboard(access=not self.access.allowed(owner)))
+            api.send(
+                owner,
+                text,
+                markup
+                or keyboard(access=not self.access.allowed(owner), cart=self.config.cart_enabled),
+            )
         except TelegramError as exc:
             if exc.code != 403:
                 raise

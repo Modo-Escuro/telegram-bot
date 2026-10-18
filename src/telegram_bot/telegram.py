@@ -59,11 +59,12 @@ class Telegram:
         }
     )
 
-    def __init__(self, token, opener=None, *, timeout=40):
+    def __init__(self, token, opener=None, *, timeout=40, cart_enabled=False):
         self._base = f"https://api.telegram.org/bot{token}/"
         self._opener = opener or build_opener(NoRedirect())
         self._timeout = timeout
         self._typing_at = {}
+        self.cart_enabled = cart_enabled
 
     def typing(self, chat_id):
         """Sinal nativo e efêmero; falha visual nunca interrompe a conversa."""
@@ -171,7 +172,7 @@ class Telegram:
 
     def send(self, chat_id, text, markup=None):
         payload = {"chat_id": chat_id, "text": text}
-        payload["reply_markup"] = markup if markup is not None else keyboard()
+        payload["reply_markup"] = markup if markup is not None else keyboard(cart=self.cart_enabled)
         return self.call("sendMessage", payload)
 
     def check(self):

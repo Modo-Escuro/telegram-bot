@@ -2,6 +2,8 @@ import argparse
 import sqlite3
 
 from .backend import Backend, BackendConfig
+from .cart import Carts
+from .cart_client import CartClient
 from .config import Config
 from .connections import Connections
 from .conversation import ConversationClient
@@ -25,7 +27,7 @@ def main():
     try:
         config = Config.from_env(identify=args.identify)
         voice_config = VoiceConfig.from_env()
-        api = Telegram(config.token)
+        api = Telegram(config.token, cart_enabled=config.cart_enabled)
         me = api.check()
         if args.check:
             print("Token Telegram válido e webhook ausente. Login iFood não verificado.")
@@ -55,7 +57,7 @@ def main():
                 )
             backend = Backend(backend_config) if backend_config else None
             state = State(config.state_dir / f"bot-{me['id']}.sqlite3")
-            box, service = None, None
+            box, service, carts = None, None, None
             try:
                 conversations = None
                 if config.conversation_enabled:
@@ -70,7 +72,7 @@ def main():
                         path,
                         scope,
                         client_factory,
-                        lambda: Telegram(config.token, timeout=5),
+                        lambda: Telegram(config.token, timeout=5, cart_enabled=config.cart_enabled),
                         config.allowed_user_id,
                         link_status_factory=lambda: (
                             lambda: Backend(backend_config).status(timeout=5)
@@ -84,6 +86,16 @@ def main():
                         else None,
                     )
                     service.start()
+                if config.cart_enabled:
+                    carts = Carts(
+                        state,
+                        CartClient(backend_config),
+                        ConversationClient(backend_config, me["id"], timeout=5),
+                        Backend(backend_config),
+                        me["id"],
+                        config.allowed_user_id,
+                        scope=scope_for(backend_config, me["id"]),
+                    )
                 print("Bot iniciado. Abra a conversa privada e envie /start. Ctrl+C encerra.")
                 poll(
                     api,
@@ -95,9 +107,12 @@ def main():
                     ),
                     conversations=conversations,
                     service=service,
+                    carts=carts,
                 )
             finally:
                 try:
+                    if carts:
+                        carts.close()
                     if service:
                         service.stop()
                 finally:

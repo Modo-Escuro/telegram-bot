@@ -1,0 +1,43 @@
+name: Ensaio HTTP CART-01
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      api_commit:
+        description: SHA completo revisado da API com a integração CART-01
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  cart-integration:
+    runs-on: ${{ matrix.os }}
+    env:
+      CART_API_COMMIT: ${{ inputs.api_commit || '09cb430d5c24ca05d504f5aed92fd79bcf3c4705' }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Exigir SHA completo da API
+        run: python -c "import os,re; assert re.fullmatch(r'[a-f0-9]{40}', os.environ['CART_API_COMMIT'])"
+      - uses: actions/checkout@v4
+        with:
+          repository: Modo-Escuro/api-backend
+          ref: ${{ env.CART_API_COMMIT }}
+          path: .cart-api
+          persist-credentials: false
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pip install --no-deps -e .
+      - run: npm ci --ignore-scripts
+        working-directory: .cart-api
+      - run: python -m unittest discover -s tests -p test_cart_integration.py -v
+        env:
+          CART_API_ROOT: .cart-api
