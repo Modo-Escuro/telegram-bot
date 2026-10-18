@@ -50,6 +50,11 @@ class State:
             "CREATE TABLE IF NOT EXISTS actions "
             "(update_id INTEGER PRIMARY KEY, created REAL NOT NULL)"
         )
+        # Pergunta individual/grupo: só o último teclado enviado vale, e uma única vez.
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS mode_prompt "
+            "(id INTEGER PRIMARY KEY CHECK(id=1), message_id INTEGER NOT NULL, used INTEGER NOT NULL)"
+        )
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS login_watch "
             "(id INTEGER PRIMARY KEY CHECK(id=1), owner INTEGER NOT NULL, "
@@ -82,6 +87,23 @@ class State:
             self.db.execute("DELETE FROM actions WHERE created < ?", (self.clock() - WEEK,))
             result = self.db.execute(
                 "INSERT OR IGNORE INTO actions VALUES (?, ?)", (update_id, self.clock())
+            )
+        return result.rowcount == 1
+
+    def mode_prompt(self, message_id):
+        with self.db:
+            self.db.execute(
+                "INSERT INTO mode_prompt VALUES (1, ?, 0) "
+                "ON CONFLICT(id) DO UPDATE SET message_id=excluded.message_id, used=0",
+                (message_id,),
+            )
+
+    def claim_mode(self, message_id):
+        """Consome o teclado atual uma vez; antigo, repetido ou desconhecido não envia nada."""
+        with self.db:
+            result = self.db.execute(
+                "UPDATE mode_prompt SET used=1 WHERE id=1 AND message_id=? AND used=0",
+                (message_id,),
             )
         return result.rowcount == 1
 
