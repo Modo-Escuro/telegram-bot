@@ -4,24 +4,22 @@ Continuação local dos PRs API #49 e bot #20, em `codex/conversation-guidance`.
 
 As respostas exibem Escolher opção N, Mudar busca e Ver outras quando a API oferece essas ações. Também aceitam texto: “a segunda”, “mais barato” e “troca por pizza”. A API preserva a busca durante a coleta e decide as opções; o bot não interpreta catálogo ou restrições. Revisar carrinho aparece com sacola atual e `TELEGRAM_CART_ENABLED=true`, abrindo a revisão já existente. Preparação exige outro callback humano específico PREPARE_CART.
 
-O teclado de navegação continua separado dessas opções. Nas respostas longas, os botões ficam apenas na última parte. Preços observados, entrega desconhecida e pessoas sem atendimento verificado permanecem explícitos. Esvaziar sacola preserva participantes, restrições e orçamento e não altera o carrinho remoto.
+O teclado persistente contém apenas Menu; a navegação aparece em botões junto da mensagem. Nas respostas longas, os botões ficam apenas na última parte. Preços observados, entrega desconhecida e pessoas sem atendimento verificado permanecem explícitos. Esvaziar sacola preserva participantes, restrições e orçamento e não altera o carrinho remoto.
 
 As referências expiram em cinco minutos e ficam vinculadas à versão da conversa. O SQLite local guarda apenas hash de referência, escopo, mensagem, bot, tipo, versão e prazo; não guarda snapshot ou texto do catálogo. Callback exige remetente/chat autorizados e mensagem original do bot. A fila não troca a versão de uma ação antiga pela atual. Recuperação conserva eventId e origem CALLBACK.
 
-## Validação offline
+## Conta, grupo e login
 
-Suíte completa: **257 testes aprovados**, incluindo a integração HTTP deste incremento, CART-01 e APIs históricas fixadas. API correspondente: **1.091 aprovados e 2 ignorados**; typecheck, lint e build aprovados. Esses resultados são locais, não CI ou ensaio em produção.
+A API correspondente implementa cadastro por conta atrás de `CONVERSATION_ACCOUNT_GROUPS_ENABLED`, desligado por padrão até validar UserInfo real. A fila captura a sessão no recebimento e mantém a referência em consulta, envio e recuperação, inclusive após reinício. Uma mensagem aceita em A não é transferida a B. Limpar/remover perfil usam versão e sessão da pergunta, com prazo de cinco minutos; confirmações antigas não são atualizadas para a versão atual.
 
-`test_conversation_buttons.py` cobre reinício, duplicação, expiração, outro remetente/chat/bot/mensagem, origem malformada, versão antiga, entrega em partes e distinção entre revisão e preparação. `test_guidance_integration.py`, com `GUIDANCE_API_ROOT` apontando para a API deste incremento, percorre texto → propostas → clique duplicado → sacola → esvaziamento com grupo preservado, via HTTP e SQLite reais e OAuth/MCP/modelo sintéticos.
+Conta iFood apresenta Entrar no iFood, Cancelar login ou Sair da conta iFood conforme o estado. Sair da demo continua separado. Cancelamento/logout incluem a referência atual para impedir que um botão antigo altere outro login.
 
-Os testes históricos RUN-01 e continuidade mantêm commits e fixtures originais. `CART_API_ROOT` testa a integração de revisão existente. Nenhum teste usa polling Telegram, modelo pago ou escrita iFood real.
+“Não”, “não tenho” e o botão “Não tenho restrições” encerram a pergunta de restrições desconhecidas, inclusive em conversa presa na confirmação anterior. A API preserva alergias já declaradas. O teclado fixo fica restrito a Menu; os demais controles aparecem nas mensagens, incluindo Remover pessoa e Limpar perfil dos PRs #23/#24.
 
-## Grupos por conta e login
+## Validação e implantação
 
-O cadastro separado por conta iFood ainda não foi implementado. A documentação MCP fornecida confirma que `userId` é oculto pelo gateway; nome/e-mail mascarados e o `linkId` de cada login não identificam a mesma conta de forma estável. O discovery público anuncia `userinfo`, mas a obtenção de uma identidade estável por esse caminho ainda precisa ser validada no backend.
+Testes offline cobrem envio, replay, versão, expiração, isolamento de sessão, callbacks e limpeza. `test_guidance_integration.py` com `GUIDANCE_API_ROOT` aponta para esta API e percorre texto → opções → clique → carrinho → limpeza, usando HTTP e SQLite reais e serviços externos falsos. As integrações históricas mantêm seus commits fixados. Resultados finais estão no PR; não comprovam deploy ou identidade real iFood.
 
-Depois dessa validação: separar grupo da compra, fixar a conta de origem nas mensagens pendentes e testar A → B → A também após reinício. Não migrar o grupo legado para uma conta inferida. Recomenda-se Entrar no iFood / Sair da conta iFood, com Cancelar login durante a tentativa e Sair da demo separado; os rótulos atuais continuam neste incremento.
+Publicar a API compatível antes do bot. API usa schema v5; preservar integralmente o diretório de estado do bot com o serviço parado, incluindo acesso, usuários, filas e WAL/SHM. Desligar `TELEGRAM_CART_ENABLED` junto de `TELEGRAM_CONVERSATION_ENABLED` em rollback e manter binário API compatível com o banco. Não executar polling concorrente.
 
-## Implantação posterior
-
-Implantar a API compatível antes do bot; a API usa schema SQLite v4. Preservar todo o diretório de estado do bot, incluindo banco de acesso, SQLite legado e `users/<hash>/bot.sqlite3`, filas, referências CART-01 e arquivos WAL/SHM. Cópia consistente exige parar o serviço antes de copiar. Rollback por flags: desligar `TELEGRAM_CART_ENABLED` e `TELEGRAM_CONVERSATION_ENABLED` juntos, preservar dados e usar binário compatível na API. Não executar polling concorrente.
+Ainda falta ampliar a resolução de pedido individual com grupo salvo e a correspondência entre comida solicitada e resultados do catálogo. Esta entrega não comprova que todo o fluxo das imagens esteja resolvido.

@@ -20,7 +20,7 @@ from telegram_bot.telegram import Telegram, TelegramError
 
 class NavigationTests(conversation.Fixture):
     def test_clear_bag_button_queues_explicit_simulated_intent_once(self):
-        event = conversation.update(1, "Esvaziar sacola")
+        event = conversation.update(1, "Esvaziar carrinho")
         for _ in range(2):
             process_batch(
                 self.telegram,
@@ -33,7 +33,7 @@ class NavigationTests(conversation.Fixture):
         row = self.box.active()
         self.assertIsNotNone(row)
         document = json.loads(bytes(row["body"]))
-        self.assertEqual(document["input"]["text"], "Esvaziar sacola simulada")
+        self.assertEqual(document["input"]["text"], "Esvaziar carrinho simulado")
         self.assertEqual(self.client.sent, [])
         self.assertEqual(
             self.box.db.execute("SELECT count(*) FROM conversation_outbox").fetchone()[0], 1

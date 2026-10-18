@@ -158,7 +158,13 @@ class LinkStatus:
         ):
             raise BackendError("PROTOCOL")
         account = body.get("account")
-        identity = attempt.get("accountIdentity") if attempt else account.get("identity") if isinstance(account, dict) else None
+        identity = (
+            attempt.get("accountIdentity")
+            if attempt
+            else account.get("identity")
+            if isinstance(account, dict)
+            else None
+        )
         if identity is not None and not isinstance(identity, dict):
             raise BackendError("PROTOCOL")
         link_id = body.get("linkId")
@@ -194,7 +200,9 @@ class Backend:
         self._opener = opener or build_opener(NoRedirect())
 
     def _request(self, method, action, payload=None, *, timeout=50, reference=None):
-        if reference is not None and (not isinstance(reference, str) or not OPAQUE.fullmatch(reference)):
+        if reference is not None and (
+            not isinstance(reference, str) or not OPAQUE.fullmatch(reference)
+        ):
             raise BackendError("PROTOCOL")
         if (method, action) not in {
             ("GET", "status"),

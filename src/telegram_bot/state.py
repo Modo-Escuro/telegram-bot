@@ -68,7 +68,9 @@ class State:
             "attempt_id TEXT NOT NULL, started REAL NOT NULL, expires REAL NOT NULL, "
             "message_id INTEGER, phase TEXT NOT NULL, next_check REAL NOT NULL)"
         )
-        self.db.execute("CREATE TABLE IF NOT EXISTS prompt_context (message_id INTEGER PRIMARY KEY, data TEXT NOT NULL, expires REAL NOT NULL)")
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS prompt_context (message_id INTEGER PRIMARY KEY, data TEXT NOT NULL, expires REAL NOT NULL)"
+        )
         self.db.commit()
 
     def close(self):
@@ -109,10 +111,16 @@ class State:
     def bind_prompt(self, message_id, context):
         with self.db:
             self.db.execute("DELETE FROM prompt_context WHERE expires<=?", (self.clock(),))
-            self.db.execute("INSERT OR REPLACE INTO prompt_context VALUES(?,?,?)", (message_id, json.dumps(context), self.clock() + 300))
+            self.db.execute(
+                "INSERT OR REPLACE INTO prompt_context VALUES(?,?,?)",
+                (message_id, json.dumps(context), self.clock() + 300),
+            )
 
     def prompt_context(self, message_id):
-        row = self.db.execute("SELECT data FROM prompt_context WHERE message_id=? AND expires>?", (message_id, self.clock())).fetchone()
+        row = self.db.execute(
+            "SELECT data FROM prompt_context WHERE message_id=? AND expires>?",
+            (message_id, self.clock()),
+        ).fetchone()
         return json.loads(row[0]) if row else None
 
     def claim_mode(self, message_id):

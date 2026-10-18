@@ -3,8 +3,8 @@ import time
 
 from .cart import COMMANDS as CART_COMMANDS
 from .connections import COMMANDS, Connections
-from .conversation_contract import ProtocolError
 from .conversation import ConversationError
+from .conversation_contract import ProtocolError
 from .conversation_runner import (
     CLEAR_MARKUP,
     CLEAR_QUESTION,
@@ -15,7 +15,7 @@ from .conversation_runner import (
     remove_markup,
     remove_text,
 )
-from .menu import navigation, inline_menu
+from .menu import inline_menu, navigation
 from .telegram import TelegramError
 
 GET_STARTED = (
@@ -31,7 +31,7 @@ STATUS = "Estou por aqui! O login não é verificado nesta tela. Use /ifood para
 HELP = (
     "• Conta iFood: entre, acompanhe o login ou saia da conta teste.\n"
     "• Endereços iFood: escolha onde receber.\n"
-    "• Esvaziar sacola: limpe a composição da demo.\n"
+    "• Esvaziar carrinho: limpe a composição da demo.\n"
     "• Remover pessoa / Limpar perfil: apague pessoas ou todo o pedido salvo.\n"
     "• Sair da demo: encerre seu acesso.\n\n"
     "Faltou uma resposta? Use /retomar. Você pode escrever ou usar os botões das mensagens."
@@ -143,6 +143,8 @@ def reply_for(update, allowed_id, username, connections=None):
         )
     if command == "/start":
         return START
+    if command == "/menu":
+        return "O que você quer fazer?"
     if command in {"/ajuda", "/help"}:
         return HELP
     if command == "/status":
@@ -233,7 +235,13 @@ def process_batch(
         if reply:
             try:
                 if isinstance(reply, str):
-                    api.send(allowed_id, reply, inline_menu(cart=carts is not None) if reply.startswith(START) or reply == HELP else None)
+                    api.send(
+                        allowed_id,
+                        reply,
+                        inline_menu(cart=carts is not None)
+                        if reply.startswith(START) or reply in {HELP, "O que você quer fazer?"}
+                        else None,
+                    )
                     if conversations is not None and reply.startswith(START):
                         # Conversa nova: pergunta uma vez se o uso é individual ou em grupo.
                         try:
@@ -342,11 +350,21 @@ def process_callback(
         return
     data = callback.get("data")
     if isinstance(data, str) and data.startswith("nav:"):
-        if message.get("forward_origin") or not isinstance(message.get("from"), dict) or message["from"].get("is_bot") is not True:
+        if (
+            message.get("forward_origin")
+            or not isinstance(message.get("from"), dict)
+            or message["from"].get("is_bot") is not True
+        ):
             return
         action = data[4:]
         if action in {"remove", "clear"}:
-            profile_command(api, state, allowed_id, "/remover" if action == "remove" else "/limpar", conversations)
+            profile_command(
+                api,
+                state,
+                allowed_id,
+                "/remover" if action == "remove" else "/limpar",
+                conversations,
+            )
         elif action in {"account", "connect"}:
             handler = connections or Connections(None, state)
             reply = handler.reply("/conectar" if action == "connect" else "/ifood", [], update_id)
@@ -354,13 +372,26 @@ def process_callback(
             handler.delivered(reply, result)
         elif action == "addresses" and conversations:
             queued = conversations.box.enqueue_addresses("menu-" + str(update_id))
-            api.send(allowed_id, "Vou conferir seus endereços." if queued else "Aguarde a resposta anterior e tente novamente.")
+            api.send(
+                allowed_id,
+                "Vou conferir seus endereços."
+                if queued
+                else "Aguarde a resposta anterior e tente novamente.",
+            )
         elif action == "review" and carts:
             api.send(allowed_id, carts.receive("/revisarcarrinho"))
         elif action in {"help", "menu"}:
-            api.send(allowed_id, HELP if action == "help" else "O que você quer fazer?", inline_menu(cart=carts is not None))
+            api.send(
+                allowed_id,
+                HELP if action == "help" else "O que você quer fazer?",
+                inline_menu(cart=carts is not None),
+            )
         elif action == "exit":
-            api.send(allowed_id, "Sair da demo está disponível no acesso por senha. Para sair do iFood, abra Conta iFood.", inline_menu())
+            api.send(
+                allowed_id,
+                "Sair da demo está disponível no acesso por senha. Para sair do iFood, abra Conta iFood.",
+                inline_menu(),
+            )
         return
     if isinstance(data, str) and data.startswith("cv:"):
         reply = (
@@ -391,7 +422,9 @@ def process_callback(
         )
         if ok:
             try:
-                conversations.mode_click(callback, update_id, choice, state.prompt_context(message["message_id"]))
+                conversations.mode_click(
+                    callback, update_id, choice, state.prompt_context(message["message_id"])
+                )
             except (ConversationError, ValueError, ProtocolError):
                 ok = False
         api.send(

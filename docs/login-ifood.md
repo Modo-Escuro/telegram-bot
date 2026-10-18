@@ -59,7 +59,7 @@ Se não houver botão após o login, envie `/confirmar` ou `/ifood`; não envie 
 
 O bot preserva cursor, ações e metadados do acompanhamento no volume `/data`: organizador, attemptId, messageId, fase, prazos e próxima consulta. A tabela é criada de forma aditiva, sem remover cursor/ações. Nenhum texto, URL OAuth, confirmationId ou identidade mascarada é guardado nessa tabela. Os vínculos da API ainda estão em armazenamento sem volume; antes de redeploy do backend, preservar os arquivos existentes e concluir uma migração verificada. Tentativas pendentes ficam em memória mesmo com volume: não redeployar a API durante o login.
 
-`linkId` deverá vincular futuras sacolas e aprovações. Mudança da conta/vínculo invalidará revisões anteriores. Essa regra ainda é requisito: sacola e aprovação de compra não existem neste bot.
+`linkId` deverá vincular futuros carrinhos e aprovações. Mudança da conta/vínculo invalidará revisões anteriores. Essa regra ainda é requisito: carrinho e aprovação de compra não existem neste bot.
 
 ## Acompanhamento BOT-02
 
@@ -71,6 +71,6 @@ O botão é atualizado por editMessageText na mensagem cujo ID foi confirmado pe
 
 Botões de cancelar/desconectar incluem referência à tentativa/vínculo e são comparados ao status atual antes da mutação. A API atual não recebe uma condição de versão nesses endpoints: a checagem protege botões obsoletos no worker único, mas não constitui CAS entre clientes externos concorrentes.
 
-Após o clique, a resposta mostra o estado atual e encerra o acompanhamento quando não há tentativa. A [continuação BOT-02](bot-02-retomada-contexto.md) agenda consulta informativa do grupo se a sessão for operacional e o worker de conversa estiver habilitado. Revalidação de sacola/aprovação após mudança de linkId permanece nas tarefas BOT-03/BUY-01 e no backend; ausência desses botões não comprova sua invalidação futura.
+Após o clique, a resposta mostra o estado atual e encerra o acompanhamento quando não há tentativa. A [continuação BOT-02](bot-02-retomada-contexto.md) agenda consulta informativa do grupo se a sessão for operacional e o worker de conversa estiver habilitado. Revalidação de carrinho/aprovação após mudança de linkId permanece nas tarefas BOT-03/BUY-01 e no backend; ausência desses botões não comprova sua invalidação futura.
 
 Código e testes deste incremento não comprovam deploy nem ensaio online. O snapshot anterior permanece histórico. Validar manualmente depois do merge/deploy: /conectar, navegador, mensagem atualizada, clique e /verificar; cancelar reconexão preservando o vínculo; desconectar com tentativa pendente preservando a tentativa.

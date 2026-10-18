@@ -3,6 +3,7 @@
 import re
 
 BUDGET_LABELS = ("Orçamento do grupo", "Orçamento")
+SEPARATOR = "━━━━━━━━━━━━"
 
 
 def collection_text(text, group):
@@ -121,8 +122,11 @@ def render(snapshot, *, collection_only=False, concise=False):
                     )
                 )
         elif kind in {"PROPOSAL", "REVIEW"}:
-            lines.append("Opção para comparar:" if kind == "PROPOSAL" else "Sua sacola:")
-            lines.append(money(block["price"]))
+            # Separador visual entre propostas; os detalhes vêm no texto do servidor logo abaixo.
+            lines.append(SEPARATOR)
+            if kind == "REVIEW":
+                lines.append("Revisão informativa.")
+                lines.append(money(block["price"]))
             for blocker in block.get("blockers", []):
                 lines.append("Pendência: " + blocker)
             uncovered = {c["participantRef"] for c in block["coverage"] if c["status"] != "COVERED"}
@@ -166,7 +170,11 @@ def render(snapshot, *, collection_only=False, concise=False):
             } or (
                 group
                 and any(
-                    question == f"{p['displayName']} tem alguma alergia ou restrição alimentar?"
+                    question
+                    in {
+                        f"{p['displayName']} tem alguma alergia ou restrição alimentar?",
+                        f"{p['displayName']} tem alguma alergia ou restrição alimentar? Pode confirmar?",
+                    }
                     for p in group["participants"]
                 )
             )
@@ -177,13 +185,15 @@ def render(snapshot, *, collection_only=False, concise=False):
         kinds = {a["kind"] for a in document["allowedActions"]}
         if "REQUEST_REVIEW" in kinds:
             lines.append(
-                "Confira os itens da sacola. Você pode mudar a busca ou revisar o carrinho quando essa função estiver disponível."
+                "Confira os itens do carrinho. Você pode mudar a busca ou revisar o carrinho quando essa função estiver disponível."
             )
         elif "SELECT_PROPOSAL" in kinds:
             lines.append(
                 "Qual opção você prefere? Toque em uma opção ou diga, por exemplo, ‘a segunda’. Também pode pedir outra busca."
             )
-        elif any(a["actionRef"].startswith(("search_", "more_")) for a in document["allowedActions"]):
+        elif any(
+            a["actionRef"].startswith(("search_", "more_")) for a in document["allowedActions"]
+        ):
             lines.append(
                 "Você pode mudar o tipo de comida ou pedir uma nova busca, mantendo as restrições."
             )

@@ -210,7 +210,9 @@ class ConversationClient:
                 require(change["source"] == body["source"])
             return operation
         target = body["operationId"]
-        status, result = self._request("POST", f"/operations/{target}/cancel", command._raw, session_ref=session_ref)
+        status, result = self._request(
+            "POST", f"/operations/{target}/cancel", command._raw, session_ref=session_ref
+        )
         validate("cancelResult", result)
         self._scope(result)
         require(result["eventId"] == body["eventId"] and result["targetOperationId"] == target)
@@ -298,10 +300,15 @@ class ConversationClient:
         require(type(body.get("enabled")) is bool)
         if not body["enabled"]:
             return None
-        require(isinstance(body.get("sessionRef"), str) and re.fullmatch(r"[a-f0-9]{64}", body["sessionRef"]))
+        require(
+            isinstance(body.get("sessionRef"), str)
+            and re.fullmatch(r"[a-f0-9]{64}", body["sessionRef"])
+        )
         return body["sessionRef"]
 
-    def _request(self, method: str, suffix: str, raw: bytes | None = None, *, session_ref=None) -> tuple[int, dict]:
+    def _request(
+        self, method: str, suffix: str, raw: bytes | None = None, *, session_ref=None
+    ) -> tuple[int, dict]:
         if session_ref is not None:
             require(isinstance(session_ref, str) and re.fullmatch(r"[a-f0-9]{64}", session_ref))
         request = Request(

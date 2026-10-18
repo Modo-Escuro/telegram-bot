@@ -36,7 +36,7 @@ O teste de migração inicialmente revelou uma conexão de fixture aberta no Win
 
 - Nenhum login, polling, alteração de banco online ou deploy foi executado nesta validação.
 - O acompanhamento continua no loop único; chamadas manuais e rede ainda podem atrasar eventos. Fila assíncrona de conversa é BOT-01.
-- Não existe contexto de compra a retomar nem sacola/aprovação neste adaptador. Retomar a conversa e invalidar ações de compra após mudança de linkId dependem das tarefas de conversa/compra. Não marcar esse critério futuro como validado.
+- Não existe contexto de compra a retomar nem carrinho/aprovação neste adaptador. Retomar a conversa e invalidar ações de compra após mudança de linkId dependem das tarefas de conversa/compra. Não marcar esse critério futuro como validado.
 - A API não possui parâmetro condicional de attemptId/linkId para cancelamento/desconexão. A rechecagem do bot evita uso de botões obsoletos no worker único, mas não garante CAS diante de outro cliente externo que troque a conta simultaneamente.
 - API-01 continua dependência para a retomada futura do contexto. O acompanhamento e os comandos deste incremento usam somente o contrato existente.
 

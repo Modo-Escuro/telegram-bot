@@ -16,7 +16,7 @@ O marcador PENDING é gravado antes de agendar a confirmação. POST é enviado 
 
 ## Limites desta entrega
 
-Este é um incremento de CART-01/BOT-03. Escolher/corrigir propostas por botões, revisão final de composição/custos, seleção de entrega e experiência completa da BOT-03 continuam pendentes. O texto conversacional ainda chama a composição local de sacola simulada; só o caminho separado PREPARE_CART pode sincronizar itens após confirmação.
+Este é um incremento de CART-01/BOT-03. Escolher/corrigir propostas por botões, revisão final de composição/custos, seleção de entrega e experiência completa da BOT-03 continuam pendentes. O texto conversacional ainda chama a composição local de carrinho simulado; só o caminho separado PREPARE_CART pode sincronizar itens após confirmação.
 
 Opções sem rótulos humanos, remoções de itens sem identificação e revisão que exceda uma mensagem de 3500 bytes bloqueiam o botão. Não truncar conteúdo para obter aprovação. A identificação legível de loja/endereço/conta na revisão precisa ser completada antes da ativação; o backend vincula IDs, mas IDs técnicos não substituem uma revisão humana suficiente. Não ativar esta interface enquanto essa lacuna permanecer.
 

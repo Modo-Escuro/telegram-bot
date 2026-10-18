@@ -2,7 +2,8 @@
 
 from unittest.mock import Mock
 
-from test_conversation_worker import Fixture, update, snapshot
+from test_conversation_worker import Fixture, snapshot, update
+
 from telegram_bot.conversation import ConversationError
 from telegram_bot.conversation_runner import Conversations, ConversationWorker
 
@@ -17,7 +18,9 @@ class AccountSessions(Fixture):
         self.client.account_context.assert_called_once()
         self.assertEqual(reopened.active()["account_session"], "a" * 64)
         self.client.get_snapshot = Mock(side_effect=ConversationError("LINK_CHANGED"))
-        worker = ConversationWorker(reopened, self.client, self.telegram, 111111111, clock=lambda: self.now)
+        worker = ConversationWorker(
+            reopened, self.client, self.telegram, 111111111, clock=lambda: self.now
+        )
         worker.tick()
         self.client.get_snapshot.assert_called_once_with(session_ref="a" * 64)
         self.assertEqual(self.client.sent, [])
@@ -28,9 +31,11 @@ class AccountSessions(Fixture):
         self.client.get_snapshot = Mock(return_value=snapshot())
         original_send, original_poll = self.client.send, self.client.get_operation
         self.client.send = Mock(side_effect=lambda command, **kw: original_send(command))
-        self.client.get_operation = Mock(side_effect=lambda op, event_id, **kw: original_poll(op, event_id=event_id))
+        self.client.get_operation = Mock(
+            side_effect=lambda op, event_id, **kw: original_poll(op, event_id=event_id)
+        )
         self.adapter.receive(update())
-        self.tick(2)
+        self.tick(4)
         self.assertEqual(self.client.send.call_args.kwargs, {"session_ref": "a" * 64})
         self.assertEqual(self.client.get_operation.call_args.kwargs["session_ref"], "a" * 64)
         self.client.get_snapshot.assert_called_with(session_ref="a" * 64)

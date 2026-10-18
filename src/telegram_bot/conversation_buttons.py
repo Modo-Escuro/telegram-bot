@@ -13,7 +13,12 @@ def offered(snapshot, *, cart=False):
         if re.fullmatch(r"choose[1-4]", code) and action["kind"] == "SELECT_PROPOSAL":
             label = "Escolher opção " + code[-1]
         elif action["kind"] == "EDIT_CONTEXT":
-            label = {"search": "Mudar busca", "more": "Ver outras", "clear": "Esvaziar sacola", "none": "Não tenho restrições"}.get(code)
+            label = {
+                "search": "Mudar busca",
+                "more": "Ver outras",
+                "clear": "Esvaziar carrinho",
+                "none": "Não tenho restrições",
+            }.get(code)
         elif code == "review" and action["kind"] == "REQUEST_REVIEW" and cart:
             label = "Revisar carrinho"
         if label:

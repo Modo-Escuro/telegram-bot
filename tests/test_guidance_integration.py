@@ -125,7 +125,7 @@ class GuidanceIntegration(unittest.TestCase):
         self.assertEqual(selected["version"], before["version"] + 1)
         self.assertEqual(selected["phase"], "EDITING_CART")
         self.assertIsNone(selected["humanApproval"])
-        self.assertIn("Sua sacola", telegram.send.call_args.args[1])
+        self.assertIn("Carrinho simulado", telegram.send.call_args.args[1])
         adapter.receive(update(3, "Esvaziar sacola"))
         drive()
         cleared = client.get_snapshot().to_dict()

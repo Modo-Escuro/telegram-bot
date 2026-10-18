@@ -19,7 +19,7 @@ from telegram_bot.cart_client import CartClient, CartError
 from telegram_bot.cart_view import current_text
 from telegram_bot.config import Config
 from telegram_bot.conversation_contract import Snapshot, encode
-from telegram_bot.menu import keyboard, inline_menu
+from telegram_bot.menu import inline_menu, keyboard
 from telegram_bot.runner import process_batch
 from telegram_bot.state import State
 

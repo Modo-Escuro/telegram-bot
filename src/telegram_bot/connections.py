@@ -55,17 +55,19 @@ def status_reply(status):
             [{"text": "Confirmar conexão", "callback_data": "ifc:" + status.confirmation_id}]
         )
     if status.attempt_id and len(status.attempt_id) <= 60:
-        buttons.append(
-            [{"text": "Cancelar login", "callback_data": "ifx:" + status.attempt_id}]
-        )
+        buttons.append([{"text": "Cancelar login", "callback_data": "ifx:" + status.attempt_id}])
     if status.link_id and len(status.link_id) <= 60:
         buttons.append([{"text": "Sair da conta iFood", "callback_data": "ifd:" + status.link_id}])
     elif not status.attempt_id:
         buttons.append([{"text": "Entrar no iFood", "callback_data": "nav:connect"}])
     if status.state == "CONNECTED" and status.identity:
         labels = [status.identity.get("displayName"), status.identity.get("emailMasked")]
-        text += "\nConta ativa: " + " · ".join(s for s in labels if isinstance(s, str) and 0 < len(s) <= 150)
-    return Reply(text, {"inline_keyboard": buttons} if buttons else None, connection_state=status.state)
+        text += "\nConta ativa: " + " · ".join(
+            s for s in labels if isinstance(s, str) and 0 < len(s) <= 150
+        )
+    return Reply(
+        text, {"inline_keyboard": buttons} if buttons else None, connection_state=status.state
+    )
 
 
 def error_text(error):

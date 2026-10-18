@@ -234,7 +234,11 @@ class Outbox:
         body = command.serialize()
         document = command.to_dict()
         event_id = document["eventId"]
-        digest = hashlib.sha256(body + (encode(voice) if voice else b"") + (account_session.encode() if account_session else b"")).hexdigest()
+        digest = hashlib.sha256(
+            body
+            + (encode(voice) if voice else b"")
+            + (account_session.encode() if account_session else b"")
+        ).hexdigest()
         now = self.clock()
         with self.transaction():
             previous = self.db.execute(
@@ -309,7 +313,10 @@ class Outbox:
                         (encode(voice), self.scope, event_id),
                     )
                 if account_session:
-                    self.db.execute("UPDATE conversation_outbox SET account_session=? WHERE scope=? AND event_id=?", (account_session, self.scope, event_id))
+                    self.db.execute(
+                        "UPDATE conversation_outbox SET account_session=? WHERE scope=? AND event_id=?",
+                        (account_session, self.scope, event_id),
+                    )
             self.db.execute(
                 "INSERT INTO cursor VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET "
                 "offset=MAX(cursor.offset,excluded.offset),updated=excluded.updated",
@@ -401,9 +408,9 @@ class Outbox:
     def _prepare(self, row, version):
         document = decode(bytes(row["body"]))
         if (
-            (document.get("input", {}).get("kind") == "ACTION" or document.get("eventId", "").startswith(("tg-clear-", "tg-remove-", "tg-mode-")))
-            and document["expectedVersion"] != version
-        ):
+            document.get("input", {}).get("kind") == "ACTION"
+            or document.get("eventId", "").startswith(("tg-clear-", "tg-remove-", "tg-mode-"))
+        ) and document["expectedVersion"] != version:
             self.update(row["seq"], state="NOTICE", notice="STALE_VERSION", body=None)
             return
         document["expectedVersion"] = version

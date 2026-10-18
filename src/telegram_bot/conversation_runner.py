@@ -114,7 +114,10 @@ class Conversations:
         self.voice_enabled = voice_enabled
 
     def _account_session(self, command):
-        previous = self.box.db.execute("SELECT account_session FROM conversation_outbox WHERE scope=? AND event_id=?", (self.box.scope, command.to_dict()["eventId"])).fetchone()
+        previous = self.box.db.execute(
+            "SELECT account_session FROM conversation_outbox WHERE scope=? AND event_id=?",
+            (self.box.scope, command.to_dict()["eventId"]),
+        ).fetchone()
         if previous:
             return previous["account_session"]
         capture = getattr(self.client, "account_context", None)
@@ -259,7 +262,9 @@ class Conversations:
             account_session = self._account_session(command)
         except ConversationError:
             return "Não consegui confirmar a conta para esta mensagem. Use Entrar no iFood ou confira sua conexão e envie novamente."
-        self.box.receive(command, update["update_id"], kind=kind, voice=voice, account_session=account_session)
+        self.box.receive(
+            command, update["update_id"], kind=kind, voice=voice, account_session=account_session
+        )
         return None
 
 
@@ -460,7 +465,9 @@ class ConversationWorker:
 
     def _poll(self, row):
         options = []
-        operation = self.client.get_operation(row["operation_id"], event_id=row["event_id"], **self._session_args(row))
+        operation = self.client.get_operation(
+            row["operation_id"], event_id=row["event_id"], **self._session_args(row)
+        )
         if self.stop_event.is_set():
             return
         if not operation.terminal:
