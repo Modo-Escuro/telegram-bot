@@ -95,12 +95,15 @@ def error_text(error):
 
 
 class Connections:
-    def __init__(self, backend, state, organizer_id=None):
+    def __init__(self, backend, state, organizer_id=None, *, conversations=None):
         self.backend, self.state = backend, state
         self.organizer_id = organizer_id
+        self.conversations = conversations
 
-    def _present(self, status):
+    def _present(self, status, *, resume_key=None):
         reply = status_reply(status)
+        if resume_key is not None:
+            reply.text += self._restore_context(status, resume_key)
         if self.organizer_id is None:
             return reply
         if status.attempt_id:
@@ -115,6 +118,17 @@ class Connections:
         else:
             self.state.stop_login_watch()
         return reply
+
+    def _restore_context(self, status, source_key):
+        """Agendar consulta local e devolver orientação, inclusive se a fila recusar."""
+        if self.conversations is None:
+            return ""
+        queued = self.conversations.restore_after_login(status, source_key)
+        if queued is True:
+            return "\nConsulta do grupo registrada para acompanhamento em segundo plano, conferindo o vínculo atual. Nenhuma ação anterior será repetida."
+        if queued is False:
+            return "\nNão consegui agendar a retomada do grupo: a fila está cheia ou o vínculo mudou. Use /verificar depois."
+        return ""
 
     def delivered(self, reply, result):
         if (
@@ -145,7 +159,10 @@ class Connections:
                 "/cancelar",
                 "/desconectar",
             } and not self.state.claim_action(update_id):
-                return self._present(self.backend.status())
+                return self._present(
+                    self.backend.status(),
+                    resume_key=f"status-update-{update_id}" if command == "/verificar" else None,
+                )
             if command == "/conectar":
                 status, url = self.backend.connect()
                 reply = self._present(status)
@@ -161,7 +178,7 @@ class Connections:
                 }
                 return reply
             if command == "/verificar":
-                return self._present(self.backend.verify())
+                return self._present(self.backend.verify(), resume_key=f"status-update-{update_id}")
             if command == "/cancelar":
                 return self._cancel()
             if command == "/desconectar":
@@ -177,18 +194,24 @@ class Connections:
             return Reply("Confirmação inválida. Envie /confirmar novamente.")
         try:
             if not self.state.claim_action(update_id):
-                return self._present(self.backend.status())
+                return self._present(
+                    self.backend.status(), resume_key=f"confirm-update-{update_id}"
+                )
             current = self.backend.status()
             if (
                 current.state != "AWAITING_CONFIRMATION"
                 or current.confirmation_id != confirmation_id
             ):
                 return Reply("Este botão não corresponde à confirmação atual. Envie /confirmar.")
-            return self._present(self.backend.confirm(confirmation_id))
+            return self._present(
+                self.backend.confirm(confirmation_id), resume_key=f"confirm-update-{update_id}"
+            )
         except BackendError as error:
             if error.kind == "ALREADY_CONFIRMED":
                 try:
-                    return self._present(self.backend.status())
+                    return self._present(
+                        self.backend.status(), resume_key=f"confirm-update-{update_id}"
+                    )
                 except BackendError as next_error:
                     return Reply(error_text(next_error))
             return Reply(error_text(error))
@@ -261,12 +284,18 @@ class Connections:
                 )
             return
         if status.attempt_id != watch["attempt_id"]:
+            # Recuperação de confirmação já concluída no servidor; nunca confirma pelo GET.
+            followup = (
+                self._restore_context(status, "attempt-" + watch["attempt_id"])
+                if not status.attempt_id
+                else ""
+            )
             text = (
                 status_text(status)
                 if not status.attempt_id
                 else ("Esta tentativa foi substituída. Consulte /ifood para acompanhar a atual.")
             )
-            self._finish_watch(api, allowed_id, watch, text)
+            self._finish_watch(api, allowed_id, watch, text + followup)
             return
         expires = min(
             status.attempt_expires_at

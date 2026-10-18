@@ -14,13 +14,13 @@ from pathlib import Path
 from unittest.mock import Mock
 from urllib.request import Request, urlopen
 
-from telegram_bot.backend import BackendConfig
+from telegram_bot.backend import BackendConfig, LinkStatus
 from telegram_bot.conversation import ConversationClient, ConversationError
 from telegram_bot.conversation_runner import Conversations, ConversationWorker
 from telegram_bot.outbox import Outbox
 from telegram_bot.state import State
 
-API_COMMIT = "d2883f120419385c5ec902740330c3743f130b44"
+API_COMMIT = "2b77c958f358130c91a72e310d5c31f6c39c2d00"
 API_ROOT = os.environ.get("BOT01_API_ROOT")
 OWNER, BOT = 111111111, 900001
 
@@ -126,10 +126,50 @@ class Run01Integration(unittest.TestCase):
 
     def drive(self, timeout=8):
         deadline = time.monotonic() + timeout
-        while self.box.active() and time.monotonic() < deadline:
+
+        def pending():
+            return self.box.db.execute(
+                "SELECT 1 FROM conversation_outbox WHERE state NOT IN ('DONE','CANCELLED','EXPIRED') LIMIT 1"
+            ).fetchone()
+
+        while pending() and time.monotonic() < deadline:
             self.worker.tick()
             time.sleep(0.03)
-        self.assertIsNone(self.box.active(), "Fila não concluiu no prazo do ensaio sintético")
+        self.assertIsNone(pending(), "Fila não concluiu no prazo do ensaio sintético")
+
+    def restore_login_context(self):
+        status = LinkStatus(
+            "CONNECTED", True, ("ADDRESSES_READ",), None, None, "synthetic-link-xxxxxxxxxxxxxxxx"
+        )
+        self.worker.link_status = lambda: status
+        self.assertTrue(self.adapter.restore_after_login(status, "synthetic-confirmation-1"))
+        recovered = Outbox(self.path, "run01-integration")
+        self.addCleanup(recovered.close)
+        self.worker = ConversationWorker(
+            recovered, self.client, self.telegram, OWNER, link_status=lambda: status
+        )
+
+    def test_login_restore_reads_real_snapshot_without_creating_new_turn(self):
+        self.adapter.receive(update(1))
+        self.drive()
+        self.telegram.reset_mock()
+        self.restore_login_context()
+        self.drive()
+        self.assertEqual(self.request("/synthetic/stats")["executions"], 1)
+        self.assertEqual(self.client.get_snapshot().version, 1)
+        self.assertIn("Pessoa sintética", self.telegram.send.call_args.args[1])
+        self.assertIn("Retomada informativa", self.telegram.send.call_args.args[1])
+
+    def test_login_restore_after_purge_does_not_reintroduce_group(self):
+        self.adapter.receive(update(1))
+        self.drive()
+        self.telegram.reset_mock()
+        self.assertEqual(self.request("/synthetic/expire", "POST")["purged"], 1)
+        self.restore_login_context()
+        self.drive()
+        self.assertEqual(self.request("/synthetic/stats")["executions"], 1)
+        self.assertEqual(self.client.get_snapshot().version, 2)
+        self.assertNotIn("Pessoa sintética", self.telegram.send.call_args.args[1])
 
     def test_http_accept_recovery_and_durable_domain_snapshot(self):
         self.adapter.receive(update(1))

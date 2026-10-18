@@ -23,6 +23,7 @@ Credenciais iFood, PKCE, callback e tokens pertencem à API. [Railway](deploy-ra
 3. Quando a página informar que a autorização foi recebida, volte à **mensagem do login no Telegram**. O bot consulta o status e edita essa mensagem para mostrar **Confirmar conexão**. Não é uma nova notificação push. Se a mensagem foi removida ou o acompanhamento terminou, envie `/confirmar` ou `/ifood`.
 4. Confira a conta mascarada apresentada e toque em **Confirmar conexão** somente se reconhecê-la. Quando a identidade não puder ser verificada, o bot informa isso explicitamente. `/confirmar` sem clique não confirma.
 5. Envie **`/verificar`** para solicitar a verificação da sessão. `/ifood` consulta o estado salvo sem nova operação iFood. Vínculo `CONNECTED` isolado não basta: sessão operacional e operações permitidas são exigidas.
+6. Com conversa habilitada e conexão operacional, o bot consulta o grupo salvo em segundo plano após o clique ou `/verificar`. Confira participantes, condições e orçamento. A retomada não repete mensagens anteriores nem apresenta proposta/aprovação antiga. [Alcance e limites](bot-02-retomada-contexto.md).
 
 Não enviar senha, token, código OAuth, URL de retorno ou código digitado no Telegram. Esta confirmação vincula a conta ao organizador; a aprovação de um pedido futuro será outro evento humano.
 
@@ -68,6 +69,6 @@ O botão é atualizado por editMessageText na mensagem cujo ID foi confirmado pe
 
 Botões de cancelar/desconectar incluem referência à tentativa/vínculo e são comparados ao status atual antes da mutação. A API atual não recebe uma condição de versão nesses endpoints: a checagem protege botões obsoletos no worker único, mas não constitui CAS entre clientes externos concorrentes.
 
-Após o clique, a resposta mostra o estado atual e encerra o acompanhamento quando não há tentativa. Não há contexto de compra para retomar nesta versão. Revalidação de sacola/aprovação após mudança de linkId permanece nas tarefas de conversa e compra; nenhum botão antigo pode aprovar compra porque essas ações não existem no bot.
+Após o clique, a resposta mostra o estado atual e encerra o acompanhamento quando não há tentativa. A [continuação BOT-02](bot-02-retomada-contexto.md) agenda consulta informativa do grupo se a sessão for operacional e o worker de conversa estiver habilitado. Revalidação de sacola/aprovação após mudança de linkId permanece nas tarefas BOT-03/BUY-01 e no backend; ausência desses botões não comprova sua invalidação futura.
 
 Código e testes deste incremento não comprovam deploy nem ensaio online. O snapshot anterior permanece histórico. Validar manualmente depois do merge/deploy: /conectar, navegador, mensagem atualizada, clique e /verificar; cancelar reconexão preservando o vínculo; desconectar com tentativa pendente preservando a tentativa.

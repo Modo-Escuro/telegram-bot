@@ -54,6 +54,9 @@ def main():
                         client_factory,
                         lambda: Telegram(config.token, timeout=5),
                         config.allowed_user_id,
+                        link_status_factory=lambda: (
+                            lambda: Backend(backend_config).status(timeout=5)
+                        ),
                     )
                     service.start()
                 print("Bot iniciado. Abra a conversa privada e envie /start. Ctrl+C encerra.")
@@ -62,7 +65,9 @@ def main():
                     state,
                     config.allowed_user_id,
                     me["username"],
-                    connections=Connections(backend, state, config.allowed_user_id),
+                    connections=Connections(
+                        backend, state, config.allowed_user_id, conversations=conversations
+                    ),
                     conversations=conversations,
                     service=service,
                 )
