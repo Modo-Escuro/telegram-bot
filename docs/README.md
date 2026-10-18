@@ -4,6 +4,8 @@
 
 # Documentação do bot Compra com Contexto
 
+[Continuidade automática e endereços](continuidade-enderecos.md): correção da mensagem presa, retomada após OAuth e escolha humana do endereço; publicação/CI não comprovam ativação.
+
 Esta revisão altera somente documentação. A implementação CART-01 local, suas rotas e resultados de testes não fazem parte das mains remotas conferidas.
 
 [Estado remoto/local](estado-remoto-local.md): versões conferidas, código integrado e CART-01 ainda local. [Decisões vigentes](decisoes-conversacionais.md): carrinho real confirmado já aprovado no escopo, com outputs/ativação pendentes; envio/pagamento proibidos.
