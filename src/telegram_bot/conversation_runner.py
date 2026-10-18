@@ -183,7 +183,9 @@ class ConversationWorker:
             state = row["state"]
             if state == "DELIVERY_UNKNOWN":
                 self.box.save(
-                    row["seq"], state="ACCEPTED", attempts=0,
+                    row["seq"],
+                    state="ACCEPTED",
+                    attempts=0,
                     delivery_recoveries=row["delivery_recoveries"] + 1,
                 )
                 row = self.box.get(row["seq"])
@@ -418,7 +420,10 @@ class ConversationWorker:
                             (row["seq"], index),
                         )
                         self.box.update(
-                            row["seq"], state=next_state, attempts=0, due=self.clock() + 1,
+                            row["seq"],
+                            state=next_state,
+                            attempts=0,
+                            due=self.clock() + 1,
                         )
                 elif not message_id and error.code in {0, 500, 502, 503, 504}:
                     self.box.save(row["seq"], state="DELIVERY_UNKNOWN", attempts=3, body=None)

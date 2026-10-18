@@ -340,9 +340,7 @@ class Outbox:
             active
             if active
             and active["due"] <= now
-            and (recoverable or (
-                active["attempts"] < 3 and active["state"] != "DELIVERY_UNKNOWN"
-            ))
+            and (recoverable or (active["attempts"] < 3 and active["state"] != "DELIVERY_UNKNOWN"))
             else None
         )
 

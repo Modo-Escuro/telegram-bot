@@ -14,6 +14,8 @@ Retomar conversa explica que uma resposta já recebida pode aparecer novamente d
 
 Validação deste refinamento: suíte com **201 testes aprovados e 10 integrações ignoradas** por falta das variáveis de checkout fixado; Ruff check/format, compileall e diff conferidos. As integrações ignoradas não foram contadas como aprovadas. Sem merge/deploy deste refinamento.
 
+Atualização da base do PR #20 para `main@46afe08beedd617a4d547ed18cd3f47fd4b11f72`: preserva a recuperação de respostas antigas do #19, sem alterar suas condições de reenvio ou recuperação por GET. A suíte atualizada passou com **205 testes aprovados e 10 integrações ignoradas**. Foram normalizados apenas imports e formatação trazidos pela nova base para manter Ruff check/format aprovados; compileall e diff também aprovados. A atualização ocorreu somente na branch do PR, sem merge na main ou deploy.
+
 O retorno automático depende da atualização correspondente do api-backend (`docs/login-retorno-natural.md`). O bot acompanha o estado existente, consulta o grupo e não repete ações. Um botão antigo de confirmação mostra o estado atual, sem confirmar uma nova tentativa. A confirmação manual permanece como recuperação de uma tentativa antiga ou falha ao salvar o vínculo. Cancelar/desconectar antigos continuam incapazes de afetar outra referência.
 
 ## Ensaio humano

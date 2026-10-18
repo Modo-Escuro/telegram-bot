@@ -14,8 +14,7 @@ from telegram_bot.backend import LinkStatus
 from telegram_bot.conversation_contract import encode
 from telegram_bot.conversation_runner import Conversations, ConversationWorker
 from telegram_bot.runner import process_batch
-from telegram_bot.telegram import Telegram
-from telegram_bot.telegram import TelegramError
+from telegram_bot.telegram import Telegram, TelegramError
 
 LINK = "synthetic-link-xxxxxxxxxxxxxxxx"
 
