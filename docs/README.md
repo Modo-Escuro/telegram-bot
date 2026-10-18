@@ -1,5 +1,7 @@
 # Documentação do bot Compra com Contexto
 
+[Incremento BOT-02](validacao-bot02.md): acompanhamento do login, cancelamento, desconexão e validação offline. Deploy e ensaio online são evidências separadas.
+
 ## Por onde começar
 
 1. [Estado atual](estado-atual.md): implementação, ensaio real, evidência sanitizada e limites.

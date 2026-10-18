@@ -58,7 +58,7 @@ Depois de encerrar a instância online e concluir a transferência de estado, in
 
 `/start`, `/status` e `/ajuda` respondem ao organizador em conversa privada. Outro usuário ou grupo é ignorado. Ctrl+C encerra. `/status` mostra o estágio da demo; `/ifood` consulta o vínculo e `/verificar` pede verificação da sessão ao backend.
 
-O [fluxo de login](login-ifood.md) exige enviar `/confirmar` depois de autorizar no navegador. O botão não aparece automaticamente e nenhum código deve ser digitado no Telegram.
+No [fluxo de login](login-ifood.md), volte à mensagem após autorizar no navegador: ela é atualizada com o botão humano. `/confirmar` é a alternativa se o acompanhamento terminar. `/cancelar` encerra só a tentativa; `/desconectar` remove só o vínculo local. Nenhum código deve ser digitado no Telegram.
 
 ## Criar um bot ou identificar um novo organizador
 

@@ -50,6 +50,12 @@ class State:
             "CREATE TABLE IF NOT EXISTS actions "
             "(update_id INTEGER PRIMARY KEY, created REAL NOT NULL)"
         )
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS login_watch "
+            "(id INTEGER PRIMARY KEY CHECK(id=1), owner INTEGER NOT NULL, "
+            "attempt_id TEXT NOT NULL, started REAL NOT NULL, expires REAL NOT NULL, "
+            "message_id INTEGER, phase TEXT NOT NULL, next_check REAL NOT NULL)"
+        )
         self.db.commit()
 
     def close(self):
@@ -78,3 +84,60 @@ class State:
                 "INSERT OR IGNORE INTO actions VALUES (?, ?)", (update_id, self.clock())
             )
         return result.rowcount == 1
+
+    def login_watch(self):
+        row = self.db.execute("SELECT * FROM login_watch WHERE id=1").fetchone()
+        if row is None:
+            return None
+        return dict(
+            zip(
+                (
+                    "id",
+                    "owner",
+                    "attempt_id",
+                    "started",
+                    "expires",
+                    "message_id",
+                    "phase",
+                    "next_check",
+                ),
+                row,
+            )
+        )
+
+    def watch_login(self, owner, attempt_id, expires):
+        now = self.clock()
+        current = self.login_watch()
+        if current and current["owner"] == owner and current["attempt_id"] == attempt_id:
+            with self.db:
+                self.db.execute(
+                    "UPDATE login_watch SET expires=? WHERE id=1",
+                    (min(expires, current["started"] + 1200),),
+                )
+            return
+        with self.db:
+            self.db.execute(
+                "INSERT OR REPLACE INTO login_watch VALUES (1, ?, ?, ?, ?, NULL, '', ?)",
+                (owner, attempt_id, now, min(expires, now + 1200), now),
+            )
+
+    def login_message(self, attempt_id, message_id, phase):
+        with self.db:
+            self.db.execute(
+                "UPDATE login_watch SET message_id=?, phase=? WHERE attempt_id=?",
+                (message_id, phase, attempt_id),
+            )
+
+    def login_phase(self, phase, expires):
+        with self.db:
+            self.db.execute(
+                "UPDATE login_watch SET phase=?, expires=? WHERE id=1", (phase, expires)
+            )
+
+    def login_next_check(self, when):
+        with self.db:
+            self.db.execute("UPDATE login_watch SET next_check=? WHERE id=1", (when,))
+
+    def stop_login_watch(self):
+        with self.db:
+            self.db.execute("DELETE FROM login_watch")

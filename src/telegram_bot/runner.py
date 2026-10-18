@@ -6,8 +6,8 @@ from .telegram import TelegramError
 
 START = (
     "Olá! Sou o bot Compra com Contexto. Esta demo está restrita ao organizador.\n\n"
-    "Use /conectar para iniciar o login iFood. Depois de autorizar no navegador, envie /confirmar "
-    "para receber o botão e conferir a conta. A conversa de compras "
+    "Use /conectar para iniciar o login iFood. Depois de autorizar no navegador, volte à mensagem "
+    "do login para conferir a conta no botão. Se ele não aparecer, envie /confirmar. A conversa de compras "
     "ainda está em implementação; nenhum pedido é enviado.\n\n"
     "Use /status para ver o andamento ou /ajuda para os comandos."
 )
@@ -20,7 +20,9 @@ HELP = (
     "/start — iniciar\n/status — estágio da demo\n/ajuda — comandos\n"
     "/conectar — abrir login iFood\n/confirmar — conferir e confirmar por botão\n"
     "/ifood — estado da conexão\n/verificar — verificar sessão no backend\n\n"
-    "Depois de autorizar no navegador, envie /confirmar para receber o botão de confirmação."
+    "/cancelar — cancelar só a tentativa de login\n"
+    "/desconectar — remover só o vínculo local\n\n"
+    "O botão aparece na mensagem do login. /confirmar e /ifood continuam disponíveis."
 )
 
 
@@ -86,7 +88,9 @@ def process_batch(api, state, updates, allowed_id, username, connections=None):
                 if isinstance(reply, str):
                     api.send(allowed_id, reply)
                 else:
-                    api.send(allowed_id, reply.text, reply.markup)
+                    result = api.send(allowed_id, reply.text, reply.markup)
+                    if connections is not None:
+                        connections.delivered(reply, result)
             except TelegramError as exc:
                 # Usuário bloqueou o bot; não prender a fila indefinidamente.
                 if exc.code != 403:
@@ -99,9 +103,14 @@ def poll(api, state, allowed_id, username, sleep=time.sleep, connections=None):
     delay = 1
     while True:
         try:
-            process_batch(
-                api, state, api.updates(state.offset()), allowed_id, username, connections
+            updates = (
+                api.updates(state.offset(), timeout=3)
+                if connections is not None and connections.watching
+                else api.updates(state.offset())
             )
+            process_batch(api, state, updates, allowed_id, username, connections)
+            if connections is not None:
+                connections.tick(api, allowed_id)
             delay = 1
         except TelegramError as exc:
             if not exc.transient:
@@ -152,10 +161,12 @@ def process_callback(api, state, callback, update_id, allowed_id, connections):
     if not authorized:
         return
     data = callback.get("data")
-    if not isinstance(data, str) or not data.startswith("ifc:"):
+    if not isinstance(data, str) or not data.startswith(("ifc:", "ifx:", "ifd:")):
         return
-    reply = (connections or Connections(None, state)).confirm_click(data[4:], update_id)
-    api.send(allowed_id, reply.text, reply.markup)
+    handler = connections or Connections(None, state)
+    reply = handler.action_click(data, update_id)
+    result = api.send(allowed_id, reply.text, reply.markup)
+    handler.delivered(reply, result)
     try:
         api.call(
             "editMessageReplyMarkup",

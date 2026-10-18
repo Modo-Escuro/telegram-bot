@@ -39,7 +39,7 @@ def main():
                     state,
                     config.allowed_user_id,
                     me["username"],
-                    connections=Connections(backend, state),
+                    connections=Connections(backend, state, config.allowed_user_id),
                 )
             finally:
                 state.close()

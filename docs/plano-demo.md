@@ -1,5 +1,7 @@
 # Plano da demo e próximos incrementos
 
+**Incremento BOT-02:** o código desta branch acrescenta acompanhamento por edição da mensagem de login, cancelamento e desconexão. O relato abaixo conserva o estado observado anteriormente; não comprova deploy deste incremento. Comportamento e limites novos em [login iFood](login-ifood.md#acompanhamento-bot-02).
+
 [Índice](README.md) · [Estado atual](estado-atual.md) · [Regras](regras-preservadas.md)
 
 Objetivo: organizar compra em grupo, alterar orçamento ou itens preservando restrições individuais, revisar a sacola e enviar somente após aprovação humana válida no ambiente autorizado do evento.

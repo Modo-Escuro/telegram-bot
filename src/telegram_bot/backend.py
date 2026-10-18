@@ -4,6 +4,7 @@ import json
 import os
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from http.client import HTTPException
 from ipaddress import ip_address
 from urllib.error import HTTPError, URLError
@@ -118,6 +119,7 @@ class LinkStatus:
     link_id: str | None
     confirmation_id: str | None = None
     identity: dict | None = field(default=None, repr=False)
+    attempt_expires_at: float | None = None
 
     @classmethod
     def parse(cls, body):
@@ -162,6 +164,15 @@ class LinkStatus:
             raise BackendError("PROTOCOL")
         if body["operational"] and not link_id:
             raise BackendError("PROTOCOL")
+        expires_at = None
+        if attempt and "expiresAt" in attempt:
+            try:
+                expires = datetime.fromisoformat(attempt["expiresAt"])
+                if expires.tzinfo is None:
+                    raise ValueError
+                expires_at = expires.timestamp()
+            except (ValueError, TypeError, AttributeError, OverflowError):
+                raise BackendError("PROTOCOL") from None
         return cls(
             body["state"],
             body["operational"],
@@ -171,6 +182,7 @@ class LinkStatus:
             link_id,
             confirmation_id,
             identity,
+            expires_at,
         )
 
 
@@ -179,12 +191,14 @@ class Backend:
         self.config = config
         self._opener = opener or build_opener(NoRedirect())
 
-    def _request(self, method, action, payload=None):
+    def _request(self, method, action, payload=None, *, timeout=50):
         if (method, action) not in {
             ("GET", "status"),
             ("POST", "connect"),
             ("POST", "confirm"),
             ("POST", "verify"),
+            ("POST", "cancel"),
+            ("DELETE", "link"),
         }:
             raise ValueError("Operação de conexão não implementada.")
         request = Request(
@@ -199,10 +213,10 @@ class Backend:
             method=method,
         )
         try:
-            with self._opener.open(request, timeout=50) as response:
+            with self._opener.open(request, timeout=timeout) as response:
                 raw = response.read(MAX_BODY + 1)
             if len(raw) > MAX_BODY:
-                raise BackendError("PROTOCOL", uncertain=method == "POST")
+                raise BackendError("PROTOCOL", uncertain=method != "GET")
             body = json.loads(raw)
         except HTTPError as exc:
             kind = "UNAVAILABLE"
@@ -217,17 +231,17 @@ class Backend:
                 pass
             finally:
                 exc.close()
-            raise BackendError(kind, uncertain=method == "POST" and exc.code >= 500) from None
+            raise BackendError(kind, uncertain=method != "GET" and exc.code >= 500) from None
         except (URLError, OSError, HTTPException):
-            raise BackendError(uncertain=method == "POST") from None
+            raise BackendError(uncertain=method != "GET") from None
         except (ValueError, UnicodeError):
-            raise BackendError("PROTOCOL", uncertain=method == "POST") from None
+            raise BackendError("PROTOCOL", uncertain=method != "GET") from None
         if not isinstance(body, dict):
-            raise BackendError("PROTOCOL", uncertain=method == "POST")
+            raise BackendError("PROTOCOL", uncertain=method != "GET")
         return body
 
-    def status(self):
-        return LinkStatus.parse(self._request("GET", "status"))
+    def status(self, *, timeout=50):
+        return LinkStatus.parse(self._request("GET", "status", timeout=timeout))
 
     def connect(self):
         body = self._request("POST", "connect")
@@ -266,3 +280,18 @@ class Backend:
 
     def verify(self):
         return LinkStatus.parse(self._request("POST", "verify"))
+
+    def cancel(self):
+        body = self._request("POST", "cancel")
+        if type(body.get("cancelled")) is not bool:
+            raise BackendError("PROTOCOL", uncertain=True)
+        return LinkStatus.parse(body), body["cancelled"]
+
+    def disconnect(self):
+        body = self._request("DELETE", "link")
+        if (
+            type(body.get("removed")) is not bool
+            or body.get("providerRevocation") != "NOT_ATTEMPTED"
+        ):
+            raise BackendError("PROTOCOL", uncertain=True)
+        return LinkStatus.parse(body), body["removed"]
