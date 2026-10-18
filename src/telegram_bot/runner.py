@@ -18,10 +18,12 @@ HELP = (
     "Converse comigo por aqui para organizar o grupo e ajustar o orçamento.\n\n"
     "Conectar iFood abre o login da conta teste. Minha conexão mostra a conta e os botões "
     "para cancelar um login ou desconectar. Verificar conexão consulta o acesso ao iFood."
+    " Endereços iFood confere os endereços cadastrados e permite escolher qual usar nas sugestões."
 )
 CONVERSATION_HELP = (
     "\n\nAcompanhar mostra suas mensagens pendentes. Interromper solicita a parada local. "
     "Retomar conversa recupera o acompanhamento; se uma entrega ficou incerta, a mensagem pode aparecer novamente."
+    " As respostas chegam automaticamente durante o acompanhamento normal."
 )
 
 
@@ -80,7 +82,9 @@ def process_batch(api, state, updates, allowed_id, username, connections=None, c
             continue
         callback = update.get("callback_query")
         if isinstance(callback, dict):
-            process_callback(api, state, callback, update_id, allowed_id, connections)
+            process_callback(
+                api, state, callback, update_id, allowed_id, connections, conversations
+            )
             state.done(update_id)
             continue
         message = private_message(update)
@@ -184,7 +188,7 @@ def identify(api, *, timeout=180, clock=time.monotonic, emit=print):
     raise ValueError("Identificação expirou. Execute --identify novamente.")
 
 
-def process_callback(api, state, callback, update_id, allowed_id, connections):
+def process_callback(api, state, callback, update_id, allowed_id, connections, conversations=None):
     sender, message = callback.get("from"), callback.get("message")
     callback_id = callback.get("id")
     if not isinstance(callback_id, str):
@@ -208,6 +212,15 @@ def process_callback(api, state, callback, update_id, allowed_id, connections):
     if not authorized:
         return
     data = callback.get("data")
+    if isinstance(data, str) and data.startswith("ifa:"):
+        queued = conversations and conversations.address_click(callback, update_id)
+        api.send(
+            allowed_id,
+            "Vou validar o endereço escolhido na conta conectada."
+            if queued
+            else "Esta escolha expirou ou não corresponde à mensagem original. Toque em Endereços iFood.",
+        )
+        return
     if not isinstance(data, str) or not data.startswith(("ifc:", "ifx:", "ifd:")):
         return
     handler = connections or Connections(None, state)

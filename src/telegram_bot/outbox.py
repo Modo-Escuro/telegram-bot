@@ -38,6 +38,11 @@ class Outbox:
             "seq INTEGER NOT NULL, part INTEGER NOT NULL, message_id INTEGER NOT NULL, digest TEXT NOT NULL, "
             "PRIMARY KEY(seq,part))"
         )
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS address_buttons (scope TEXT NOT NULL, ref_hash TEXT NOT NULL, "
+            "message_id INTEGER NOT NULL, bot_id INTEGER NOT NULL, expires REAL NOT NULL, "
+            "PRIMARY KEY(scope,ref_hash,message_id))"
+        )
         self.db.commit()
         # Crash entre envio Telegram e gravação do message_id: entrega possivelmente ocorreu.
         with self.db:
@@ -66,6 +71,13 @@ class Outbox:
             if previous:
                 # Replay depois de troca de conta não reescreve a solicitação antiga.
                 return previous[0] == digest
+            # Só libera GET de operação conhecida, nunca POST ou entrega incerta.
+            self.db.execute(
+                "UPDATE conversation_outbox SET attempts=0,due=?,state='ACCEPTED' "
+                "WHERE scope=? AND kind='TEXT' AND operation_id IS NOT NULL "
+                "AND state='PAUSED' AND notice='UNAVAILABLE'",
+                (self.clock(), self.scope),
+            )
             count = self.db.execute(
                 "SELECT count(*),sum(state NOT IN ('DONE','CANCELLED','EXPIRED')) "
                 "FROM conversation_outbox WHERE scope=?",
@@ -78,6 +90,120 @@ class Outbox:
                 "(scope,event_id,digest,kind,state,created,due,link_hash) "
                 "VALUES (?,?,?,'CONTEXT','CONTEXT',?,?,?)",
                 (self.scope, event_id, digest, self.clock(), self.clock(), link_hash),
+            )
+        return True
+
+    def enqueue_addresses(self, source_key, link_hash=None):
+        with self.transaction():
+            event_id = "address-review-" + source_key
+            existing = self.db.execute(
+                "SELECT 1 FROM conversation_outbox WHERE scope=? AND event_id=?",
+                (self.scope, event_id),
+            ).fetchone()
+            if existing:
+                return True
+            count = self.db.execute(
+                "SELECT count(*) FROM conversation_outbox WHERE scope=? AND state NOT IN ('DONE','CANCELLED','EXPIRED')",
+                (self.scope,),
+            ).fetchone()[0]
+            if count >= self.capacity:
+                return False
+            records = self.db.execute(
+                "SELECT count(*) FROM conversation_outbox WHERE scope=?", (self.scope,)
+            ).fetchone()[0]
+            if records >= 10000:
+                return False
+            self.db.execute(
+                "INSERT INTO conversation_outbox(scope,event_id,digest,kind,state,created,due,link_hash) "
+                "VALUES(?,?,?,'ADDRESS_REVIEW','RECEIVED',?,?,?)",
+                (
+                    self.scope,
+                    event_id,
+                    "technical-address-review",
+                    self.clock(),
+                    self.clock(),
+                    link_hash,
+                ),
+            )
+        return True
+
+    def bind_addresses(self, message_id, bot_id, options):
+        from datetime import datetime
+
+        with self.db:
+            for option in options:
+                expires = datetime.fromisoformat(option["expiresAt"]).timestamp()
+                if not self.clock() < expires <= self.clock() + 301:
+                    raise ProtocolError()
+                self.db.execute(
+                    "INSERT OR REPLACE INTO address_buttons VALUES(?,?,?,?,?)",
+                    (
+                        self.scope,
+                        hashlib.sha256(option["choiceRef"].encode()).hexdigest(),
+                        message_id,
+                        bot_id,
+                        expires,
+                    ),
+                )
+
+    def address_click(self, callback, update_id, bot_id):
+        """Referência só é enfileirada após origem e mensagem humanas verificadas."""
+        sender, message = callback.get("from"), callback.get("message")
+        if not isinstance(sender, dict) or not isinstance(message, dict):
+            return False
+        data, callback_id = callback.get("data"), callback.get("id")
+        if (
+            not isinstance(data, str)
+            or not data.startswith("ifa:")
+            or len(data) != 36
+            or not isinstance(callback_id, str)
+            or not 0 < len(callback_id) <= 128
+            or type(message.get("message_id")) is not int
+            or message["message_id"] <= 0
+        ):
+            return False
+        source = message.get("from")
+        reference = data[4:]
+        if (
+            not isinstance(source, dict)
+            or source.get("is_bot") is not True
+            or type(source.get("id")) is not int
+            or source["id"] != bot_id
+            or message.get("forward_origin")
+            or not isinstance(reference, str)
+        ):
+            return False
+        digest = hashlib.sha256(reference.encode()).hexdigest()
+        with self.transaction():
+            binding = self.db.execute(
+                "SELECT 1 FROM address_buttons WHERE scope=? AND ref_hash=? AND message_id=? AND bot_id=? AND expires>?",
+                (
+                    self.scope,
+                    digest,
+                    message["message_id"],
+                    bot_id,
+                    self.clock(),
+                ),
+            ).fetchone()
+            if not binding:
+                return False
+            event_id = "address-choice-" + hashlib.sha256(callback["id"].encode()).hexdigest()
+            raw = encode({"choiceRef": reference})
+            self.db.execute(
+                "INSERT OR IGNORE INTO conversation_outbox(scope,event_id,digest,kind,state,body,created,due) VALUES(?,?,?,'ADDRESS_SELECT','RECEIVED',?,?,?)",
+                (
+                    self.scope,
+                    event_id,
+                    hashlib.sha256(raw).hexdigest(),
+                    raw,
+                    self.clock(),
+                    self.clock(),
+                ),
+            )
+            self.db.execute("DELETE FROM address_buttons WHERE scope=?", (self.scope,))
+            self.db.execute(
+                "INSERT INTO cursor VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET offset=MAX(cursor.offset,excluded.offset),updated=excluded.updated",
+                (update_id + 1, self.clock()),
             )
         return True
 
@@ -264,6 +390,10 @@ class Outbox:
         """Não expirar comandos enviados sem resposta nem operações em andamento."""
         with self.db:
             self.db.execute(
+                "DELETE FROM address_buttons WHERE scope=? AND expires<=?",
+                (self.scope, self.clock()),
+            )
+            self.db.execute(
                 "UPDATE conversation_outbox SET voice=NULL WHERE scope=? AND (created<=? OR state IN ('DONE','CANCELLED','EXPIRED','NOTICE'))",
                 (self.scope, self.clock() - DAY),
             )
@@ -290,10 +420,39 @@ class Outbox:
             (self.scope,),
         ).fetchall()
         if not rows:
+            last = self.db.execute(
+                "SELECT state,notice FROM conversation_outbox WHERE scope=? AND kind='TEXT' ORDER BY seq DESC LIMIT 1",
+                (self.scope,),
+            ).fetchone()
+            if last:
+                outcome = {
+                    "SUCCEEDED": "concluído",
+                    "FAILED": "falhou",
+                    "CANCELLED": "interrompido",
+                    "RESULT_UNKNOWN": "com resultado externo desconhecido",
+                }.get(last["notice"] or last["state"])
+                if outcome:
+                    return (
+                        "Último processamento: "
+                        + outcome
+                        + ". Nenhuma mensagem aguardando processamento local."
+                    )
             return "Nenhuma mensagem de conversa aguardando processamento local."
+        states = {
+            "RECEIVED": "na fila",
+            "PREPARED": "aguardando aceite",
+            "POST_UNKNOWN": "aceite ainda incerto",
+            "ACCEPTED": "em processamento ou entrega",
+            "PAUSED": "acompanhamento pausado",
+            "DELIVERY_UNKNOWN": "entrega incerta",
+            "NOTICE": "aviso pendente",
+        }
         return (
             f"Conversa: {sum(r['n'] for r in rows)} registro(s) em acompanhamento. "
-            "Use Retomar conversa para consultar novamente ou Interromper para solicitar parada local. "
+            + "; ".join(f"{r['n']} {states.get(r['state'], 'em acompanhamento')}" for r in rows)
+            + ". "
+            "A resposta será entregue automaticamente enquanto o acompanhamento estiver ativo. "
+            "Retomar conversa é uma recuperação opcional; Interromper solicita parada local. "
             "Nenhum pedido é enviado."
         )
 

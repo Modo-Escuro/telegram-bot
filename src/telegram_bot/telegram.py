@@ -11,9 +11,10 @@ from .menu import keyboard
 
 
 class TelegramError(Exception):
-    def __init__(self, code: int = 0, retry_after: int = 0):
+    def __init__(self, code: int = 0, retry_after: int = 0, *, reason="OTHER"):
         self.code = code
         self.retry_after = retry_after
+        self.reason = reason if reason == "NOT_MODIFIED" else "OTHER"
         # Nunca incluir corpo remoto, URL ou exceção de transporte.
         super().__init__(f"Falha na comunicação com Telegram (código {code}).")
 
@@ -87,14 +88,23 @@ class Telegram:
         except HTTPError as exc:
             code = exc.code
             retry_after = 0
+            reason = "OTHER"
             try:
                 body = json.load(exc)
                 retry_after = int(body.get("parameters", {}).get("retry_after", 0))
+                if (
+                    method == "editMessageText"
+                    and code == 400
+                    and body.get("description", "").startswith(
+                        "Bad Request: message is not modified"
+                    )
+                ):
+                    reason = "NOT_MODIFIED"
             except (ValueError, TypeError, AttributeError):
                 pass
             finally:
                 exc.close()
-            raise TelegramError(code, max(0, retry_after)) from None
+            raise TelegramError(code, max(0, retry_after), reason=reason) from None
         except (URLError, OSError, ValueError, HTTPException):
             raise TelegramError() from None
         if not isinstance(body, dict):
@@ -106,6 +116,12 @@ class Telegram:
             raise TelegramError(
                 code if type(code) is int else 0,
                 retry_after if type(retry_after) is int and retry_after > 0 else 0,
+                reason="NOT_MODIFIED"
+                if method == "editMessageText"
+                and code == 400
+                and isinstance(body.get("description"), str)
+                and body["description"].startswith("Bad Request: message is not modified")
+                else "OTHER",
             )
         return body.get("result")
 

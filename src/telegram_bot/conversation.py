@@ -3,6 +3,7 @@
 import math
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from functools import wraps
 from http.client import HTTPException
 from urllib.error import HTTPError, URLError
@@ -90,6 +91,16 @@ def safe_response(*, mutation=False):
 
 
 class ConversationClient:
+    addresses_supported = True
+
+    @property
+    def bot_id(self):
+        return int(self._bot_id)
+
+    @property
+    def organizer_id(self):
+        return self._config.organizer_id
+
     def __init__(
         self, config: BackendConfig, bot_id: int, *, opener=None, timeout: float = 15, now=utc_now
     ):
@@ -240,6 +251,47 @@ class ConversationClient:
             body["completeness"],
         )
 
+    @safe_response()
+    def get_addresses(self):
+        _, body = self._request("GET", "/addresses")
+        require(body.get("contractVersion") == "1.0")
+        require(body.get("state") in {"EMPTY", "CHOICE_REQUIRED"})
+        require(
+            isinstance(body.get("linkHash"), str)
+            and re.fullmatch(r"[a-f0-9]{64}", body["linkHash"])
+        )
+        options = body.get("options")
+        require(isinstance(options, list) and len(options) <= 50)
+        require(bool(options) == (body["state"] == "CHOICE_REQUIRED"))
+        refs = set()
+        for item in options:
+            require(isinstance(item, dict))
+            require(
+                isinstance(item.get("choiceRef"), str)
+                and re.fullmatch(r"[A-Za-z0-9_-]{32}", item["choiceRef"])
+            )
+            require(item["choiceRef"] not in refs)
+            refs.add(item["choiceRef"])
+            require(isinstance(item.get("label"), str) and 0 < len(item["label"]) <= 200)
+            require(isinstance(item.get("expiresAt"), str))
+            try:
+                require(datetime.fromisoformat(item["expiresAt"]).tzinfo is not None)
+            except ValueError:
+                raise ProtocolError() from None
+        return body
+
+    @safe_response(mutation=True)
+    def select_address(self, reference):
+        require(isinstance(reference, str) and re.fullmatch(r"[A-Za-z0-9_-]{32}", reference))
+        _, body = self._request(
+            "POST",
+            "/addresses/select",
+            encode({"source": "TELEGRAM_CALLBACK", "choiceRef": reference}),
+        )
+        require(body.get("contractVersion") == "1.0" and body.get("state") == "SELECTED")
+        require(body.get("purchaseAuthorized") is False)
+        return body
+
     def _request(self, method: str, suffix: str, raw: bytes | None = None) -> tuple[int, dict]:
         request = Request(
             self._config.base_url.rstrip("/")
@@ -264,6 +316,9 @@ class ConversationClient:
                 status = response.status
                 content_type = response.headers.get_content_type()
                 data = response.read(MAX_BODY + 1)
+            if status == 404 and suffix == "/addresses":
+                # API anterior: recurso adicional ausente, contrato RUN-01 continua válido.
+                raise ConversationError("ACTION_UNAVAILABLE")
             require(len(data) <= MAX_BODY and content_type == "application/json")
             body = decode(data)
             if status not in ({200, 202} if method == "POST" else {200}):

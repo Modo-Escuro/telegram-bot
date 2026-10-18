@@ -9,6 +9,7 @@ BUTTONS = {
     "Retomar conversa": "/retomar",
     "Interromper": "/interromper",
     "Ajuda": "/ajuda",
+    "Endereços iFood": "/enderecos",
     "Sair da demo": "/sair",
 }
 
@@ -20,6 +21,7 @@ def keyboard(*, access=False):
         else [
             ["Conectar iFood", "Minha conexão"],
             ["Verificar conexão", "Acompanhar"],
+            ["Endereços iFood"],
             ["Retomar conversa", "Interromper"],
             ["Ajuda", "Sair da demo"],
         ]
