@@ -2,7 +2,7 @@
 
 Incremento BOT-01: o [fluxo de outbox/worker](bot-01-fila-duravel.md) acrescenta tabelas ao SQLite do bot e comunica as rotas v1 da RUN-01/DATA-01. Não duplica o domínio na API nem instala modelo. O fluxo de login e seu histórico abaixo permanecem separados; a conversa é opt-in, não ativada neste desenvolvimento.
 
-Esta página descreve a implementação existente. A evolução para IA, contexto por pessoa e compra aprovada está no [plano integrado](plano-conversacional.md) e no [contrato ainda proposto](contrato-conversa-proposto.md). Não tratar o desenho futuro como módulo entregue.
+Esta página combina o mapa histórico de login com a integração BOT-01/BOT-02. A conversa usa o contrato v1 implementado; a [proposta v0](contrato-conversa-proposto.md) é histórica. Modelo e domínio por pessoa já estão integrados na API, com configuração explícita. O [plano vigente](plano-conversacional.md) exige carrinho real confirmado; CART-01 e callback PREPARE_CART ainda dependem de integração/INT-02. Envio e pagamento seguem proibidos.
 
 [Índice](README.md) · [Estado e evidências](estado-atual.md)
 
@@ -19,7 +19,7 @@ flowchart LR
     A -->|Verificação de sessão| M[MCP iFood /marketplace]
 ```
 
-O fluxo de login acima está implementado e foi ensaiado. A direção do produto inclui um agente entre API e MCP para organizar compras; o agente de compra, contexto do grupo e sacola ainda não estão integrados ao bot. O protótipo FastAPI original não é o serviço Node implantado na Railway.
+O diagrama acima mostra o login implementado e seu ensaio histórico. A conversa acrescenta runner → outbox SQLite → API RUN-01/AI-02/DATA-01 → consulta e apresentação; BOT-02 retoma o grupo por GET após revalidar o vínculo. O bot ainda não implementa confirmação PREPARE_CART. Consultar [remoto/local](estado-remoto-local.md) para separar integração de código, evidência operacional e CART-01 local. O protótipo FastAPI original é outro serviço.
 
 ## Mapa do código
 
@@ -32,15 +32,16 @@ O fluxo de login acima está implementado e foi ensaiado. A direção do produto
 | `state.py` | Cursor SQLite, registro prévio de ações e lock de processo no mesmo diretório |
 | `backend.py` | Contrato HTTP de login, validação de estados, operações e URL de autorização |
 | `connections.py` | Mensagens do fluxo, apresentação da identidade mascarada e botão humano |
-| `conversation.py` | Cliente v1.0 de eventos, consultas e cancelamento local; isolado do polling e validado offline |
+| `conversation.py` | Cliente v1.0 de eventos, consultas e cancelamento local, utilizado pela outbox/worker |
+| `outbox.py` / `conversation_runner.py` | Persistência dos eventos, acompanhamento sem bloquear polling e retomada por consulta |
 | `conversation_contract.py` | Documentos imutáveis, schemas fixados e validação semântica de respostas |
 | `tests/test_bot.py` | Cenários simulados do canal, transporte, autorização e estado |
 | `tests/test_connections.py` | Cenários simulados do contrato, confirmação, replay e falhas |
 | `Dockerfile` / `railway.toml` | Imagem Python 3.12 e configuração do worker |
 
-Não há servidor MCP, OAuth próprio, LLM, coleta do grupo ou operação de compra no adaptador.
+OAuth, MCP, modelo, regras do grupo e escrita de carrinho pertencem à API. O adaptador envia eventos do organizador e apresenta respostas confiáveis; não duplica o domínio nem executa ferramentas iFood diretamente.
 
-O [cliente de conversa](cliente-conversa.md) prepara o consumo da API-01. Não está conectado ao `runner.py`; integração real depende de RUN-01 e do restante da BOT-01.
+O [cliente de conversa](cliente-conversa.md) já está conectado ao runner via outbox BOT-01, com opt-in explícito. Esse código integrado não comprova ensaio humano ponta a ponta. Confirmação de carrinho exige o caminho dedicado CART-01/BOT-03 e nunca é inferida do texto do modelo.
 
 ## Contrato HTTP consumido
 

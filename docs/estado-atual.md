@@ -1,14 +1,17 @@
-# Estado atual e evidências
+# Estado de código e evidências online
 
-**Código integrado — 18/10/2026:** BOT-01 e a primeira etapa da BOT-02 estão na `main@c29cc04` pelo merge da PR #10; #7/#8/#9 também foram marcados como mergeados. A CI pós-merge passou em Windows/Linux. [Alcance da BOT-01](bot-01-fila-duravel.md). API `2b77c95` inclui o módulo AI-02, ainda sem processador no entrypoint padrão; conversa continua opt-in e desligada por padrão. Isso não comprova deploy ou ensaio online novo.
+[Estado remoto/local](estado-remoto-local.md) registra o código atual conferido: bot #13/#14 integrado; API com montagem AI-01 e RUN-01 #41 integrada. BOT-01 e BOT-02 estão fechadas no GitHub. A continuação da retomada já foi mergeada; não está mais em desenvolvimento nesta revisão.
 
-**Continuação BOT-02 em desenvolvimento:** esta branch acrescenta [retomada informativa do grupo](bot-02-retomada-contexto.md) após conexão operacional, sem recuperar ações ou repetir mensagens. O relato abaixo conserva o estado online histórico; não comprova deploy deste incremento.
+A ativação e a jornada online precisam de evidência própria. CART-01 nova continua local; carrinho real está aprovado no escopo, mas outputs e callback/ensaio ainda são pendências. Nenhuma evidência antiga foi regravada.
+
+## Evidência online histórica — 17/10/2026
+
+O restante desta seção preserva o retrato daquele ensaio. Frases sobre pendências, volume, comandos ou número de testes descrevem aquela versão, não as mains atuais. Para planejamento vigente, usar os links acima.
 
 Conferência em **17/10/2026, horário de São Paulo**. Este documento registra uma observação, não monitoramento contínuo. O [snapshot sanitizado](evidencias/login-ifood-2026-10-17.json) contém somente estados, operações permitidas e referências de versão.
 
-Incremento de desenvolvimento em **18/10/2026**: [cliente de conversa v1.0](cliente-conversa.md) implementado e testado offline contra API-01 `6ce3d99`. Não altera a evidência online abaixo; integração com polling/outbox e RUN-01 permanece pendente. O contrato de conversa já foi especificado; sua implementação no serviço ainda não foi validada por este incremento.
 
-## O que está entregue
+## Capacidades observadas naquele ensaio
 
 | Capacidade | Implementação e evidência |
 | --- | --- |
@@ -34,7 +37,7 @@ A verificação operacional do backend usa leitura autenticada `listAddresses`. 
 
 Essas referências identificam a evidência anterior à reorganização documental e às melhorias de orientação deste incremento. Commits posteriores não atualizam retroativamente o snapshot.
 
-## O que continua pendente
+## Pendências anotadas naquele ensaio
 
 - Participantes, limites individuais/coletivo e restrições por pessoa na conversa do bot.
 - Agente de compra integrado ao canal e contrato HTTP de conversa/sacola/aprovação.
@@ -46,7 +49,7 @@ Essas referências identificam a evidência anterior à reorganização document
 
 O backend respondeu `purchaseAuthorized: false`. O login concluído não representa compra aprovada nem fechamento no iFood. O provedor do protótipo Python original permanece simulado.
 
-## Persistência que exige próximo incremento
+## Risco de persistência anotado naquele ensaio
 
 O bot já preserva o SQLite em `/data`. A API ainda usa `.ifood-links` sem volume: os vínculos confirmados podem se perder em um redeploy. Antes de mudar o caminho ou montar um volume, preservar os arquivos existentes por canal privado e validar a migração. Tentativas OAuth pendentes ficam em memória mesmo com volume.
 
