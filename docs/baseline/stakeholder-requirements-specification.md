@@ -148,7 +148,7 @@ A quantidade de restaurantes por plano, o rateio dos custos e a possibilidade de
 
 **RS26 Medir qualidade e tempo de resposta.** A avaliação deve separar cumprimento de restrições, correção dos custos, utilidade do ranking, clareza das justificativas e tempo de resposta. Metas de latência e utilidade precisam ser aprovadas em DA08; não se presume desempenho já alcançado. Prioridade P1. Origem N06, N08, N09 e N10.
 
-**RS27 Respeitar a fronteira do fechamento.** No fluxo do hackathon, o agente deve obter aprovação da versão atual da sacola antes do envio, preservar a identidade de tentativas repetidas e informar o estado comprovado pelo provedor. Resultado de envio desconhecido exige consulta ou reconciliação quando suportada; sem evidência confiável, o reenvio deve permanecer bloqueado. Prioridade P0 para a entrega principal do hackathon. Origem briefing e decisões anteriores.
+**RS27 Respeitar a fronteira do fechamento.** No fluxo do hackathon, o agente deve obter aprovação da versão atual do carrinho antes do envio, preservar a identidade de tentativas repetidas e informar o estado comprovado pelo provedor. Resultado de envio desconhecido exige consulta ou reconciliação quando suportada; sem evidência confiável, o reenvio deve permanecer bloqueado. Prioridade P0 para a entrega principal do hackathon. Origem briefing e decisões anteriores.
 
 ### Dependências externas
 

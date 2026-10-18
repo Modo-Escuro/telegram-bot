@@ -1,7 +1,7 @@
 {
   "kind": "BOT02_OPERATIONAL_ENABLEMENT",
   "date": "2026-10-18",
-  "scope": "DEC-01: sacola simulada, MCP somente leitura, sem envio real",
+  "scope": "DEC-01: carrinho simulado, MCP somente leitura, sem envio real",
   "source": {
     "botCommit": "9314c72e1324a36da09c014e74f98a470dde6306",
     "apiCommit": "dc448f9e117e05192004514a639c3ed5acd1098a"

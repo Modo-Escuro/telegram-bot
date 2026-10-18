@@ -8,7 +8,7 @@ Estado: proposta de interface, **não implementada**. [API-01](https://github.co
 | --- | --- | --- |
 | Aceitar evento | eventId estável, conversa, tipo, texto ou referência de ação, versão esperada quando aplicável | operationId, estado aceito/em andamento/concluído, versão do contrato |
 | Consultar processamento | operationId pertencente ao organizador | estado, resultado recuperável ou erro seguro, orientação de nova consulta |
-| Consultar compra | referência da conversa/compra | versão, contexto resumido, propostas/sacola e ações disponíveis |
+| Consultar compra | referência da conversa/compra | versão, contexto resumido, propostas/carrinho e ações disponíveis |
 | Aplicar ação humana | referência opaca e evidência do callback validado pelo adaptador | resultado da ação ou conflito/expiração |
 | Solicitar cancelamento local | operationId | aceitação/rejeição e alcance; não alega reversão de efeito remoto |
 

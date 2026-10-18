@@ -40,9 +40,9 @@ Essas referências identificam a evidência anterior à reorganização document
 ## Pendências anotadas naquele ensaio
 
 - Participantes, limites individuais/coletivo e restrições por pessoa na conversa do bot.
-- Agente de compra integrado ao canal e contrato HTTP de conversa/sacola/aprovação.
+- Agente de compra integrado ao canal e contrato HTTP de conversa/carrinho/aprovação.
 - Ensaio de `searchOffers` e `getItem` apresentado pelo bot; liberação de `OFFERS_EVALUATE` não comprova essa jornada.
-- Sacola, entrega, pagamento, cupom, revisão, aprovação de pedido, envio e reconciliação remota.
+- Carrinho, entrega, pagamento, cupom, revisão, aprovação de pedido, envio e reconciliação remota.
 - Cancelamento e desconexão pelo bot; o backend possui rotas, mas o adaptador não as oferece.
 - Mensagem automática após retorno do navegador; hoje o usuário envia `/confirmar` ou `/ifood` para consultar o estado.
 - Ensaio online específico de expiração, refresh, indisponibilidade, reconexão e reinício com vínculo preservado.

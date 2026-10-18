@@ -15,7 +15,7 @@ A tabela descreve requisitos a implementar e verificar, não funcionalidades de 
 | RN03: informação alimentar insuficiente bloqueia | Backend mantém bloqueio por pessoa até confirmação rastreável do restaurante. |
 | RN04: disponibilidade e custos observados | Backend calcula em centavos e inclui frete/taxas; bot identifica estimativas e dados ausentes. |
 | RN05: duas a quatro opções elegíveis | Não completar a lista com candidatos incompatíveis. |
-| RN06: mudança exige reavaliação | Nova versão de sacola e invalidação da aprovação anterior. |
+| RN06: mudança exige reavaliação | Nova versão de carrinho e invalidação da aprovação anterior. |
 | RN07: atendimento coletivo não supera restrição individual | Mostrar participantes não atendidos; não ultrapassar limites obrigatórios. |
 
 ## Cenários já construídos a transportar
@@ -34,7 +34,7 @@ Origem: tests/test_shopping.py do protótipo. São critérios para novos testes,
 
 - Deduplicar updates e callbacks, persistindo o processamento sem perder eventos após reinício.
 - Validar o ID do organizador e a sessão; nomes de usuário não são credenciais de aprovação.
-- Botão antigo não aprova sacola nova; o preço não deve ser aceito apenas por vir no payload do botão.
+- Botão antigo não aprova carrinho novo; o preço não deve ser aceito apenas por vir no payload do botão.
 - Segregar token Telegram, autenticação bot→API e credenciais iFood; apenas o backend recebe as últimas.
 - Timeout após envio significa resultado desconhecido; consultar e reconciliar antes de qualquer nova tentativa.
 - Confirmar sucesso por resposta confiável do provedor, não pelo texto produzido pelo modelo.
