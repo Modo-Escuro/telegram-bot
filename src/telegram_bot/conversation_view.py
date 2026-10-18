@@ -6,7 +6,7 @@ BUDGET_LABELS = ("Orçamento do grupo", "Orçamento")
 SEPARATOR = "━━━━━━━━━━━━"
 
 
-def collection_text(text, group):
+def collection_text(text, group, *, include_conditions=True):
     """Remover apenas confirmações redundantes reconstruíveis dos fatos atuais.
 
     Não descarta texto desconhecido, recusas, alertas nem texto do modelo.
@@ -15,6 +15,8 @@ def collection_text(text, group):
     for person in group["participants"]:
         name = person["displayName"]
         redundant.append(f"{name} entrou na compra.")
+        if not include_conditions:
+            continue
         if "Sem restrições alimentares" in person["conditions"]:
             redundant.append(f"{name} não tem restrições.")
         for condition in person["conditions"]:
@@ -27,7 +29,7 @@ def collection_text(text, group):
             text = text[len(sentence) :].lstrip()
     # A ordem das ações pode divergir da ordem do grupo.
     if any(text.startswith(sentence) for sentence in redundant):
-        return collection_text(text, group)
+        return collection_text(text, group, include_conditions=include_conditions)
     return text
 
 
@@ -73,6 +75,9 @@ def render(snapshot, *, collection_only=False, concise=False):
             prefix = "Assistente: " if block["source"] == "MODEL" else ""
             text = block["text"]
             if concise and block["source"] == "SERVER":
+                if group:
+                    # O resumo está oculto: preservar confirmações alimentares.
+                    text = collection_text(text, group, include_conditions=False)
                 if text in {"Nada foi alterado.", "Pergunta registrada."}:
                     continue
                 if budget_text and text.startswith(tuple(f"{label}: " for label in BUDGET_LABELS)):
@@ -161,21 +166,32 @@ def render(snapshot, *, collection_only=False, concise=False):
     else:
         asked = False
         for question in document["pending"]:
-            routine = question in {
-                "Quem vai participar da compra?",
-                "Qual é o orçamento do grupo?",
-                "Qual é o seu orçamento?",
-                "Vocês preferem economia ou rapidez?",
-                "Você prefere economia ou rapidez?",
-            } or (
-                group
-                and any(
-                    question
-                    in {
-                        f"{p['displayName']} tem alguma alergia ou restrição alimentar?",
-                        f"{p['displayName']} tem alguma alergia ou restrição alimentar? Pode confirmar?",
-                    }
-                    for p in group["participants"]
+            routine = (
+                question
+                in {
+                    "Quem vai participar da compra?",
+                    "Qual é o orçamento do grupo?",
+                    "Qual é o seu orçamento?",
+                    "Vocês preferem economia ou rapidez?",
+                    "Você prefere economia ou rapidez?",
+                    "Qual é o teto de gastos do grupo? É um valor máximo ou só uma referência?",
+                }
+                or bool(
+                    re.fullmatch(
+                        r"R\$ \d+[.,]\d{2} para o grupo é um teto máximo ou só uma referência\?",
+                        question,
+                    )
+                )
+                or (
+                    group
+                    and any(
+                        question
+                        in {
+                            f"{p['displayName']} tem alguma alergia ou restrição alimentar?",
+                            f"{p['displayName']} tem alguma alergia ou restrição alimentar? Pode confirmar?",
+                        }
+                        for p in group["participants"]
+                    )
                 )
             )
             if not routine or not asked:

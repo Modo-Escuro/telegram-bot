@@ -15,8 +15,6 @@ from .outbox import Outbox
 from .telegram import TelegramError
 from .voice import MAX_BYTES, VoiceError, voice_metadata
 
-PROCESSING = "Vou responder automaticamente por aqui."
-
 # Contrato fixo com a API: o clique vira esta mensagem, como se tivesse sido digitada.
 MODE_TEXTS = {
     "individual": "É um pedido individual, só para mim.",
@@ -481,12 +479,6 @@ class ConversationWorker:
                 attempts=0,
                 due=self.clock() + operation.poll_after_ms / 1000,
             )
-            if self.box.delivered(row["seq"], 0) is None:
-                self._deliver(
-                    row,
-                    [PROCESSING],
-                    final=False,
-                )
             return
         if operation.status == "SUCCEEDED":
             # Não reutilizar snapshot histórico da operação: ele pode ter sido substituído/expurgado.

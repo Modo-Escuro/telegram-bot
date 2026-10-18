@@ -18,6 +18,8 @@ Conta iFood apresenta Entrar no iFood, Cancelar login ou Sair da conta iFood con
 
 ## Validação e implantação
 
+As respostas curtas omitem a narração “Ana entrou na compra”, seguindo direto para a pergunta pendente. Confirmações alimentares, recusas e alertas continuam visíveis. A abertura, a escolha individual/grupo e a espera da operação não anunciam que a resposta chegará automaticamente; o indicador de digitação e a entrega final continuam ativos. Mensagens de progresso já enviadas por versões antigas continuam recuperáveis após atualização ou reinício.
+
 Testes offline cobrem envio, replay, versão, expiração, isolamento de sessão, callbacks e limpeza. `test_guidance_integration.py` com `GUIDANCE_API_ROOT` aponta para esta API e percorre texto → opções → clique → carrinho → limpeza, usando HTTP e SQLite reais e serviços externos falsos. As integrações históricas mantêm seus commits fixados. Resultados finais estão no PR; não comprovam deploy ou identidade real iFood.
 
 Publicar a API compatível antes do bot. API usa schema v5; preservar integralmente o diretório de estado do bot com o serviço parado, incluindo acesso, usuários, filas e WAL/SHM. Desligar `TELEGRAM_CART_ENABLED` junto de `TELEGRAM_CONVERSATION_ENABLED` em rollback e manter binário API compatível com o banco. Não executar polling concorrente.

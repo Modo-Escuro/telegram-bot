@@ -164,6 +164,10 @@ class Fixture(unittest.TestCase):
         self.addCleanup(other.close)
         return other
 
+    def seed_legacy_progress(self):
+        # Uma versão anterior já enviou esta mensagem; a atualização deve recuperá-la.
+        self.worker._deliver(self.box.active(), ["Mensagem de progresso legada."], final=False)
+
 
 class DurableTests(Fixture):
     def test_cancel_during_snapshot_lookup_cannot_resurrect_local_event(self):
@@ -410,6 +414,7 @@ class DeliveryTests(Fixture):
         self.client.finish = False
         self.adapter.receive(update())
         self.tick(4)
+        self.seed_legacy_progress()
         self.assertEqual(self.telegram.send.call_count, 1)
         self.client.finish = True
         self.tick(3)

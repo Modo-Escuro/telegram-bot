@@ -96,6 +96,7 @@ class ContinuityTests(Fixture):
         self.adapter.receive(update())
         self.tick(3)
         # Mensagem enviada por versão antiga, com teclado que impede edição.
+        self.seed_legacy_progress()
         self.wire.messages[1]["reply_markup"] = {"keyboard": [[{"text": "Ajuda"}]]}
         row = self.box.active()
         self.box.save(row["seq"], state="DELIVERY_UNKNOWN", attempts=3)
@@ -116,6 +117,7 @@ class ContinuityTests(Fixture):
         self.client.finish = False
         self.adapter.receive(update())
         self.tick(3)
+        self.seed_legacy_progress()
         self.wire.messages[1]["reply_markup"] = {"keyboard": [[{"text": "Ajuda"}]]}
         self.client.finish = True
         self.tick(6)
@@ -127,6 +129,7 @@ class ContinuityTests(Fixture):
         self.client.finish = False
         self.adapter.receive(update())
         self.tick(3)
+        self.seed_legacy_progress()
         row = self.box.active()
         self.box.save(row["seq"], state="DELIVERY_UNKNOWN", attempts=3)
         self.telegram.call.side_effect = TelegramError(400)  # Erro não classificado.
@@ -141,14 +144,13 @@ class ContinuityTests(Fixture):
         self.wire = TelegramWire()
         self.worker.telegram = Telegram("synthetic-token", self.wire)
 
-    def test_processing_result_is_automatic_editable_and_duplicate_update_does_not_send_again(self):
+    def test_pending_operation_is_silent_and_duplicate_update_does_not_send_again(self):
         self.real_telegram()
         self.client.finish = False
         self.adapter.receive(update())
         self.tick(3)
-        self.assertEqual(len(self.wire.messages), 1)
-        self.assertIn("automaticamente", self.wire.messages[1]["text"])
-        self.assertNotIn("keyboard", self.wire.messages[1]["reply_markup"])
+        self.assertEqual(self.wire.messages, {})
+        self.assertEqual(self.box.active()["state"], "ACCEPTED")
         self.client.finish = True
         self.tick(4)
         self.adapter.receive(update())
@@ -163,6 +165,7 @@ class ContinuityTests(Fixture):
         self.client.finish = False
         self.adapter.receive(update())
         self.tick(3)
+        self.seed_legacy_progress()
         self.wire.lose_edit_ack = True
         self.client.finish = True
         self.tick()

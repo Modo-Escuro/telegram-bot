@@ -61,6 +61,9 @@ class ModeTests(Fixture):
         self.run_batch(start())
         self.prompt_id()
         self.assertEqual(self.client.sent, [])  # perguntar não envia nada ao backend
+        self.assertFalse(
+            any("automaticamente" in c.args[1] for c in self.telegram.send.call_args_list)
+        )
 
     def test_each_button_sends_exact_text_once_even_with_double_click(self):
         for choice in ("individual", "group"):
@@ -72,6 +75,7 @@ class ModeTests(Fixture):
                 self.run_batch(click(3, "mode:" + choice, prompt))  # clique duplo
                 self.assertEqual(self.sent_texts(), [MODE_TEXTS[choice]])
                 replies = [c.args[1] for c in self.telegram.send.call_args_list]
+                self.assertFalse(any("automaticamente" in r for r in replies))
                 self.assertTrue(any("já foi usada" in r for r in replies))
 
     def test_old_unknown_or_foreign_click_sends_nothing(self):

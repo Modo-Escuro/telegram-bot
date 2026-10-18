@@ -36,7 +36,6 @@ HELP = (
     "• Sair da demo: encerre seu acesso.\n\n"
     "Faltou uma resposta? Use /retomar. Você pode escrever ou usar os botões das mensagens."
 )
-CONVERSATION_HELP = "\n\nAs respostas chegam automaticamente por aqui."
 
 
 PROFILE_COMMANDS = frozenset({"/limpar", "/remover"})
@@ -228,10 +227,8 @@ def process_batch(
                 # A outbox já gravou o cursor atomicamente, ou a recusa foi respondida acima.
                 continue
         reply = reply_for(update, allowed_id, username, connections)
-        if conversations is not None and isinstance(reply, str) and reply == START:
-            reply += CONVERSATION_HELP
-            if conversations.voice_enabled:
-                reply += "\n\nPode enviar áudios de até um minuto. Uso a Groq para transcrever e mostro o texto para você conferir."
+        if conversations is not None and reply == START and conversations.voice_enabled:
+            reply += "\n\nPode enviar áudios de até um minuto. Uso a Groq para transcrever e mostro o texto para você conferir."
         if reply:
             try:
                 if isinstance(reply, str):
@@ -429,12 +426,7 @@ def process_callback(
                 ok = False
         api.send(
             allowed_id,
-            (
-                "Certo: pedido só para você. "
-                if choice == "individual"
-                else "Certo: pedido em grupo. "
-            )
-            + "Vou responder automaticamente por aqui."
+            ("Certo: pedido só para você." if choice == "individual" else "Certo: pedido em grupo.")
             if ok
             else "Esta escolha expirou ou já foi usada. Pode escrever direto para quem é o pedido.",
         )
