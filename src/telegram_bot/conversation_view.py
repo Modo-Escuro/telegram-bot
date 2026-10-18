@@ -3,6 +3,7 @@
 import re
 
 BUDGET_LABELS = ("Orçamento do grupo", "Orçamento")
+SEPARATOR = "━━━━━━━━━━━━"
 
 
 def collection_text(text, group):
@@ -121,8 +122,11 @@ def render(snapshot, *, collection_only=False, concise=False):
                     )
                 )
         elif kind in {"PROPOSAL", "REVIEW"}:
-            lines.append("Proposta informativa." if kind == "PROPOSAL" else "Revisão informativa.")
-            lines.append(money(block["price"]))
+            # Separador visual entre propostas; os detalhes vêm no texto do servidor logo abaixo.
+            lines.append(SEPARATOR)
+            if kind == "REVIEW":
+                lines.append("Revisão informativa.")
+                lines.append(money(block["price"]))
             for blocker in block.get("blockers", []):
                 lines.append("Pendência: " + blocker)
             for coverage in block["coverage"]:

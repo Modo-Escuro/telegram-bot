@@ -370,7 +370,7 @@ class ExtraTransportTests(unittest.TestCase):
             LinkStatus.parse(body).attempt_expires_at,
         )
 
-    def test_telegram_short_polling_and_edit_have_no_parse_mode(self):
+    def test_telegram_short_polling_and_edit_escape_html_from_text(self):
         opener = Mock()
         opener.open.return_value = io.BytesIO(b'{"ok":true,"result":[]}')
         telegram = Telegram("synthetic-token", opener)
@@ -380,4 +380,17 @@ class ExtraTransportTests(unittest.TestCase):
         telegram.call(
             "editMessageText", {"chat_id": USER, "message_id": 10, "text": "<b>plain</b>"}
         )
-        self.assertNotIn("parse_mode", json.loads(opener.open.call_args.args[0].data))
+        sent = json.loads(opener.open.call_args.args[0].data)
+        # HTML só é usado com escape: marcação vinda do texto nunca vira formatação.
+        self.assertEqual(sent["parse_mode"], "HTML")
+        self.assertEqual(sent["text"], "&lt;b&gt;plain&lt;/b&gt;")
+        opener.open.return_value = io.BytesIO(b'{"ok":true,"result":{}}')
+        telegram.call(
+            "sendMessage",
+            {"chat_id": USER, "text": "• Pizza: R$ 29.90\n🛵 Entrega: R$ 4,99 & taxa <x>"},
+        )
+        sent = json.loads(opener.open.call_args.args[0].data)
+        self.assertEqual(
+            sent["text"],
+            "• Pizza: <b>R$ 29.90</b>\n🛵 Entrega: <b>R$ 4,99</b> &amp; taxa &lt;x&gt;",
+        )
