@@ -4,9 +4,9 @@
 
 # Documentação do bot Compra com Contexto
 
-Esta revisão altera somente documentação. A implementação CART-01 local, suas rotas e resultados de testes não fazem parte das mains remotas conferidas.
+Esta branch acrescenta o [canal humano CART-01](cart-01-telegram.md) sobre a main que já integrou #15/#16. A API correspondente está no PR #46; código de cart em PR não comprova merge, ativação ou ensaio real.
 
-[Estado remoto/local](estado-remoto-local.md): versões conferidas, código integrado e CART-01 ainda local. [Decisões vigentes](decisoes-conversacionais.md): carrinho real confirmado já aprovado no escopo, com outputs/ativação pendentes; envio/pagamento proibidos.
+[Estado remoto/local](estado-remoto-local.md): versões conferidas, código integrado e CART-01 em desenvolvimento publicado. [Decisões vigentes](decisoes-conversacionais.md): carrinho real confirmado já aprovado no escopo, com outputs/ativação pendentes; envio/pagamento proibidos.
 
 [Acesso compartilhado com senha](acesso-senha.md): entrada de qualquer usuário na conversa privada,
 isolamento por conta e implantação coordenada com a API. A senha não habilita compras.

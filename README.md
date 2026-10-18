@@ -4,7 +4,7 @@ Interface Python 3.12 do projeto SEMCOMP. Organiza compra em grupo com condiçõ
 
 O código remoto conferido integra login e confirmação humana, cancelamento/desconexão, cliente de conversa v1, outbox/polling opt-in, retomada do grupo e acesso por senha com isolamento por usuário. A API remota já monta Gemini/AI-02/GRP-01 mediante configuração explícita. Isso não comprova ativação nem ensaio completo online.
 
-Carrinho real está aprovado no escopo somente após confirmação humana específica. O código novo CART-01 permanece local na API; apresentação/callbacks BOT-03, outputs reais INT-02 e validação QA-01 continuam pendentes. Envio de pedido e pagamento permanecem proibidos neste incremento. Login/senha não confirmam carrinho nem aprovam compra.
+Carrinho real está aprovado no escopo somente após confirmação humana específica. A API CART-01 está publicada no [PR #46](https://github.com/Modo-Escuro/api-backend/pull/46), ainda separado da main. Esta branch acrescenta [revisão e callback humano no Telegram](docs/cart-01-telegram.md), com opt-in desligado. BOT-03 completa, outputs reais INT-02 e validação QA-01 continuam pendentes. Envio de pedido e pagamento permanecem proibidos neste incremento. Login/senha não confirmam carrinho nem aprovam compra.
 
 - [Remoto publicado × alterações locais](docs/estado-remoto-local.md)
 - [Plano integrado](docs/plano-conversacional.md) e [backlog](docs/backlog-conversacional.md)

@@ -23,7 +23,7 @@ STATES = frozenset(
         "UNAVAILABLE",
     }
 )
-OPERATIONS = frozenset({"ADDRESSES_READ", "OFFERS_EVALUATE"})
+OPERATIONS = frozenset({"ADDRESSES_READ", "OFFERS_EVALUATE", "CART_READ", "CART_WRITE"})
 OPAQUE = re.compile(r"[A-Za-z0-9_-]{10,100}")
 ERROR_KINDS = frozenset(
     {
