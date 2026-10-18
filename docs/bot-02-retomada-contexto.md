@@ -1,5 +1,10 @@
 # BOT-02 — Retomar a organização após o login
 
+**Atualização 18/10/2026:** a retomada está integrada pela PR #11 e a issue está fechada. A API
+`dc448f9` já monta Gemini e propostas; a CI deste incremento usa essa versão. Abaixo permanece o
+histórico da implementação anterior. Configuração efetiva, validação atual e pendências humanas estão
+no [ensaio operacional](ensaio-bot02-operacional.md); issue fechada não comprova a recuperação online.
+
 [Issue #2](https://github.com/Modo-Escuro/telegram-bot/issues/2) · [Login](login-ifood.md) · [Fila BOT-01](bot-01-fila-duravel.md)
 
 ## Base e alcance

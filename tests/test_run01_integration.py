@@ -20,7 +20,7 @@ from telegram_bot.conversation_runner import Conversations, ConversationWorker
 from telegram_bot.outbox import Outbox
 from telegram_bot.state import State
 
-API_COMMIT = "2b77c958f358130c91a72e310d5c31f6c39c2d00"
+API_COMMIT = "dc448f9e117e05192004514a639c3ed5acd1098a"
 API_ROOT = os.environ.get("BOT01_API_ROOT")
 OWNER, BOT = 111111111, 900001
 
@@ -56,6 +56,25 @@ class Run01Integration(unittest.TestCase):
         self.assertFalse(target.exists(), "Outro ensaio usa este checkout da API")
         shutil.copyfile(fixture, target)
         self.addCleanup(target.unlink)
+        self.errors = (Path(self.temp.name) / "node-errors.log").open("w+", encoding="utf-8")
+        self.addCleanup(self.errors.close)
+        self.start_api(assembled=self._testMethodName.startswith("test_assembled"))
+        self.addCleanup(self.stop_api)
+        self.path = Path(self.temp.name) / "bot.sqlite3"
+        self.state = State(self.path)
+        self.addCleanup(self.state.close)
+        self.box = Outbox(self.path, "run01-integration")
+        self.addCleanup(self.box.close)
+        self.adapter = Conversations(self.box, self.client)
+        self.telegram = Mock()
+        self.telegram.send.side_effect = lambda *args: {
+            "message_id": 500 + self.telegram.send.call_count
+        }
+        self.worker = ConversationWorker(self.box, self.client, self.telegram, OWNER)
+
+    def start_api(self, *, assembled=False):
+        root = Path(API_ROOT).resolve()
+        target = root / ".bot01-synthetic-test.ts"
         env = {
             k: v
             for k, v in os.environ.items()
@@ -71,8 +90,8 @@ class Run01Integration(unittest.TestCase):
             }
         }
         env.update(BOT01_TEST_ONLY="1", BOT01_TEST_DB=str(Path(self.temp.name) / "api.sqlite"))
-        self.errors = (Path(self.temp.name) / "node-errors.log").open("w+", encoding="utf-8")
-        self.addCleanup(self.errors.close)
+        if assembled:
+            env["BOT02_TEST_ASSEMBLED"] = "1"
         self.process = subprocess.Popen(
             ["node", "--import", "tsx", str(target)],
             cwd=root,
@@ -82,7 +101,6 @@ class Run01Integration(unittest.TestCase):
             text=True,
             encoding="utf-8",
         )
-        self.addCleanup(self.stop_api)
         # O leitor fica numa thread limitada; evita travar a suíte se Node falhar antes de anunciar a porta.
         import queue
         import threading
@@ -94,21 +112,11 @@ class Run01Integration(unittest.TestCase):
         try:
             ready = json.loads(result.get(timeout=20))
         except (queue.Empty, ValueError):
+            self.stop_api()
             self.fail("Fixture RUN-01 não iniciou; conferir Node/dependências no checkout de teste")
         self.base = f"http://127.0.0.1:{ready['port']}"
         config = BackendConfig(self.base, "synthetic-token-xxxxxxxxxxxxxxxxxxxxxxxxx", OWNER)
         self.client = ConversationClient(config, BOT, timeout=2)
-        self.path = Path(self.temp.name) / "bot.sqlite3"
-        self.state = State(self.path)
-        self.addCleanup(self.state.close)
-        self.box = Outbox(self.path, "run01-integration")
-        self.addCleanup(self.box.close)
-        self.adapter = Conversations(self.box, self.client)
-        self.telegram = Mock()
-        self.telegram.send.side_effect = lambda *args: {
-            "message_id": 500 + self.telegram.send.call_count
-        }
-        self.worker = ConversationWorker(self.box, self.client, self.telegram, OWNER)
 
     def stop_api(self):
         if self.process.poll() is None:
@@ -137,12 +145,12 @@ class Run01Integration(unittest.TestCase):
             time.sleep(0.03)
         self.assertIsNone(pending(), "Fila não concluiu no prazo do ensaio sintético")
 
-    def restore_login_context(self):
+    def restore_login_context(self, source="synthetic-confirmation-1"):
         status = LinkStatus(
             "CONNECTED", True, ("ADDRESSES_READ",), None, None, "synthetic-link-xxxxxxxxxxxxxxxx"
         )
         self.worker.link_status = lambda: status
-        self.assertTrue(self.adapter.restore_after_login(status, "synthetic-confirmation-1"))
+        self.assertTrue(self.adapter.restore_after_login(status, source))
         recovered = Outbox(self.path, "run01-integration")
         self.addCleanup(recovered.close)
         self.worker = ConversationWorker(
@@ -159,6 +167,60 @@ class Run01Integration(unittest.TestCase):
         self.assertEqual(self.client.get_snapshot().version, 1)
         self.assertIn("Pessoa sintética", self.telegram.send.call_args.args[1])
         self.assertIn("Retomada informativa", self.telegram.send.call_args.args[1])
+
+    def test_assembled_group_correction_and_restart_restore_without_model_or_replay(self):
+        self.adapter.receive(
+            update(
+                1,
+                "Somos Ana e Bia. Ana é alérgica a amendoim. Bia não tem restrições. Teto de R$ 180.",
+            )
+        )
+        self.drive()
+        self.adapter.receive(update(2, "Na verdade, no máximo R$ 150."))
+        self.drive()
+        before = self.client.get_snapshot().to_dict()
+        group = next(b for b in before["blocks"] if b["kind"] == "GROUP")
+        self.assertEqual(group["budgetCents"], 15000)
+        self.assertEqual([p["displayName"] for p in group["participants"]], ["Ana", "Bia"])
+        self.assertIn("Alergia: amendoim (obrigatória)", group["participants"][0]["conditions"])
+        self.assertIsNone(before["humanApproval"])
+        self.assertEqual(self.request("/synthetic/stats")["executions"], 2)
+        self.telegram.reset_mock()
+        self.restore_login_context()
+        self.drive()
+        self.assertEqual(self.request("/synthetic/stats")["executions"], 2)
+        self.assertEqual(self.client.get_snapshot().to_dict(), before)
+        text = " ".join(c.args[1] for c in self.telegram.send.call_args_list)
+        for expected in ("Ana", "Bia", "amendoim", "R$ 150,00", "Retomada informativa"):
+            self.assertIn(expected, text)
+        self.assertNotIn("R$ 180,00", text)
+        self.assertEqual(self.telegram.send.call_count, 1)
+        self.restore_login_context()  # replay da confirmação não repete nem a mensagem.
+        self.drive()
+        self.assertEqual(self.telegram.send.call_count, 1)
+        other = ConversationClient(
+            BackendConfig(
+                self.base,
+                "synthetic-token-xxxxxxxxxxxxxxxxxxxxxxxxx",
+                OWNER + 1,
+                password_access=True,
+            ),
+            BOT,
+        )
+        with self.assertRaises(ConversationError) as denied:
+            other.get_snapshot()
+        self.assertEqual(denied.exception.code, "NOT_FOUND")
+
+        # Processo real reiniciado, mesmo SQLite; GET/retomada não dispara Gemini novamente.
+        self.stop_api()
+        self.start_api(assembled=True)
+        self.telegram.reset_mock()
+        self.adapter = Conversations(self.box, self.client)
+        self.restore_login_context("synthetic-verification-2")
+        self.drive()
+        self.assertEqual(self.request("/synthetic/stats")["executions"], 0)
+        self.assertEqual(self.client.get_snapshot().to_dict(), before)
+        self.assertIn("R$ 150,00", self.telegram.send.call_args.args[1])
 
     def test_login_restore_after_purge_does_not_reintroduce_group(self):
         self.adapter.receive(update(1))

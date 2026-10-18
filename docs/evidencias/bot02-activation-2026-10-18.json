@@ -1,0 +1,77 @@
+{
+  "kind": "BOT02_OPERATIONAL_ENABLEMENT",
+  "date": "2026-10-18",
+  "scope": "DEC-01: sacola simulada, MCP somente leitura, sem envio real",
+  "source": {
+    "botCommit": "9314c72e1324a36da09c014e74f98a470dde6306",
+    "apiCommit": "dc448f9e117e05192004514a639c3ed5acd1098a"
+  },
+  "deploymentVerification": {
+    "verifiedAtUtc": "2026-10-18T09:49:30Z",
+    "botDeployment": "2f6aeee3-6291-449b-908d-ae1071294866",
+    "botStatus": "SUCCESS",
+    "botCommit": "9314c72e1324a36da09c014e74f98a470dde6306",
+    "botConversationEnabled": true,
+    "pollingProcessesVerified": 1,
+    "botStartupCount": 1,
+    "botTracebackCount": 0,
+    "botPollingConflictCount": 0,
+    "apiDeployment": "4ac36a18-5403-4df5-927a-c28e0049d802",
+    "apiStatus": "SUCCESS",
+    "apiCommit": "28edd060c2e5e4058f68f18c658d90b03b27e6b0",
+    "apiSourceComparedToTestedCommit": "IDENTICAL_SRC; PR #41 alterou apenas testes/documentação",
+    "apiRuntimeProbeRepeatedAfterTeamDeployment": "PASS"
+  },
+  "localChecks": {
+    "botTestsPassed": 177,
+    "botHttpTestsIncluded": 7,
+    "apiRelevantTestsPassed": 32,
+    "ruff": "PASS",
+    "format": "PASS",
+    "diffCheck": "PASS",
+    "geminiTransport": "FAKE",
+    "oauthAndTelegram": "SYNTHETIC",
+    "assembledRestartAndContextRestore": "PASS",
+    "restoreChangesVersion": false,
+    "restoreCallsModel": false
+  },
+  "privateBackups": {
+    "botSqliteCount": 3,
+    "botIntegrity": "ok",
+    "apiLinkFilesVerified": 2,
+    "apiConversationDatabaseExisted": false,
+    "location": "VOLUME_OF_EACH_SERVICE",
+    "offVolumeBackup": false
+  },
+  "apiRuntimeProbe": {
+    "result": "PASS",
+    "runtimeEnabled": true,
+    "modelEnabled": true,
+    "provider": "google",
+    "model": "gemini-3.8-flash",
+    "maxRequestsPerProcess": 100,
+    "maxRequestsPerConversationPerProcess": 40,
+    "budgetMicroUsdPerProcess": 500000,
+    "dbFile": "/data/conversations/runtime.sqlite",
+    "dbIntegrity": "ok",
+    "dbSchema": 2,
+    "conversationCountAtProbe": 0,
+    "authenticatedSnapshotStatus": 404,
+    "snapshotMeaning": "NOT_FOUND: nenhum grupo salvo; rota ativa",
+    "cartEnabled": false,
+    "globalSessionEnabled": false,
+    "agentActiveLogCount": 1,
+    "startupErrorCount": 0
+  },
+  "humanChecks": {
+    "realModelThroughTelegram": "PENDING",
+    "oauthAndHumanClick": "PENDING",
+    "correctedGroupRecovered": "PENDING",
+    "secondTelegramAccountIsolation": "PENDING"
+  },
+  "notes": [
+    "Não contém segredos, identidades ou conteúdo de conversa.",
+    "Limites em memória reiniciam com a API; reserva local não é limite de cobrança.",
+    "Ativação e testes sintéticos não comprovam a jornada humana."
+  ]
+}

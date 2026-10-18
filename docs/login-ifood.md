@@ -1,3 +1,5 @@
+**Atualização de UX em 18/10/2026:** navegação por botões e retorno do login sem confirmação duplicada, conforme pedido do usuário. Ver [conversa por botões](conversa-por-botoes.md). Instruções antigas com comandos permanecem como histórico/compatibilidade.
+
 # Login iFood pelo Telegram
 
 [Índice](README.md) · [Estado verificado](estado-atual.md) · [Arquitetura](arquitetura.md)

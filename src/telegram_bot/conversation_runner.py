@@ -7,12 +7,15 @@ from datetime import datetime
 
 from .backend import BackendError
 from .conversation import ConversationError
-from .conversation_contract import ProtocolError, encode
+from .conversation_contract import ProtocolError, decode, encode
 from .conversation_view import chunks, render
 from .outbox import Outbox
 from .telegram import TelegramError
+from .voice import MAX_BYTES, VoiceError, voice_metadata
 
 NOTICES = {
+    "VOICE_UNKNOWN": "A transcrição foi interrompida e não será repetida automaticamente. Envie o áudio novamente ou escreva a mensagem.",
+    "VOICE_FAILED": "Não consegui entender este áudio com segurança ou o limite de voz foi atingido. Tente mais tarde ou escreva a mensagem.",
     "QUEUE_FULL": "A fila de conversa está cheia. Aguarde e envie esta mensagem novamente depois.",
     "EXPIRED": "Uma mensagem aguardou mais de 24 horas sem envio e foi descartada. Envie novamente se ainda fizer sentido.",
     "NO_ACTIVE": "Nenhum processamento ativo foi encontrado para interromper.",
@@ -22,17 +25,17 @@ NOTICES = {
     "STALE_VERSION": "A conversa mudou. O evento antigo não foi alterado ou reaplicado. Envie sua correção novamente sobre o estado atual.",
     "EVENT_CONFLICT": "Este evento já existe com outro conteúdo. Não vou alterar sua identidade; consulte o responsável pelo serviço.",
     "FORBIDDEN": "A conversa não está autorizada para esta conta. Consulte o responsável pelo serviço.",
-    "UNAUTHENTICATED": "A autenticação entre bot e API foi recusada. Consulte o responsável pelo serviço.",
+    "UNAUTHENTICATED": "Não consegui acessar o serviço de compras. Avise a equipe.",
     "INVALID_REQUEST": "A API recusou o formato da mensagem. Nenhuma correção automática foi aplicada; consulte o responsável pelo serviço.",
-    "LINK_CHANGED": "O vínculo da conta mudou. Confira /ifood antes de enviar uma nova mensagem.",
-    "CONTEXT_EXPIRED": "A retomada do grupo expirou após 24 horas. Use /verificar para solicitar uma nova consulta.",
+    "LINK_CHANGED": "O vínculo da conta mudou. Confira Minha conexão antes de enviar uma nova mensagem.",
+    "CONTEXT_EXPIRED": "A retomada do grupo expirou após 24 horas. Use Verificar conexão para solicitar uma nova consulta.",
     "NO_CONTEXT": "Não há conversa salva para retomar. Envie uma mensagem para começar; nenhum pedido é enviado.",
-    "CONTEXT_LINK_NOT_READY": "Não consegui validar o mesmo vínculo operacional para retomar o grupo. Consulte /ifood e use /verificar quando a conexão estiver pronta.",
-    "UNAVAILABLE": "Conversa temporariamente indisponível. Use /retomar para recuperar o mesmo evento, ou consulte /andamento.",
+    "CONTEXT_LINK_NOT_READY": "Não consegui validar o mesmo vínculo operacional para retomar o grupo. Consulte Minha conexão e use Verificar conexão quando a conexão estiver pronta.",
+    "UNAVAILABLE": "Conversa temporariamente indisponível. Use Retomar conversa para recuperar o mesmo evento, ou consulte Acompanhar.",
     "PROTOCOL": "Resposta incompatível com o contrato. O acompanhamento está pausado; consulte o responsável pelo serviço.",
     "FAILED": "O processamento terminou sem concluir a solicitação. Envie uma nova correção quando o serviço estiver disponível.",
     "RESULT_UNKNOWN": "Resultado externo desconhecido. Não repita o pedido; é necessária reconciliação. Nenhum envio automático será feito.",
-    "CANCEL_UNKNOWN": "A parada local ainda não foi confirmada. Use /retomar para recuperar a mesma solicitação.",
+    "CANCEL_UNKNOWN": "A parada local ainda não foi confirmada. Use Retomar conversa para recuperar a mesma solicitação.",
 }
 
 
@@ -57,8 +60,9 @@ class Conversations:
 
     COMMANDS = frozenset({"/andamento", "/interromper", "/retomar"})
 
-    def __init__(self, box, client):
+    def __init__(self, box, client, *, voice_enabled=False):
         self.box, self.client = box, client
+        self.voice_enabled = voice_enabled
 
     def restore_after_login(self, status, source_key):
         fingerprint = link_fingerprint(status)
@@ -67,6 +71,18 @@ class Conversations:
         return self.box.enqueue_context(source_key, fingerprint)
 
     def receive(self, update, text_command=None):
+        voice = None
+        if "voice" in update.get("message", {}):
+            if not self.voice_enabled:
+                return "Ainda não estou recebendo áudios nesta demo. Por enquanto, escreva sua mensagem."
+            try:
+                voice = voice_metadata(update["message"])
+            except VoiceError:
+                return "Envie uma mensagem de voz de até um minuto e 5 MB, ou escreva sua mensagem."
+            update = {
+                **update,
+                "message": {**update["message"], "text": "Áudio aguardando transcrição."},
+            }
         if text_command == "/andamento":
             return self.box.status()
         if text_command in {"/interromper", "/retomar"}:
@@ -80,7 +96,7 @@ class Conversations:
         command = self.client.restore(encode(body), command.schema)
         if len(command.serialize()) > 16384:
             raise ValueError("Mensagem excede o limite do backend.")
-        self.box.receive(command, update["update_id"], kind=kind)
+        self.box.receive(command, update["update_id"], kind=kind, voice=voice)
         return None
 
 
@@ -96,12 +112,14 @@ class ConversationWorker:
         stop_event=None,
         link_status=None,
         access_allowed=None,
+        transcriber=None,
     ):
         self.box, self.client, self.telegram = box, client, telegram
         self.organizer_id, self.clock = organizer_id, clock
         self.stop_event = stop_event or threading.Event()
         self.link_status = link_status
         self.access_allowed = access_allowed
+        self.transcriber = transcriber
 
     def _authorized(self):
         return not self.stop_event.is_set() and (
@@ -123,6 +141,8 @@ class ConversationWorker:
         row = self.box.next()
         if row is None:
             return False
+        if row["state"] not in {"NOTICE", "PAUSED"}:
+            self.telegram.typing(self.organizer_id)
         try:
             state = row["state"]
             if state == "NOTICE":
@@ -130,7 +150,10 @@ class ConversationWorker:
             elif row["kind"] == "CONTEXT":
                 self._context(row)
             elif state == "RECEIVED" or (state == "PAUSED" and row["body"] is not None):
-                self.box.prepare(row, self._version())
+                if row["voice"]:
+                    self._voice(row)
+                else:
+                    self.box.prepare(row, self._version())
             elif state in {"PREPARED", "POST_UNKNOWN"} or (
                 state == "PAUSED" and not row["operation_id"]
             ):
@@ -142,6 +165,53 @@ class ConversationWorker:
         except ProtocolError:
             self._error(row, ConversationError("PROTOCOL"))
         return True
+
+    def _voice(self, row):
+        # Reserva antes da rede: queda/timeout nunca provoca outra transcrição cobrada.
+        with self.box.transaction():
+            current = self.box.get(row["seq"])
+            if current["state"] != "RECEIVED":
+                return
+            self.box.update(row["seq"], state="TRANSCRIBING")
+        try:
+            if self.transcriber is None:
+                raise VoiceError()
+            metadata = decode(bytes(row["voice"]))
+            audio = self.telegram.download_voice(metadata["file_id"], MAX_BYTES)
+            if not self._authorized():
+                self.box.finish(row["seq"])
+                return
+            self.telegram.typing(self.organizer_id)
+            text = self.transcriber.transcribe(audio, metadata["duration"])
+            if not self._authorized():
+                self.box.finish(row["seq"])
+                return
+            document = decode(bytes(row["body"]))
+            document["input"] = {"kind": "TEXT", "text": text}
+            if len(encode(document)) > 16384:
+                raise VoiceError()
+            self.client.restore(encode(document), "event")
+            with self.box.transaction():
+                if self.box.get(row["seq"])["state"] != "TRANSCRIBING":
+                    return
+                self.box.update(row["seq"], state="RECEIVED", body=encode(document), voice=None)
+            for part in chunks(
+                "Ouvi: "
+                + text
+                + "\n\nConfira especialmente nomes, alergias e valores. Se algo ficou errado, me corrija por aqui."
+            ):
+                if not self._authorized():
+                    return
+                try:
+                    self.telegram.send(self.organizer_id, part)
+                except TelegramError:
+                    break  # Só a prévia falhou; não repetir transcrição nem criar outra intenção.
+        except (VoiceError, TelegramError, ProtocolError):
+            with self.box.transaction():
+                if self.box.get(row["seq"])["state"] == "TRANSCRIBING":
+                    self.box.update(
+                        row["seq"], state="NOTICE", notice="VOICE_FAILED", body=None, voice=None
+                    )
 
     def _context(self, row):
         if self.stop_event.is_set():
@@ -226,7 +296,7 @@ class ConversationWorker:
                 self._deliver(
                     row,
                     [
-                        "Estou processando sua mensagem. Você pode continuar escrevendo ou usar /andamento e /interromper."
+                        "Estou processando sua mensagem. Você pode continuar escrevendo ou usar Acompanhar e Interromper."
                     ],
                     final=False,
                 )
@@ -360,12 +430,14 @@ class ConversationService:
         *,
         link_status_factory=None,
         access_allowed_factory=None,
+        transcriber_factory=None,
     ):
         self.path, self.scope = path, scope
         self.client_factory, self.telegram_factory = client_factory, telegram_factory
         self.organizer_id = organizer_id
         self.link_status_factory = link_status_factory
         self.access_allowed_factory = access_allowed_factory
+        self.transcriber_factory = transcriber_factory
         self.stop_event = threading.Event()
         self.failed = threading.Event()
         self.thread = threading.Thread(target=self._run, name="conversation-worker", daemon=True)
@@ -387,6 +459,7 @@ class ConversationService:
                 access_allowed=self.access_allowed_factory()
                 if self.access_allowed_factory
                 else None,
+                transcriber=self.transcriber_factory() if self.transcriber_factory else None,
             )
             while not self.stop_event.is_set():
                 worker.tick()

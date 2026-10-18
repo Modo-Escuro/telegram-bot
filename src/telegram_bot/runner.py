@@ -3,33 +3,25 @@ import time
 
 from .connections import COMMANDS, Connections
 from .conversation_contract import ProtocolError
+from .menu import navigation
 from .telegram import TelegramError
 
 START = (
-    "Olá! Sou o bot Compra com Contexto. Você está na sua conversa privada da demo.\n\n"
-    "Use /conectar para iniciar o login iFood. Depois de autorizar no navegador, volte à mensagem "
-    "do login para conferir a conta no botão. Se ele não aparecer, envie /confirmar. A conversa de compras "
-    "ainda está em implementação; nenhum pedido é enviado.\n\n"
-    "Use /status para ver o andamento ou /ajuda para os comandos."
+    "Olá! Eu sou o Ailo, seu assistente de compras. Vamos organizar seu pedido juntos? "
+    "Me conte quem participa, as restrições alimentares "
+    "e quanto vocês querem gastar. Você pode corrigir as informações quando precisar.\n\n"
+    "Para conectar a conta teste iFood, toque em Conectar iFood. "
+    "Nesta demo, a sacola é simulada e nenhum pedido é enviado."
 )
-STATUS = (
-    "Telegram: disponível para seu usuário autenticado.\n"
-    "iFood: use /ifood para consultar a conexão; login não verificado por /status.\n"
-    "Sacola e envio de pedidos: indisponíveis."
-)
+STATUS = "Estou por aqui! O login não é verificado nesta tela. Toque em Minha conexão para consultar sua conta."
 HELP = (
-    "/start — iniciar\n/status — estágio da demo\n/ajuda — comandos\n"
-    "/conectar — abrir login iFood\n/confirmar — conferir e confirmar por botão\n"
-    "/ifood — estado da conexão\n/verificar — verificar sessão no backend\n\n"
-    "/cancelar — cancelar só a tentativa de login\n"
-    "/desconectar — remover só o vínculo local\n\n"
-    "O botão aparece na mensagem do login. /confirmar e /ifood continuam disponíveis."
+    "Converse comigo por aqui para organizar o grupo e ajustar o orçamento.\n\n"
+    "Conectar iFood abre o login da conta teste. Minha conexão mostra a conta e os botões "
+    "para cancelar um login ou desconectar. Verificar conexão consulta o acesso ao iFood."
 )
 CONVERSATION_HELP = (
-    "\n/andamento — consultar fila de conversa\n"
-    "/interromper — solicitar parada do processamento local\n"
-    "/retomar — recuperar o acompanhamento; entrega incerta pode aparecer novamente\n"
-    "A conversa depende da disponibilidade da API. Nenhum pedido é enviado."
+    "\n\nAcompanhar mostra suas mensagens pendentes. Interromper solicita a parada local. "
+    "Retomar conversa recupera o acompanhamento; se uma entrega ficou incerta, a mensagem pode aparecer novamente."
 )
 
 
@@ -53,12 +45,13 @@ def private_message(update):
 
 
 def reply_for(update, allowed_id, username, connections=None):
+    update = navigation(update)
     message = private_message(update)
     if message is None or message["from"]["id"] != allowed_id:
         return None
     text = message.get("text")
     if not isinstance(text, str):
-        return "Nesta etapa, use mensagens de texto: /start, /status ou /ajuda."
+        return "Por enquanto, escreva uma mensagem ou toque em Ajuda."
     words = text.strip().split()
     command, _, target = (words[0] if words else "").partition("@")
     if target and target.casefold() != username.casefold():
@@ -73,11 +66,12 @@ def reply_for(update, allowed_id, username, connections=None):
         return HELP
     if command == "/status":
         return STATUS
-    return "A conversa de compras ainda não está disponível. Use /ajuda para ver os comandos."
+    return "A conversa de compras não está disponível nesta configuração. Toque em Ajuda."
 
 
 def process_batch(api, state, updates, allowed_id, username, connections=None, conversations=None):
     for update in sorted(updates, key=lambda u: u["update_id"]):
+        update = navigation(update)
         update_id = update["update_id"]
         if type(update_id) is not int:
             raise ValueError("Update Telegram inválido.")
@@ -99,7 +93,9 @@ def process_batch(api, state, updates, allowed_id, username, connections=None, c
             if not first.startswith("/"):
                 command, target = first, ""
             if (not target or target.casefold() == username.casefold()) and (
-                command in conversations.COMMANDS or (first and not first.startswith("/"))
+                command in conversations.COMMANDS
+                or (first and not first.startswith("/"))
+                or "voice" in message
             ):
                 try:
                     reply = conversations.receive(
@@ -119,6 +115,8 @@ def process_batch(api, state, updates, allowed_id, username, connections=None, c
         reply = reply_for(update, allowed_id, username, connections)
         if conversations is not None and isinstance(reply, str) and reply in {START, STATUS, HELP}:
             reply += CONVERSATION_HELP
+            if conversations.voice_enabled:
+                reply += "\n\nPode enviar áudios de até um minuto. Uso a Groq para transcrever e mostro o texto para você conferir."
         if reply:
             try:
                 if isinstance(reply, str):

@@ -65,7 +65,7 @@ class LoginContextTests(Fixture):
     def test_human_confirmation_queues_followup_before_delivery(self):
         reply = self.connections.confirm_click(CONFIRM, 1)
         self.backend.confirm.assert_called_once_with(CONFIRM)
-        self.assertIn("segundo plano", reply.text)
+        self.assertIn("Vou recuperar o grupo", reply.text)
         self.assertEqual(len(self.rows()), 1)
         self.assertEqual(self.client.sent, [])
         self.telegram.send.assert_not_called()
@@ -125,14 +125,14 @@ class LoginContextTests(Fixture):
         first = self.connections.reply("/verificar", [], 1)
         self.backend.status.return_value = connected()
         second = self.connections.reply("/verificar", [], 1)
-        self.assertIn("segundo plano", first.text)
-        self.assertIn("segundo plano", second.text)
+        self.assertIn("Vou recuperar o grupo", first.text)
+        self.assertIn("Vou recuperar o grupo", second.text)
         self.backend.verify.assert_called_once()
         self.assertEqual(len(self.rows()), 1)
 
     def test_legacy_login_without_conversation_feature_is_unchanged(self):
         legacy = Connections(self.backend, self.state, OWNER)
-        self.assertNotIn("segundo plano", legacy.confirm_click(CONFIRM, 1).text)
+        self.assertNotIn("Vou recuperar o grupo", legacy.confirm_click(CONFIRM, 1).text)
         self.assertEqual(self.rows(), [])
 
     def test_restoration_after_reopening_sqlite_reads_only_current_group(self):
@@ -366,5 +366,5 @@ class LoginContextTests(Fixture):
         self.backend.status.return_value = connected()
         self.connections.tick(self.telegram, OWNER)
         self.assertIn("fila está cheia", self.telegram.call.call_args.args[1]["text"])
-        self.assertIn("/verificar", self.telegram.call.call_args.args[1]["text"])
+        self.assertIn("Verificar conexão", self.telegram.call.call_args.args[1]["text"])
         self.assertEqual(self.rows(), [])

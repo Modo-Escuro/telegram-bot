@@ -11,6 +11,7 @@ from .outbox import Outbox
 from .runner import identify, poll
 from .state import State, single_instance
 from .telegram import Telegram, TelegramError
+from .voice import VoiceConfig, VoiceTranscriber
 
 
 def main():
@@ -23,6 +24,7 @@ def main():
     args = parser.parse_args()
     try:
         config = Config.from_env(identify=args.identify)
+        voice_config = VoiceConfig.from_env()
         api = Telegram(config.token)
         me = api.check()
         if args.check:
@@ -33,6 +35,7 @@ def main():
             if args.identify:
                 identify(api)
                 return 0
+            api.configure_name(me)
             if config.access_password:
                 # Valida o transporte antes do polling. O ID de cada usuário virá do update autenticado.
                 backend_config = BackendConfig.from_env(config.allowed_user_id or 1)
@@ -60,7 +63,9 @@ def main():
                     scope = scope_for(backend_config, me["id"])
                     client_factory = lambda: ConversationClient(backend_config, me["id"], timeout=5)
                     box = Outbox(path, scope)
-                    conversations = Conversations(box, client_factory())
+                    conversations = Conversations(
+                        box, client_factory(), voice_enabled=voice_config is not None
+                    )
                     service = ConversationService(
                         path,
                         scope,
@@ -70,6 +75,13 @@ def main():
                         link_status_factory=lambda: (
                             lambda: Backend(backend_config).status(timeout=5)
                         ),
+                        transcriber_factory=(
+                            lambda: VoiceTranscriber(
+                                voice_config, config.state_dir / "voice-budget.sqlite3"
+                            )
+                        )
+                        if voice_config
+                        else None,
                     )
                     service.start()
                 print("Bot iniciado. Abra a conversa privada e envie /start. Ctrl+C encerra.")

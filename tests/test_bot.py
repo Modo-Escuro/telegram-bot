@@ -42,7 +42,7 @@ class AccessTests(unittest.TestCase):
         for command in ["/start", "/start@demo_bot", "/help", "/ajuda", "/status"]:
             with self.subTest(command=command):
                 self.assertIsNotNone(reply_for(update(text=command), ALLOWED, "demo_bot"))
-        self.assertIn("não verificado", reply_for(update(text="/status"), ALLOWED, "demo_bot"))
+        self.assertIn("não é verificado", reply_for(update(text="/status"), ALLOWED, "demo_bot"))
 
     def test_other_user_and_nonprivate_chats_are_silent(self):
         for item in [
