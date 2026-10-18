@@ -1,14 +1,16 @@
-# Executar o bot Telegram
+# Executar e diagnosticar o bot localmente
 
-Implementado: long polling, /start, /status, /ajuda, acesso privado por ID numérico, cursor persistente e bloqueio de instância concorrente no mesmo diretório de estado. Há cliente HTTP para login iFood via backend, com confirmação por botão. Coleta de participantes e compra continuam pendentes.
+[Índice](README.md) · [Railway](deploy-railway.md) · [Login](login-ifood.md)
 
-## 1. Criar o bot
+## Antes de iniciar
 
-No Telegram, abra [@BotFather](https://t.me/BotFather), execute /newbot e siga as instruções. Guarde o token apenas localmente. Configure /setjoingroups como Disable para reduzir convites a grupos; o programa rejeita grupos independentemente dessa configuração.
+O bot já está online na Railway. Não iniciar polling local com o mesmo token enquanto o serviço estiver ativo. Para transferir a execução, seguir a migração do [estado atualizado](deploy-railway.md#transferir-execução-entre-computador-e-nuvem); preservar `data/` e não voltar a usar uma cópia antiga do SQLite.
 
-## 2. Preparar Python
+`--check` consulta apenas token e webhook, sem consumir updates. `--identify` consome updates de preparação e não deve rodar junto com o serviço online.
 
-No Git Bash, na pasta do projeto, use Python 3.12:
+## Preparar Python
+
+Python 3.12 no Git Bash do Windows:
 
 ```bash
 cd ~/OneDrive/Desktop/telegram-bot
@@ -16,65 +18,77 @@ python -m venv .venv
 ./.venv/Scripts/python.exe -m pip install -e .
 ```
 
-Se seu comando python não for 3.12, use o caminho completo do executável 3.12. No Linux/macOS, substitua .venv/Scripts/python.exe por .venv/bin/python. O programa usa apenas a biblioteca padrão em execução.
+Não recriar uma venv que já funciona. Se `python` não for 3.12, usar o executável correspondente. Linux/macOS: `.venv/bin/python`. O pacote usa somente a biblioteca padrão em execução.
 
-## 3. Inserir o token sem exibi-lo
+## Configurar o ambiente sem registrar segredos
+
+As variáveis valem para o terminal atual. O bot não carrega `.env` automaticamente. Token do BotFather, segredo bot→API e Client Secret iFood são credenciais diferentes; a última fica exclusivamente no backend.
 
 ```bash
 read -r -s -p "Token do BotFather: " TELEGRAM_BOT_TOKEN
 echo
 export TELEGRAM_BOT_TOKEN
+read -r -p "Seu ID numérico do Telegram: " TELEGRAM_ALLOWED_USER_ID
+export TELEGRAM_ALLOWED_USER_ID
+export BACKEND_BASE_URL="https://api-backend-production-9c4c.up.railway.app"
+read -r -s -p "Segredo de serviço da API (BOT_API_TOKEN): " BACKEND_API_TOKEN
+echo
+export BACKEND_API_TOKEN
 ```
 
-O token não aparece no comando nem no histórico. Não cole o token no chat. O programa lê variáveis do processo; não carrega .env automaticamente. Variáveis exportadas valem apenas nesse terminal.
+O organizador precisa ser o mesmo permitido em `ALLOWED_ORGANIZER_IDS` na API. O valor de `BACKEND_API_TOKEN` é o `BOT_API_TOKEN` da API. Credenciais não devem ser coladas em comandos literais, histórico ou chat.
 
-## 4. Descobrir o ID do organizador
+`TELEGRAM_STATE_DIR` usa `data` por padrão. Para executar uma migração reversa, aponte para o diretório com o SQLite atualizado e já conferido. O exemplo não importa o estado da nuvem automaticamente.
 
-Se já conhece seu ID numérico pessoal, pule para o passo 5. Não use o ID do bot que aparece no início do token.
+Sem ambas as variáveis `BACKEND_*`, os comandos de login informam integração desabilitada; configuração parcial impede iniciar polling. Para backend local, a origem pode ser `http://localhost:8000`, desde que `PUBLIC_BASE_URL` e callback estejam coerentes com esse ambiente.
+
+## Diagnóstico e execução
+
+```bash
+./.venv/Scripts/python.exe -m telegram_bot --check
+```
+
+Esse comando verifica o token Telegram e a ausência de webhook. Não verifica o login iFood nem o contrato/configuração completa do backend.
+
+Depois de encerrar a instância online e concluir a transferência de estado, iniciar:
+
+```bash
+./.venv/Scripts/python.exe -m telegram_bot
+```
+
+`/start`, `/status` e `/ajuda` respondem ao organizador em conversa privada. Outro usuário ou grupo é ignorado. Ctrl+C encerra. `/status` mostra o estágio da demo; `/ifood` consulta o vínculo e `/verificar` pede verificação da sessão ao backend.
+
+O [fluxo de login](login-ifood.md) exige enviar `/confirmar` depois de autorizar no navegador. O botão não aparece automaticamente e nenhum código deve ser digitado no Telegram.
+
+## Criar um bot ou identificar um novo organizador
+
+Se for necessário outro bot, usar [@BotFather](https://t.me/BotFather), `/newbot`, e guardar o token somente no ambiente/painel. `/setjoingroups` como Disable reduz convites, mas o programa rejeita grupos independentemente dessa configuração.
+
+Se o ID pessoal do organizador for desconhecido, com o polling parado:
 
 ```bash
 ./.venv/Scripts/python.exe -m telegram_bot --identify
 ```
 
-O terminal mostra um comando temporário /identificar seguido de um código aleatório. Envie exatamente esse comando na conversa privada com seu bot em até três minutos. O terminal exibirá apenas o seu ID numérico; não grava essa identidade e não libera o bot automaticamente. Não compartilhe o código de pareamento.
+Enviar na conversa privada exatamente o desafio temporário `/identificar ...` exibido no terminal, em até três minutos. O terminal mostra apenas o ID pessoal para configuração; não gravar essa saída em logs públicos. Não usar o ID do bot presente no token. O pareamento não libera acesso automaticamente.
 
-Esse modo consome updates de preparação e não deve rodar junto com o bot. Ele não responde no Telegram. É a única saída local deliberada de ID pessoal, para configurar o acesso; não redirecione essa saída para logs públicos.
+## Falhas e limites
 
-## 5. Configurar e iniciar
+- Token recusado: conferir o token local do BotFather.
+- Webhook ativo: o programa para sem alterar a configuração. Desativar no sistema responsável sem descartar updates pendentes antes de migrar para polling.
+- Conflito 409: encerrar a outra instância, inclusive em outra máquina. Não apagar estado para contornar.
+- Falha temporária: espera progressiva e `retry_after` do Telegram são respeitados.
+- Falha de backend: mensagens saneadas; consultar `/ifood` antes de repetir uma ação cujo resultado seja desconhecido.
+- Falha entre `sendMessage` e gravação do cursor pode repetir texto; não há promessa de entrega única de mensagens.
+- Eventos ignorados também avançam cursor; mensagens editadas não são processadas. Callbacks validam remetente e conversa privada.
+- Após uma semana sem eventos processados, o cursor aceita IDs aleatórios do Telegram.
 
-```bash
-read -r -p "Seu ID numérico do Telegram: " TELEGRAM_ALLOWED_USER_ID
-export TELEGRAM_ALLOWED_USER_ID
-./.venv/Scripts/python.exe -m telegram_bot --check
-./.venv/Scripts/python.exe -m telegram_bot
-```
-
-Abra a conversa privada com o bot e envie /start. Teste /status e /ajuda. Ctrl+C encerra. Outro usuário ou grupo não recebe resposta.
-
---check verifica o token e a ausência de webhook, sem consumir mensagens. Não verifica login iFood.
-
-## Erros e limites
-
-- Token recusado: confira o token local do BotFather.
-- Webhook ativo: o programa para sem alterar a configuração. Desative o webhook no sistema que o configurou antes de usar polling; não descarte updates pendentes.
-- Conflito 409: encerre outra instância do bot/OpenCode que esteja consumindo getUpdates. Use um único processo por token, inclusive entre computadores.
-- Falha temporária: novas tentativas têm espera progressiva; limites do Telegram respeitam retry_after.
-- O diretório data guarda cursor, IDs dos updates com ações iniciadas e arquivos de lock, sem conteúdo de conversa, link de login, identidade de conta ou token. Não apague o estado durante a operação.
-- Uma interrupção após Telegram aceitar sendMessage e antes da gravação do cursor pode repetir uma resposta textual. Não se promete entrega única de mensagens; não há operação de compra. A futura integração precisa de idempotência própria no backend.
-- Updates ignorados por autorização ou tipo também avançam o cursor. Mensagens editadas não são processadas; callbacks de confirmação validam remetente e conversa privada.
-- Depois de uma semana sem eventos processados, o cursor é reiniciado para aceitar IDs aleatórios do Telegram.
-- Integração de login implementada conforme [guia de conexão](login-ifood.md); falta ensaio real com credenciais locais.
-
-## Verificação
+## Testes
 
 ```bash
 ./.venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-Os testes usam respostas simuladas, sem rede e sem credenciais. A CI executa em Windows e Linux. Teste manual esperado: organizador recebe /start; outra conta e grupo são ignorados; reiniciar não responde novamente aos updates já processados.
+A suíte usa respostas simuladas, sem rede e sem credenciais. A CI executa em Windows e Linux. O ensaio real concluído está em [estado atual](estado-atual.md); não apresentar testes simulados como evidência de compra no iFood.
 
-Referência: [Telegram Bot API — getUpdates](https://core.telegram.org/bots/api#getupdates).
-
-## 6. Habilitar login iFood
-
-Consulte [login-ifood.md](login-ifood.md) para configurar os dois processos. No Telegram, envie /conectar, abra o botão e conclua a autorização no mesmo navegador. Para backend local, use o computador do backend; para Railway com callback HTTPS cadastrado, também é possível usar o celular. Envie /confirmar, confira a conta e toque em Confirmar conexão. /ifood consulta o estado; /verificar valida a sessão via backend. Não envie código no chat.
+Referência do transporte: [Telegram Bot API — getUpdates](https://core.telegram.org/bots/api#getupdates).

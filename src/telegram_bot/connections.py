@@ -108,8 +108,8 @@ class Connections:
                 return Reply(
                     "Abra o link e conclua o login no mesmo navegador. "
                     "Se a API estiver em localhost, use o computador em que ela está rodando. "
-                    "Depois envie /confirmar para conferir a conta e confirmar por botão."
-                    + NO_PURCHASE,
+                    "Depois do login, volte ao Telegram e envie /confirmar para receber "
+                    "o botão Confirmar conexão e conferir a conta." + NO_PURCHASE,
                     {"inline_keyboard": [[{"text": "Abrir login do iFood", "url": url}]]},
                 )
             if command == "/verificar":

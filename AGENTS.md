@@ -1,6 +1,6 @@
 # Instruções para o telegram-bot
 
-- Escreva em português. Projeto Python 3.12 em src/telegram_bot; canal Telegram implementado, integração HTTP de login implementada; conversa de compras pendente.
+- Escreva em português. Projeto Python 3.12 em src/telegram_bot; canal Telegram e login iFood implementados e ensaiados na Railway; conversa de compras pendente. Documentação começa em docs/README.md; estado observado e seus limites em docs/estado-atual.md.
 - Este repositório implementará a interface Telegram. Consumir o api-backend; não criar outro servidor MCP nem duplicar seu OAuth.
 - Ler docs/regras-preservadas.md e docs/plano-demo.md antes de implementar. Preservar os IDs da StRS copiada em docs/baseline, sem converter propostas ou decisões abertas em comportamento aprovado.
 - Não inventar rotas ou formatos do backend. Distinguir contrato proposto, código existente e chamada verificada.
@@ -15,4 +15,7 @@
 
 - Para código, executar python -m unittest discover -s tests -v no ambiente do projeto. A CI usa Windows e Linux. Não executar polling com token real durante os testes automatizados. Guia operacional em docs/executar-bot.md.
 
-- Contrato de login validado contra api-backend 20e46fd: confirmação por botão humano com confirmationId. Não pedir código digitado. BACKEND_API_TOKEN no bot corresponde a BOT_API_TOKEN na API. Não repetir mutações automaticamente após timeout.
+- Contrato de login implementado contra api-backend 20e46fd e revisado para 686300d: confirmação por botão humano com confirmationId. Não pedir código digitado. BACKEND_API_TOKEN no bot corresponde a BOT_API_TOKEN na API. Não repetir mutações automaticamente após timeout.
+
+- O bot está online: não iniciar outra instância real com o mesmo token. Preservar o volume /data e o SQLite atualizado ao migrar execução. A API ainda estava sem volume na última conferência; preservar vínculos existentes antes de corrigir essa persistência.
+- O botão humano não é enviado automaticamente após o callback: orientar /confirmar no Telegram. A sessão operacional observada não comprova busca, sacola ou compra; não atualizar snapshots históricos como se fossem estado em tempo real.

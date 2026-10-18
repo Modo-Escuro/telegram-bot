@@ -1,37 +1,37 @@
-# Telegram Bot — Compra com Contexto
+# Compra com Contexto — bot Telegram
 
-Interface conversacional para a demo do hackathon SEMCOMP, em conversa privada entre organizador e bot. O organizador informa as necessidades do grupo; o sistema preserva orçamento e restrições quando o pedido muda e solicita aprovação humana antes do envio.
+Interface Telegram do projeto SEMCOMP. O objetivo do produto é organizar uma compra em grupo com restrições individuais e orçamento, preservar essas condições quando o pedido muda e exigir aprovação humana antes do envio.
 
-**Status: bot inicial implementado com long polling, /start, /status, /ajuda e acesso restrito ao organizador em conversa privada. Cliente HTTP e comandos /conectar, /confirmar, /ifood e /verificar implementados, com confirmação humana por botão. Conversa de compras e pedidos ainda pendentes. Testes automatizados usam respostas simuladas do Telegram; conexão real depende da configuração local.**
+**Entregue e ensaiado:** bot privado na Railway, login iFood pelo navegador, confirmação humana por botão no Telegram e sessão operacional reconhecida pelo backend. A consulta autenticada registrou `CONNECTED`, `operational: true` e verificação `OK`. A evidência e seus limites estão em [estado atual](docs/estado-atual.md).
 
-Fluxo previsto: Telegram → adaptador Python → [api-backend](https://github.com/Modo-Escuro/api-backend) → agente e validações determinísticas → MCP do iFood.
+**Pendente:** conversa de compras, participantes, busca apresentada pelo bot, sacola, aprovação de pedido e checkout. O login não aprova uma compra. Não apresentar esses requisitos como funcionalidades entregues.
 
-## Responsabilidades
+## Arquitetura
 
-- Bot: receber mensagens e cliques, verificar o usuário permitido, encaminhar eventos autenticados à API e apresentar opções, sacola e status.
-- Backend: manter contexto e participantes, executar o agente, autenticar no iFood, consultar/modificar a sacola, validar aprovação e reconciliar resultados desconhecidos.
-- Aprovação: evento humano validado pela API, associado ao responsável, à versão e ao total revisados. O modelo não pode produzir sua própria autorização.
+Fluxo implementado: Telegram → adaptador Python → [api-backend](https://github.com/Modo-Escuro/api-backend) → OAuth e verificação da sessão pelo MCP iFood. O agente de compra e as regras de grupo ainda precisam ser integrados a esse fluxo.
 
-## Executar
-
-Siga o [guia de execução no Git Bash](docs/executar-bot.md) para criar o bot no BotFather, configurar o token sem exibi-lo, descobrir seu ID com --identify e iniciar o processo. Python 3.12; nenhuma dependência externa em execução.
+Python 3.12, biblioteca padrão em execução, long polling e acesso restrito a um organizador em conversa privada. Cursor e ações iniciadas ficam em SQLite; tokens iFood ficam exclusivamente no backend.
 
 ## Documentação
 
-- [Publicar o bot na Railway](docs/deploy-railway.md): serviço, variáveis e transferência do estado local.
-- [Regras preservadas e critérios de migração](docs/regras-preservadas.md).
-- [Etapas da demo e contrato pendente](docs/plano-demo.md).
-- [Login iFood e vínculo com o organizador](docs/login-ifood.md): pré-requisito das operações vinculadas à conta; cliente implementado, ensaio de login real pendente.
-- [Especificação v0.2 preservada](docs/baseline/stakeholder-requirements-specification.md), ainda em validação.
-- [Proveniência e hashes das cópias](docs/baseline/proveniencia.json).
+Comece pelo [índice](docs/README.md). As referências principais são:
 
-O [repositório original](https://github.com/Modo-Escuro/compra-com-contexto) preserva o protótipo Python, seus testes e seu histórico. As cópias em docs/baseline são referências históricas, não funcionalidades implementadas pelo bot. Os links relativos internos da especificação preservada pertencem ao repositório de origem.
+| Necessidade | Documento |
+| --- | --- |
+| Saber o que funciona e qual evidência existe | [Estado atual](docs/estado-atual.md) |
+| Entender os módulos e suas fronteiras | [Arquitetura implementada](docs/arquitetura.md) |
+| Usar login, confirmação e verificação | [Login iFood](docs/login-ifood.md) |
+| Operar o serviço e manter o estado | [Railway](docs/deploy-railway.md) |
+| Executar localmente sem disputar polling | [Execução local](docs/executar-bot.md) |
+| Escolher o próximo incremento | [Plano da demo](docs/plano-demo.md) |
+| Preservar regras e decisões abertas | [Regras](docs/regras-preservadas.md) |
 
-## Preparação
+As cópias em [docs/baseline](docs/baseline/proveniencia.json) preservam a StRS v0.2, ainda em validação, e os contratos recebidos. O [protótipo original](https://github.com/Modo-Escuro/compra-com-contexto) mantém seu histórico e sua simulação Python; essas evidências não equivalem à implementação deste bot.
 
-1. Criar o bot manualmente no @BotFather com /newbot.
-2. Guardar o token somente no ambiente local; nunca em mensagens, commits ou logs.
-3. Definir um organizador permitido pelo ID numérico do Telegram.
-4. Validar as rotas disponíveis no api-backend antes de implementar o adaptador.
+## Desenvolvimento
 
-As variáveis TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USER_ID e TELEGRAM_STATE_DIR são lidas do ambiente do processo. .env não é carregado automaticamente. BACKEND_BASE_URL e BACKEND_API_TOKEN habilitam a integração HTTP de login. O OAuth do iFood permanece no backend.
+```bash
+./.venv/Scripts/python.exe -m unittest discover -s tests -v
+```
+
+Os testes simulam Telegram e backend, sem polling real nem credenciais. A CI executa em Windows e Linux. Use `.venv/bin/python` no Linux/macOS. Consulte [execução local](docs/executar-bot.md) para preparar o ambiente e configurar variáveis; `.env` não é carregado automaticamente.

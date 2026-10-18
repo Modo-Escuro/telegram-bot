@@ -1,0 +1,48 @@
+{
+  "data_local": "2026-10-17",
+  "fuso": "America/Sao_Paulo",
+  "origem": "GET /api/bot/ifood/status autenticado e metadados Railway; somente campos sanitizados",
+  "versoes_de_referencia": {
+    "telegram_bot": "51b4a9eedd6cc22aaff692187f13a06e66a2a73d",
+    "api_backend": "686300d1a10c12bb6c3bd899e40fbd3a68c648f5"
+  },
+  "status_backend": {
+    "state": "CONNECTED",
+    "reason": null,
+    "operational": true,
+    "verification": {
+      "status": "OK"
+    },
+    "scopeEvidence": "TOKEN_SCOPES",
+    "missingScopes": [],
+    "allowedOperations": [
+      "ADDRESSES_READ",
+      "OFFERS_EVALUATE"
+    ],
+    "attemptPresent": false,
+    "purchaseAuthorized": false
+  },
+  "servicos": {
+    "telegram-bot": {
+      "status": "SUCCESS",
+      "instancias_em_execucao": 1,
+      "volume_montado": "/data"
+    },
+    "api-backend": {
+      "status": "SUCCESS",
+      "instancias_em_execucao": 1,
+      "volume_montado": null
+    }
+  },
+  "informado_pelo_usuario": [
+    "Aprovacao do callback HTTPS no iFood",
+    "Respostas de /start e /ifood no Telegram",
+    "Conclusao do fluxo de login apos orientacao para /confirmar"
+  ],
+  "limites": [
+    "Estado observado, sem monitoramento continuo",
+    "Operacao permitida nao comprova sua execucao",
+    "Conferencia leu estado do backend e deploys; nao executou compra",
+    "API ainda sem volume para preservar vinculos entre redeploys"
+  ]
+}

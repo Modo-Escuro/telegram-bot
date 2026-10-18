@@ -6,7 +6,8 @@ from .telegram import TelegramError
 
 START = (
     "Olá! Sou o bot Compra com Contexto. Esta demo está restrita ao organizador.\n\n"
-    "Use /conectar para iniciar o login iFood e /confirmar para conferir a conta. A conversa de compras "
+    "Use /conectar para iniciar o login iFood. Depois de autorizar no navegador, envie /confirmar "
+    "para receber o botão e conferir a conta. A conversa de compras "
     "ainda está em implementação; nenhum pedido é enviado.\n\n"
     "Use /status para ver o andamento ou /ajuda para os comandos."
 )
@@ -18,7 +19,8 @@ STATUS = (
 HELP = (
     "/start — iniciar\n/status — estágio da demo\n/ajuda — comandos\n"
     "/conectar — abrir login iFood\n/confirmar — conferir e confirmar por botão\n"
-    "/ifood — estado da conexão\n/verificar — verificar sessão no backend"
+    "/ifood — estado da conexão\n/verificar — verificar sessão no backend\n\n"
+    "Depois de autorizar no navegador, envie /confirmar para receber o botão de confirmação."
 )
 
 

@@ -1,27 +1,42 @@
-# Etapas da demo
+# Plano da demo e próximos incrementos
 
-Objetivo: organizar uma compra de grupo, alterar orçamento ou itens preservando restrições, revisar a sacola e enviar somente após aprovação humana válida no ambiente de teste autorizado.
+[Índice](README.md) · [Estado atual](estado-atual.md) · [Regras](regras-preservadas.md)
 
-1. Implementar e validar o [login iFood associado ao organizador](login-ifood.md), incluindo vínculo confirmado, expiração, renovação e desconexão. Token armazenado não comprova sessão válida. Depois validar listAddresses → searchOffers → getItem e preservar evidências sanitizadas.
-2. Definir contrato HTTP para conversa, estado da sacola, alterações, aprovação e status. Rotas ainda não definidas; não presumir /chat ou /approve. Autenticar o bot e associar o organizador à conta de teste.
-3. Implementar Python com long polling, conversa privada e organizador permitido. Não precisa de webhook público do Telegram; OAuth iFood é uma conexão separada.
-4. Manter participantes, limites e restrições no backend. Definir rateio e quantidade de restaurantes explicitamente; permanecem decisões abertas.
-5. Implementar operações de carrinho no backend após confirmar seus contratos. Preservar listAddresses, getItem antes de adicionar e listagens de entrega/pagamento/cupom antes de selecionar.
-6. Apresentar versão, itens, distribuição de custos, total e validade. Validar aprovação fora do modelo. Bloquear confirmação antiga, usuário diferente e repetição de envio.
-7. Ensaiar alteração de orçamento, item incompatível, clique repetido e timeout após envio. Não declarar sucesso externo sem confirmação do provedor.
+Objetivo: organizar compra em grupo, alterar orçamento ou itens preservando restrições individuais, revisar a sacola e enviar somente após aprovação humana válida no ambiente autorizado do evento.
 
-## Dados necessários no contrato proposto
+## Entregas concluídas e limites
+
+| Entrega | Evidência e alcance |
+| --- | --- |
+| Canal Telegram privado | Implementado, testes simulados e respostas online confirmadas pelo usuário |
+| Worker Railway e SQLite | Bot online; volume `/data`, transferência inicial com integridade conferida |
+| Cliente HTTP de login | Contrato revisado para backend `686300d`; sem OAuth duplicado no bot |
+| Login com botão humano | Ensaio real concluído; status autenticado confirmou sessão operacional |
+
+Expiração, refresh, reconexão, indisponibilidade e desconexão não foram todos ensaiados online. As rotas de cancelamento/desconexão existem no backend, mas não têm comandos no bot. Participantes, agente de compra, sacola e pedido continuam pendentes.
+
+## Ordem de execução proposta
+
+1. **Persistir vínculos da API.** Preservar arquivos existentes antes de adicionar volume e mudar `IFOOD_LINKS_DIR`; ensaiar reinício controlado, consulta e nova verificação da mesma conexão. Não perder a conta já conectada por uma migração sem cópia.
+2. **Fechar o contrato de conversa e grupo.** Definir eventos, estado e respostas entre Telegram e API. O contrato do login já existe; conversa, sacola e aprovação não têm rotas acordadas. Não presumir `/chat` ou `/approve`.
+3. **Definir o recorte de grupo.** Decidir explicitamente rateio, conciliação entre limites individuais e coletivo, papéis e quantidade de restaurantes. São decisões abertas da StRS, não escolhas aprovadas por este plano.
+4. **Implementar participantes, orçamento e restrições por pessoa.** Coleta no Telegram, persistência no backend e bloqueios determinísticos antes do ranking. O modelo não afrouxa restrição obrigatória por conta própria.
+5. **Ensaiar leitura e recomendação.** Validar `listAddresses` → `searchOffers` → `getItem` e sua apresentação no bot, sem dados privados nas evidências. `OFFERS_EVALUATE` liberada não comprova essa execução. Preço de listagem não é total confirmado de pedido.
+6. **Integrar sacola e revisão.** Confirmar contratos externos, `getItem` antes de adicionar e listagens de entrega/pagamento/cupom antes de selecionar. `setVoucher` é mutação. Incluir custos suportados em centavos e distinguir estimativa de cotação confirmada.
+7. **Aprovar e enviar.** Vincular aprovação ao responsável, conta/link, versão, itens, total e validade. Toda mudança invalida a aprovação. Timeout remoto exige resultado desconhecido e reconciliação antes de reenvio.
+8. **Ensaiar a demo completa.** Mudança de orçamento, incompatibilidade alimentar, dado ausente, botão antigo, clique repetido e timeout. Confirmar resultado por fonte confiável; não declarar pedido real a partir de texto do agente.
+
+A próxima entrega recomendada é a persistência da API, seguida do contrato de conversa. Nenhuma das etapas futuras é funcionalidade concluída. A aprovação do cadastro OAuth não aprova uma compra.
+
+## Dados necessários no contrato futuro
 
 - Evento: identificador de deduplicação, origem Telegram validada, sessão, texto ou ação.
-- Resposta: mensagem, opções elegíveis, estado, versão da sacola, custos em centavos, validade e ações permitidas.
-- Aprovação: referência opaca à revisão, organizador autenticado e registro verificável do clique humano; nunca autorização gerada pelo agente.
-- Resultado: não enviado, aguardando aprovação, enviando, confirmado, falhou ou resultado desconhecido; erros que permitam recuperação segura.
+- Resposta: mensagem, opções elegíveis, participantes atendidos/bloqueados, estado, versão, custos em centavos, validade e ações permitidas.
+- Aprovação: referência opaca à revisão, organizador autenticado e registro verificável do clique; nunca autorização gerada pelo modelo.
+- Resultado: não enviado, aguardando aprovação, enviando, confirmado, falhou ou resultado desconhecido; regras explícitas de recuperação.
 
-Estes são requisitos de contrato, não nomes de rotas nem schemas implementados.
+A deduplicação atual dos updates não substitui idempotência no provedor. Intenções distintas com o mesmo valor continuam legítimas.
 
 ## Preservação
 
-O repositório original continua íntegro. Não apagar ou arquivar automaticamente. docs/baseline conserva a especificação e os contratos com hash SHA-256. Alterações futuras de requisitos devem identificar a versão de origem e preservar IDs e decisões abertas.
-## Incremento entregue: canal Telegram
-
-Long polling, /start, /status, /ajuda, identificação local por desafio, acesso privado ao organizador e cursor persistente estão implementados. Testes automatizados simulam Telegram; validação real depende do token local. Cliente HTTP de login e comandos Telegram implementados com testes simulados; ensaio real e operações de compra continuam pendentes. Consulte [executar o bot](executar-bot.md).
+A [StRS v0.2](baseline/stakeholder-requirements-specification.md) permanece em validação. Preservar IDs, requisitos e decisões abertas. [Proveniência e hashes](baseline/proveniencia.json) identificam o baseline; não reescrevê-lo para refletir o deploy atual. O protótipo original e seus arquivos não rastreados permanecem preservados.

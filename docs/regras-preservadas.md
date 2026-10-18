@@ -4,7 +4,9 @@ A StRS v0.2 em baseline é uma cópia integral, com IDs e decisões abertas pres
 
 ## Requisitos que permanecem
 
-| Regra | Aplicação na nova arquitetura |
+A tabela descreve requisitos a implementar e verificar, não funcionalidades de compra já entregues. Consulte [estado atual](estado-atual.md) para o alcance real do incremento.
+
+| Regra | Comportamento exigido na nova arquitetura |
 | --- | --- |
 | RN01: restrições e limites antes do ranking | Backend bloqueia candidatos incompatíveis; o bot explica o motivo. |
 | RN02: histórico não autoriza flexibilizar restrições | Agente esclarece contradições; bot apresenta perguntas. |
@@ -37,6 +39,6 @@ Origem: tests/test_shopping.py do protótipo. São critérios para novos testes,
 
 ## Pendências do backend
 
-Na inspeção de 17/10/2026, api-backend limitava as ferramentas à leitura e documentava recomendação sem checkout. Sua política de UNKNOWN/ignorar restrição precisa ser alinhada a RN01/RN03. Não remover a barreira de escrita sem implementar aprovação e tratamento de resultado desconhecido.
+A inspeção inicial de 17/10/2026 levantou a necessidade de alinhar UNKNOWN/ignorar restrição a RN01/RN03. O contrato revisado do backend `686300d` já descreve alergia como bloqueada e sem PASS automático; isso não comprova restrições por participante, ingredientes ou segurança das opções reais. A integração de grupo precisa ser verificada por pessoa contra RN01/RN03. O backend documenta recomendação sem checkout. Não remover a barreira de escrita sem implementar aprovação e tratamento de resultado desconhecido.
 
 O novo bot não resolve automaticamente essas pendências. A migração das regras precisa de implementação e testes no backend, além dos testes de identidade, transporte e apresentação no bot.
