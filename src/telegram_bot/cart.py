@@ -20,6 +20,16 @@ NOTICE = "Estou conferindo a composição. Nenhum pedido será enviado."
 UNKNOWN = (
     "Resultado da preparação ainda desconhecido. Use Conferir carrinho; não vou repetir a escrita."
 )
+REVIEW_PROBLEMS = {
+    "CART_BAG_UNVERIFIED": "Escolha uma opção das sugestões para colocar no carrinho antes de revisar. Se ainda não buscou, diga o que quer comer.",
+    "CART_LINK_CHANGED": "Confira a conta iFood conectada em Conta iFood antes de revisar o carrinho.",
+    "CART_ADDRESS_CONFIRMATION_REQUIRED": "Escolha o endereço de entrega em Endereços iFood antes de revisar o carrinho.",
+    "CART_GROUP_BLOCKED": "Ainda há pendências nas restrições, no orçamento ou nos itens escolhidos. Retome a conversa para concluir essas informações antes de revisar.",
+    "CART_FEATURE_DISABLED": "A revisão de carrinho está indisponível nesta versão. Você pode continuar escolhendo opções na conversa.",
+    "CART_PERMISSIONS_UNVERIFIED": "A conta conectada ainda não tem permissão confirmada para preparar o carrinho. Confira com a equipe.",
+    "CART_CONTRACT_UNVERIFIED": "A integração iFood ainda não retornou os dados necessários para uma revisão confiável. Confira com a equipe.",
+    "CART_REVIEW_NOT_DISPLAYABLE": "Faltam dados para identificar a conta, o endereço ou os itens na revisão. Confira com a equipe.",
+}
 
 
 def review_text(review, snapshot):
@@ -363,7 +373,11 @@ class Carts:
                     else "A revisão perdeu a validade antes da preparação. Nenhuma repetição será enviada; peça uma nova revisão."
                 )
             else:
-                text = "Não consegui apresentar uma revisão completa e válida. Nenhuma escrita foi enviada. Confira conexão, composição e pendências; tente Revisar carrinho novamente."
+                text = REVIEW_PROBLEMS.get(
+                    getattr(error, "code", None),
+                    "Não consegui consultar os dados para revisar o carrinho agora. Se continuar, confira com a equipe.",
+                )
+                text += " Nenhuma alteração foi enviada ao iFood."
         except TelegramError:
             self.review = None
             return  # Entrega incerta não mantém um botão de autorização utilizável na RAM.
