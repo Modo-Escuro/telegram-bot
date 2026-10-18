@@ -1,3 +1,5 @@
+[Ailo: apresentação, digitação e voz](ailo-voz.md): integração de áudio opt-in e limites de ativação.
+
 **Atualização de UX em 18/10/2026:** navegação por botões e retorno do login sem confirmação duplicada, conforme pedido do usuário. Ver [conversa por botões](conversa-por-botoes.md). Instruções antigas com comandos permanecem como histórico/compatibilidade.
 
 # Documentação do bot Compra com Contexto

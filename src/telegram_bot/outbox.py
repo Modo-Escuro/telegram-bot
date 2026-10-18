@@ -31,6 +31,8 @@ class Outbox:
         columns = {r[1] for r in self.db.execute("PRAGMA table_info(conversation_outbox)")}
         if "link_hash" not in columns:
             self.db.execute("ALTER TABLE conversation_outbox ADD COLUMN link_hash TEXT")
+        if "voice" not in columns:
+            self.db.execute("ALTER TABLE conversation_outbox ADD COLUMN voice BLOB")
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS conversation_delivery ("
             "seq INTEGER NOT NULL, part INTEGER NOT NULL, message_id INTEGER NOT NULL, digest TEXT NOT NULL, "
@@ -39,6 +41,10 @@ class Outbox:
         self.db.commit()
         # Crash entre envio Telegram e gravação do message_id: entrega possivelmente ocorreu.
         with self.db:
+            self.db.execute(
+                "UPDATE conversation_outbox SET state='NOTICE',notice='VOICE_UNKNOWN',voice=NULL,body=NULL,attempts=0 WHERE scope=? AND state='TRANSCRIBING'",
+                (scope,),
+            )
             self.db.execute(
                 "UPDATE conversation_outbox SET state='DELIVERY_UNKNOWN' "
                 "WHERE scope=? AND state='SENDING'",
@@ -85,12 +91,12 @@ class Outbox:
             self.db.rollback()
             raise
 
-    def receive(self, command, update_id, *, kind="TEXT"):
+    def receive(self, command, update_id, *, kind="TEXT", voice=None):
         """Mensagem/controle e cursor na MESMA transação; nenhuma rede antes do commit."""
         body = command.serialize()
         document = command.to_dict()
         event_id = document["eventId"]
-        digest = hashlib.sha256(body).hexdigest()
+        digest = hashlib.sha256(body + (encode(voice) if voice else b"")).hexdigest()
         now = self.clock()
         with self.transaction():
             previous = self.db.execute(
@@ -120,8 +126,10 @@ class Outbox:
                     target = active["seq"] if active else None
                     if not active:
                         state, notice = "NOTICE", "NO_ACTIVE"
-                    elif active["state"] == "RECEIVED":
-                        self.update(active["seq"], state="CANCELLED", body=None, command=None)
+                    elif active["state"] in {"RECEIVED", "TRANSCRIBING"}:
+                        self.update(
+                            active["seq"], state="CANCELLED", body=None, command=None, voice=None
+                        )
                         state, notice = "NOTICE", "LOCAL_CANCELLED"
                 elif kind == "RESUME":
                     self.db.execute(
@@ -157,6 +165,11 @@ class Outbox:
                         notice,
                     ),
                 )
+                if voice and state == "RECEIVED":
+                    self.db.execute(
+                        "UPDATE conversation_outbox SET voice=? WHERE scope=? AND event_id=?",
+                        (encode(voice), self.scope, event_id),
+                    )
             self.db.execute(
                 "INSERT INTO cursor VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET "
                 "offset=MAX(cursor.offset,excluded.offset),updated=excluded.updated",
@@ -209,6 +222,7 @@ class Outbox:
             "deadline",
             "attempts",
             "notice",
+            "voice",
         }
         if not fields or not fields.keys() <= allowed:
             raise ValueError("Transição local inválida.")
@@ -249,6 +263,10 @@ class Outbox:
     def expire(self):
         """Não expirar comandos enviados sem resposta nem operações em andamento."""
         with self.db:
+            self.db.execute(
+                "UPDATE conversation_outbox SET voice=NULL WHERE scope=? AND (created<=? OR state IN ('DONE','CANCELLED','EXPIRED','NOTICE'))",
+                (self.scope, self.clock() - DAY),
+            )
             self.db.execute(
                 "UPDATE conversation_outbox SET body=NULL,command=NULL,state='NOTICE',notice='EXPIRED',attempts=0 "
                 "WHERE scope=? AND (state IN ('RECEIVED','PREPARED') OR (state='PAUSED' AND body IS NOT NULL)) AND created<=?",
@@ -300,7 +318,7 @@ class Outbox:
 
     def finish(self, seq):
         with self.db:
-            self.update(seq, state="DONE", body=None, command=None, attempts=0)
+            self.update(seq, state="DONE", body=None, command=None, voice=None, attempts=0)
             self.db.execute("DELETE FROM conversation_delivery WHERE seq=?", (seq,))
 
     def pause_notice(self, row, code):

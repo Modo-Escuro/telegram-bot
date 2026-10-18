@@ -107,7 +107,7 @@ def render(snapshot, *, collection_only=False):
                     lines.append("Há participante sem atendimento verificado.")
         elif kind == "OUTCOME":
             lines.append(
-                "Resultado de compra fora do fluxo disponível neste bot; não houve envio por esta interface."
+                "Resultado de compra fora do fluxo disponível no Ailo; não houve envio por esta interface."
             )
     if collection_only:
         if not lines:
@@ -138,7 +138,7 @@ def render(snapshot, *, collection_only=False):
         any(b["kind"] in {"PROPOSAL", "REVIEW", "OUTCOME"} for b in document["blocks"])
         and not collection_only
     ):
-        lines.append("Sacola simulada. Nenhum pedido é enviado por este bot.")
+        lines.append("Sacola simulada. Nenhum pedido é enviado pelo Ailo.")
     text = "\n\n".join(lines)
     # Defesa adicional: nunca exibir referências humanas nem identificadores técnicos do documento.
     references = [document.get("conversationId", "")]

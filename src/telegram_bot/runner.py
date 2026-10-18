@@ -7,7 +7,8 @@ from .menu import navigation
 from .telegram import TelegramError
 
 START = (
-    "Oi! Vamos organizar a compra? Me conte quem participa, as restrições alimentares "
+    "Olá! Eu sou o Ailo, seu assistente de compras. Vamos organizar seu pedido juntos? "
+    "Me conte quem participa, as restrições alimentares "
     "e quanto vocês querem gastar. Você pode corrigir as informações quando precisar.\n\n"
     "Para conectar a conta teste iFood, toque em Conectar iFood. "
     "Nesta demo, a sacola é simulada e nenhum pedido é enviado."
@@ -92,7 +93,9 @@ def process_batch(api, state, updates, allowed_id, username, connections=None, c
             if not first.startswith("/"):
                 command, target = first, ""
             if (not target or target.casefold() == username.casefold()) and (
-                command in conversations.COMMANDS or (first and not first.startswith("/"))
+                command in conversations.COMMANDS
+                or (first and not first.startswith("/"))
+                or "voice" in message
             ):
                 try:
                     reply = conversations.receive(
@@ -112,6 +115,8 @@ def process_batch(api, state, updates, allowed_id, username, connections=None, c
         reply = reply_for(update, allowed_id, username, connections)
         if conversations is not None and isinstance(reply, str) and reply in {START, STATUS, HELP}:
             reply += CONVERSATION_HELP
+            if conversations.voice_enabled:
+                reply += "\n\nPode enviar áudios de até um minuto. Uso a Groq para transcrever e mostro o texto para você conferir."
         if reply:
             try:
                 if isinstance(reply, str):

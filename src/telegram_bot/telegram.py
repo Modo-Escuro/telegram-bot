@@ -1,6 +1,8 @@
 """Cliente da Bot API sem registro de URLs (elas contêm o token)."""
 
 import json
+import re
+import time
 from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -29,9 +31,12 @@ class Telegram:
     METHODS = frozenset(
         {
             "getMe",
+            "setMyName",
             "getWebhookInfo",
             "getUpdates",
             "sendMessage",
+            "sendChatAction",
+            "getFile",
             "deleteMessage",
             "answerCallbackQuery",
             "editMessageReplyMarkup",
@@ -43,8 +48,29 @@ class Telegram:
         self._base = f"https://api.telegram.org/bot{token}/"
         self._opener = opener or build_opener(NoRedirect())
         self._timeout = timeout
+        self._typing_at = {}
 
-    def call(self, method, payload=None):
+    def typing(self, chat_id):
+        """Sinal nativo e efêmero; falha visual nunca interrompe a conversa."""
+        now = time.monotonic()
+        if now - self._typing_at.get(chat_id, -10) < 4:
+            return
+        self._typing_at = {k: v for k, v in self._typing_at.items() if now - v < 4}
+        self._typing_at[chat_id] = now
+        try:
+            self.call("sendChatAction", {"chat_id": chat_id, "action": "typing"}, timeout=1)
+        except TelegramError:
+            pass
+
+    def configure_name(self, me):
+        if me.get("first_name") == "Ailo":
+            return
+        try:
+            self.call("setMyName", {"name": "Ailo"}, timeout=3)
+        except TelegramError:
+            pass  # Nome visual não pode impedir o serviço; pode ser ajustado no BotFather.
+
+    def call(self, method, payload=None, *, timeout=None):
         if method not in self.METHODS:
             raise ValueError("Método Telegram não implementado.")
         request = Request(
@@ -54,7 +80,9 @@ class Telegram:
             method="POST",
         )
         try:
-            with self._opener.open(request, timeout=self._timeout) as response:
+            with self._opener.open(
+                request, timeout=self._timeout if timeout is None else timeout
+            ) as response:
                 body = json.load(response)
         except HTTPError as exc:
             code = exc.code
@@ -98,6 +126,30 @@ class Telegram:
         ):
             raise TelegramError()
         return result
+
+    def download_voice(self, file_id, limit):
+        info = self.call("getFile", {"file_id": file_id}, timeout=5)
+        path = info.get("file_path") if isinstance(info, dict) else None
+        if (
+            not isinstance(path, str)
+            or not re.fullmatch(r"[A-Za-z0-9_/-]+\.[A-Za-z0-9]+", path)
+            or path.startswith("/")
+            or ".." in path
+        ):
+            raise TelegramError()
+        url = self._base.replace("/bot", "/file/bot", 1) + path
+        try:
+            with self._opener.open(Request(url), timeout=5) as response:
+                data = response.read(limit + 1)
+            if not 0 < len(data) <= limit:
+                raise TelegramError()
+            return data
+        except HTTPError as exc:
+            code = exc.code
+            exc.close()
+            raise TelegramError(code) from None
+        except (URLError, OSError, HTTPException, ValueError):
+            raise TelegramError() from None
 
     def send(self, chat_id, text, markup=None):
         payload = {"chat_id": chat_id, "text": text}

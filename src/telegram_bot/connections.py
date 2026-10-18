@@ -70,8 +70,8 @@ def error_text(error):
             "Não a repetirei automaticamente. Consulte Minha conexão antes de enviar outra ação."
         )
     messages = {
-        "BOT_API_NOT_CONFIGURED": "A integração do bot não está configurada na API.",
-        "BOT_AUTH_REQUIRED": "A API recusou a credencial do bot. Avise o organizador.",
+        "BOT_API_NOT_CONFIGURED": "A conexão do Ailo ainda não foi configurada.",
+        "BOT_AUTH_REQUIRED": "Não consegui acessar o serviço de compras. Avise a equipe.",
         "ORGANIZER_REQUIRED": "A API não reconheceu a identidade do organizador.",
         "ORGANIZER_NOT_ALLOWED": "Este organizador não está autorizado na API.",
         "IFOOD_CLIENT_NOT_CONFIGURED": "O login iFood ainda não foi configurado no backend.",

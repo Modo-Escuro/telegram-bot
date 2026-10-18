@@ -14,9 +14,11 @@ from .outbox import Outbox
 from .runner import private_message, process_batch
 from .state import State
 from .telegram import Telegram, TelegramError
+from .voice import VoiceConfig, VoiceTranscriber
 
 PROMPT = (
-    "Oi! Vamos organizar uma compra juntos? Toque em Entrar na demo para usar a senha da equipe."
+    "Olá! Eu sou o Ailo, seu assistente de compras. Vamos organizar seu pedido juntos? "
+    "Toque em Entrar na demo para usar a senha da equipe."
 )
 
 
@@ -54,12 +56,15 @@ class UserSession:
             backend_cfg = replace(backend_cfg, password_access=True) if backend_cfg else None
             conversations = None
             if config.conversation_enabled:
+                voice_config = VoiceConfig.from_env()
                 if backend_cfg is None:
                     raise ValueError("Conversa requer configuração do backend.")
                 scope = scope_for(backend_cfg, bot_id)
                 client_factory = lambda: ConversationClient(backend_cfg, bot_id, timeout=5)
                 self.box = Outbox(path, scope)
-                conversations = Conversations(self.box, client_factory())
+                conversations = Conversations(
+                    self.box, client_factory(), voice_enabled=voice_config is not None
+                )
                 self.service = ConversationService(
                     path,
                     scope,
@@ -68,6 +73,13 @@ class UserSession:
                     owner,
                     link_status_factory=lambda: lambda: Backend(backend_cfg).status(timeout=5),
                     access_allowed_factory=lambda: access_check,
+                    transcriber_factory=(
+                        lambda: VoiceTranscriber(
+                            voice_config, config.state_dir / "voice-budget.sqlite3"
+                        )
+                    )
+                    if voice_config
+                    else None,
                 )
                 self.service.start()
             self.connections = Connections(
@@ -214,6 +226,8 @@ class PasswordRouter:
                 if result == "OK":
                     self.access.clear_entry(owner)
                     self.session(owner)
+                    if VoiceConfig.from_env() is not None and self.config.conversation_enabled:
+                        reply += " Pode enviar áudios de até um minuto; uso a Groq para transcrever e mostro o texto para você conferir."
                 if result != "OK" and not self.access.allowed(owner):
                     self.access.request_entry(owner)
                 # A tentativa já está gravada: falha Telegram pode repetir orientação, nunca enviar a senha.
