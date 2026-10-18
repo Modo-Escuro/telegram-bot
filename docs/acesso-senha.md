@@ -23,7 +23,8 @@ continua simulada e o MCP somente leitura (DEC-01). Entrada na demo e login iFoo
 
 1. Abrir a conversa privada com o bot e enviar `/start`.
 2. Enviar `/entrar` seguido da senha fornecida privadamente pela equipe.
-3. Acesso dura 24 horas. Usar `/conectar` e conferir a conta iFood no botão humano. Cada usuário conecta sua conta.
+3. Acesso dura 24 horas. Usar `/conectar`, entrar com a conta de teste iFood autorizada do evento e conferir
+   a identidade no botão humano. A senha da demo não substitui as credenciais nem o OAuth da conta de teste.
 4. Texto livre usa a conversa e os limites vigentes da API. `/ajuda`, `/ifood`, `/verificar`, `/andamento` e demais
    comandos preservam os comportamentos anteriores. Recursos pendentes do backend continuam indisponíveis.
 5. `/sair` revoga o acesso à demo, sem desconectar a conta iFood nem apagar a intenção aceita. Para remover o

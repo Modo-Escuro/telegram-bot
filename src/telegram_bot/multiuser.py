@@ -146,7 +146,7 @@ class PasswordRouter:
                         pass
                 result = self.access.enter(owner, words[1] if len(words) > 1 else "")
                 reply = {
-                    "OK": "Acesso liberado por 24 horas! Use /conectar para sua conta iFood, /ajuda para comandos e /sair para encerrar o acesso. Login não aprova compras.",
+                    "OK": "Acesso à demo liberado por 24 horas! Para consultar o iFood, use /conectar e autorize uma conta de teste do evento no navegador, depois confirme no botão humano. A senha da demo não substitui esse login. Use /ajuda para comandos e /sair para encerrar o acesso. Login não aprova compras.",
                     "DENIED": "Senha incorreta. Confira com a equipe e tente novamente.",
                     "LIMIT": "Limite de tentativas atingido. Aguarde 15 minutos antes de tentar novamente.",
                     "FULL": "A demo atingiu o limite de sessões simultâneas. Tente novamente mais tarde.",
