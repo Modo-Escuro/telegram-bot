@@ -43,6 +43,7 @@ class LoseConfirmReply:
 
 @unittest.skipUnless(ROOT, "Definir CART_API_ROOT para ensaio HTTP CART-01")
 class CartIntegration(unittest.TestCase):
+    SHAPE = "synthetic"
     def setUp(self):
         self.root = Path(ROOT).resolve()
         self.temp = tempfile.TemporaryDirectory()
@@ -73,6 +74,7 @@ class CartIntegration(unittest.TestCase):
             CART_TEST_ONLY="1",
             CART_TEST_DB=str(self.path / "api.sqlite3"),
             CART_TEST_REMOTE=str(self.path / "provider.json"),
+            CART_TEST_SHAPE=self.SHAPE,
         )
         self.process = subprocess.Popen(
             ["node", "--import", "tsx", str(self.target)],
@@ -218,3 +220,26 @@ class CartIntegration(unittest.TestCase):
         with self.assertRaises(CartError):
             self.client.review()
         self.assertEqual(self.synthetic("stats")["writes"], 1)
+
+
+class ObservedShapeCartIntegration(CartIntegration):
+    """Mesmo fluxo com a forma das respostas reais da INT-02 (valores sintéticos)."""
+
+    SHAPE = "observed"
+
+    def test_address_review_human_click_final_costs_replay_and_isolation(self):
+        callback = self.choose_and_review()
+        event = {"update_id": 60, "callback_query": callback}
+        for _ in range(2):
+            process_batch(
+                self.telegram, self.state, [event], OWNER, "bot",
+                conversations=Mock(), carts=self.carts,
+            )
+            self.pump()
+        self.assertEqual(self.synthetic("stats")["writes"], 1)
+        self.assertEqual(self.carts._row()[1], "SUCCEEDED")
+        shown = self.telegram.send.call_args.args[1]
+        self.assertIn("Total informado pelo iFood (não confirmado): R$ 15,99", shown)
+        self.assertIn("Benefícios do iFood (não detalhados): R$ 10,00", shown)
+        self.assertNotIn("Total observado", shown)
+        self.assertIn("PEDIDO NÃO ENVIADO", shown)

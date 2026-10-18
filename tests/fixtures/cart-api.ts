@@ -19,7 +19,7 @@ const p = { botId: '900001', organizerId: '111111111', conversationId: '11111111
 const token = 'test-bot-token-0123456789abcdefghijklmnop', linkId = 'synthetic-cart-link-0001';
 const merchantId = '11111111-1111-4111-8111-111111111111', itemId = '22222222-2222-4222-8222-222222222222';
 const address = { addressId: '33333333-3333-4333-8333-333333333333', alias: 'Casa',
-  location: { neighborhood: 'Centro', city: 'Cidade sintética' }, coordinates: { latitude: -1, longitude: -2 } };
+  location: { street: 'Rua Sintética', number: '10', neighborhood: 'Centro', city: 'Cidade sintética' }, coordinates: { latitude: -1, longitude: -2 } };
 const store = new TurnStore(process.env.CART_TEST_DB), runtime = new TurnRuntime(store);
 if (!store.db.prepare('SELECT domain FROM conversations WHERE scope=?').get(scopeKey(p))) {
   let state = applyPatch(null, [{ op: 'ADD_PARTICIPANT', displayName: 'Pessoa sintética' }], { seed: 'http-cart', eventId: 'one' }).state;
@@ -38,10 +38,22 @@ if (!store.db.prepare('SELECT domain FROM conversations WHERE scope=?').get(scop
 const remoteFile = process.env.CART_TEST_REMOTE;
 let remote = existsSync(remoteFile) ? JSON.parse(readFileSync(remoteFile, 'utf8')) : { writes: 0, cart: null };
 let mode = 'normal';
+// CART_TEST_SHAPE=observed: forma das respostas reais da INT-02 (carrinho inteiro, sem addressId, promoção). Valores sintéticos.
+const observedShape = process.env.CART_TEST_SHAPE === 'observed';
+const observed = (cart: { cartId: string; items: { itemId: string; cartItemId: string; quantity: number }[] }, promo: boolean) => {
+  const sub = cart.items.reduce((n, i) => n + i.quantity * 20, 0);
+  return { cartId: cart.cartId, merchant: { merchantId, merchantName: 'Loja sintética' },
+    items: cart.items.map(i => ({ itemId: i.itemId, cartItemId: i.cartItemId, quantity: i.quantity, unitPrice: 20, name: 'Arroz' })),
+    deliveryAddress: { streetName: 'Rua Sintética', streetNumber: '10', neighborhood: 'Centro' },
+    deliveryMethod: { deliveryMethodId: 'DEFAULT', deliveryMethodMode: 'DELIVERY', fee: 0 },
+    fees: [{ name: 'Taxa de serviço', amount: 0.99 }],
+    summary: { totalAmount: Math.round((promo ? sub + 0.99 - 5 : sub + 0.99) * 100) / 100, subtotalAmount: sub, deliveryFeeAmount: 0,
+      feeTotalAmount: 0.99, benefitsTotalAmount: promo ? 10 : 5, voucherTotalAmount: 0 } };
+};
 const gateway = {
   async call(tool: string) {
     if (tool !== 'getCart' || !remote.cart || mode === 'read-failed') throw new Error('synthetic read failure');
-    return structuredClone(remote.cart);
+    return observedShape ? observed(remote.cart, true) : structuredClone(remote.cart);
   },
   async writeConfirmed(tool: string, args: Record<string, unknown>) {
     if (tool !== 'createCart') throw new Error('Synthetic fixture implements create only');
@@ -50,7 +62,8 @@ const gateway = {
       items: (args.items as object[]).map(item => ({ ...item, cartItemId: randomUUID(), unitPrice: 20 })),
       totals: { subtotal: 20, deliveryFee: 5, serviceFee: 1, discount: 0, total: 26 } };
     writeFileSync(remoteFile, JSON.stringify(remote));
-    return mode === 'unknown' ? { queued: true } : { cartId: remote.cart.cartId };
+    if (mode === 'unknown') return { queued: true };
+    return observedShape ? observed(remote.cart, false) : { cartId: remote.cart.cartId };
   },
 };
 const identity = { status: 'VERIFIED', displayName: 'Pessoa S.', emailMasked: 'p***@example.test', source: 'getUser' };

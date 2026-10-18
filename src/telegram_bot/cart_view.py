@@ -92,12 +92,16 @@ def cost_rows(costs, *, previous=False):
         k: cents(costs.get(k))
         for k in ("subtotal", "deliveryFee", "serviceFee", "discount", "total")
     }
-    if (
-        values["subtotal"] + values["deliveryFee"] + values["serviceFee"] - values["discount"]
-        != values["total"]
-    ):
-        raise CartError("PROTOCOL")
-    return [
+    expected = values["subtotal"] + values["deliveryFee"] + values["serviceFee"] - values["discount"]
+    benefits = None
+    if expected != values["total"]:
+        # INT-02 observado: benefícios do iFood (promoção + entrega grátis) não se decompõem.
+        # Só aceita total menor e explicitamente informado; nunca o apresenta como confirmado.
+        raw = costs.get("benefits")
+        benefits = cents(raw) if raw is not None else None
+        if not benefits or not 0 <= values["total"] <= expected:
+            raise CartError("PROTOCOL")
+    rows = [
         "Custos do carrinho atual, antes destas alterações:"
         if previous
         else "Custos observados nesta consulta:",
@@ -105,8 +109,15 @@ def cost_rows(costs, *, previous=False):
         "Entrega: " + brl(values["deliveryFee"]),
         "Taxa de serviço: " + brl(values["serviceFee"]),
         "Desconto: " + brl(values["discount"]),
-        ("Total atual: " if previous else "Total observado: ") + brl(values["total"]),
     ]
+    if benefits is None:
+        rows.append(("Total atual: " if previous else "Total observado: ") + brl(values["total"]))
+    else:
+        rows += [
+            "Benefícios do iFood (não detalhados): " + brl(benefits),
+            "Total informado pelo iFood (não confirmado): " + brl(values["total"]),
+        ]
+    return rows
 
 
 def current_text(value):
