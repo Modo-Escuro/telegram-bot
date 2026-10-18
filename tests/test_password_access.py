@@ -207,7 +207,7 @@ class RouterTests(unittest.TestCase):
                 self.assertEqual(self.state.offset(), number + 1)
                 self.assertEqual([c[0] for c in calls], ["deleteMessage", "sendMessage"])
                 self.assertEqual(calls[0][1], {"chat_id": A, "message_id": 100 + number})
-                self.assertIn("Acesso à demo liberado", calls[1][1]["text"])
+                self.assertIn("Pronto, você entrou!", calls[1][1]["text"])
                 self.assertNotIn(PASSWORD, json.dumps(calls))
                 self.router.receive(telegram, [message], "demo_bot")
                 self.assertEqual(len(calls), 2)  # Replay não repete remoção/entrada.

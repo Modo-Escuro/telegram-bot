@@ -5,6 +5,8 @@ from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from .menu import keyboard
+
 
 class TelegramError(Exception):
     def __init__(self, code: int = 0, retry_after: int = 0):
@@ -99,8 +101,7 @@ class Telegram:
 
     def send(self, chat_id, text, markup=None):
         payload = {"chat_id": chat_id, "text": text}
-        if markup is not None:
-            payload["reply_markup"] = markup
+        payload["reply_markup"] = markup if markup is not None else keyboard()
         return self.call("sendMessage", payload)
 
     def check(self):

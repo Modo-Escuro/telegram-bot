@@ -9,12 +9,15 @@ from .backend import Backend, BackendConfig
 from .connections import Connections
 from .conversation import ConversationClient
 from .conversation_runner import Conversations, ConversationService, scope_for
+from .menu import keyboard, navigation
 from .outbox import Outbox
 from .runner import private_message, process_batch
 from .state import State
 from .telegram import Telegram, TelegramError
 
-PROMPT = "Bem-vindo! Para liberar a demo, envie /entrar seguido da senha compartilhada pela equipe. Use somente esta conversa privada."
+PROMPT = (
+    "Oi! Vamos organizar uma compra juntos? Toque em Entrar na demo para usar a senha da equipe."
+)
 
 
 def private_owner(update):
@@ -118,6 +121,7 @@ class PasswordRouter:
 
     def receive(self, api, updates, username):
         for update in sorted(updates, key=lambda u: u["update_id"]):
+            update = navigation(update)
             number = update["update_id"]
             if type(number) is not int:
                 raise ValueError("Update Telegram inválido.")
@@ -135,7 +139,61 @@ class PasswordRouter:
             if target and target.casefold() != username.casefold():
                 self.state.done(number)
                 continue
-            if command == "/entrar":
+            if text == "Entrar na demo":
+                if self.access.allowed(owner):
+                    self.send(
+                        api,
+                        owner,
+                        "Você já está na demo! Pode conversar comigo ou escolher um botão.",
+                    )
+                    self.state.done(number)
+                    continue
+                if self.access.request_entry(owner):
+                    self.send(
+                        api,
+                        owner,
+                        "Digite a senha da equipe aqui. Vou tentar apagar sua mensagem depois de conferir. Para desistir, toque em Cancelar entrada.",
+                        {"keyboard": [[{"text": "Cancelar entrada"}]], "resize_keyboard": True},
+                    )
+                self.state.done(number)
+                continue
+            if text == "Cancelar entrada":
+                self.access.clear_entry(owner)
+                self.send(api, owner, PROMPT)
+                self.state.done(number)
+                continue
+            plain_password = bool(
+                message
+                and isinstance(text, str)
+                and self.access.awaiting_entry(owner)
+                and not text.startswith("/")
+            )
+            if (
+                message
+                and isinstance(text, str)
+                and not text.startswith("/")
+                and self.access.expired_entry(owner)
+            ):
+                self.state.done(number)
+                if type(message.get("message_id")) is int:
+                    try:
+                        api.call(
+                            "deleteMessage", {"chat_id": owner, "message_id": message["message_id"]}
+                        )
+                    except TelegramError:
+                        pass
+                self.access.clear_entry(owner)
+                self.send(
+                    api,
+                    owner,
+                    "O tempo para digitar a senha terminou. Toque em Entrar na demo para tentar novamente.",
+                )
+                self.state.done(number)
+                continue
+            if command == "/entrar" or plain_password:
+                # Consome antes de remover a espera/conceder acesso. Após falha de envio ou
+                # reinício, o replay da senha em texto livre nunca pode virar mensagem ao modelo.
+                self.state.done(number)
                 # A senha nunca entra na outbox, no modelo nem no banco. Apagar a mensagem é best effort.
                 if type(message.get("message_id")) is int:
                     try:
@@ -144,25 +202,31 @@ class PasswordRouter:
                         )
                     except TelegramError:
                         pass
-                result = self.access.enter(owner, words[1] if len(words) > 1 else "")
+                result = self.access.enter(
+                    owner, text if plain_password else (words[1] if len(words) > 1 else "")
+                )
                 reply = {
-                    "OK": "Acesso à demo liberado por 24 horas! Para consultar o iFood, use /conectar e autorize uma conta de teste do evento no navegador, depois confirme no botão humano. A senha da demo não substitui esse login. Use /ajuda para comandos e /sair para encerrar o acesso. Login não aprova compras.",
+                    "OK": "Pronto, você entrou! Quem vai participar da compra? Conte também se alguém tem alergias ou restrições e quanto vocês querem gastar. Para usar a conta teste iFood, toque em Conectar iFood. Nesta demo, a sacola é simulada e nenhum pedido é enviado.",
                     "DENIED": "Senha incorreta. Confira com a equipe e tente novamente.",
                     "LIMIT": "Limite de tentativas atingido. Aguarde 15 minutos antes de tentar novamente.",
                     "FULL": "A demo atingiu o limite de sessões simultâneas. Tente novamente mais tarde.",
                 }[result]
                 if result == "OK":
+                    self.access.clear_entry(owner)
                     self.session(owner)
+                if result != "OK" and not self.access.allowed(owner):
+                    self.access.request_entry(owner)
                 # A tentativa já está gravada: falha Telegram pode repetir orientação, nunca enviar a senha.
                 self.send(api, owner, reply)
             elif command == "/sair":
+                self.access.clear_entry(owner)
                 self.access.revoke(owner)
                 if owner in self.sessions:
                     self.sessions.pop(owner).close()
                 self.send(
                     api,
                     owner,
-                    "Acesso à demo encerrado. Seu vínculo iFood não foi desconectado. Para remover o vínculo, entre novamente e use /desconectar.",
+                    "Acesso à demo encerrado. Seu vínculo iFood não foi desconectado. Para remover o vínculo, entre novamente e use Minha conexão.",
                 )
             elif self.access.allowed(owner):
                 self.session(owner).receive(api, update, username)
@@ -170,10 +234,9 @@ class PasswordRouter:
                 self.send(api, owner, PROMPT)
             self.state.done(number)
 
-    @staticmethod
-    def send(api, owner, text):
+    def send(self, api, owner, text, markup=None):
         try:
-            api.send(owner, text)
+            api.send(owner, text, markup or keyboard(access=not self.access.allowed(owner)))
         except TelegramError as exc:
             if exc.code != 403:
                 raise

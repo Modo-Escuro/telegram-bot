@@ -24,15 +24,15 @@ NOTICES = {
     "FORBIDDEN": "A conversa não está autorizada para esta conta. Consulte o responsável pelo serviço.",
     "UNAUTHENTICATED": "A autenticação entre bot e API foi recusada. Consulte o responsável pelo serviço.",
     "INVALID_REQUEST": "A API recusou o formato da mensagem. Nenhuma correção automática foi aplicada; consulte o responsável pelo serviço.",
-    "LINK_CHANGED": "O vínculo da conta mudou. Confira /ifood antes de enviar uma nova mensagem.",
-    "CONTEXT_EXPIRED": "A retomada do grupo expirou após 24 horas. Use /verificar para solicitar uma nova consulta.",
+    "LINK_CHANGED": "O vínculo da conta mudou. Confira Minha conexão antes de enviar uma nova mensagem.",
+    "CONTEXT_EXPIRED": "A retomada do grupo expirou após 24 horas. Use Verificar conexão para solicitar uma nova consulta.",
     "NO_CONTEXT": "Não há conversa salva para retomar. Envie uma mensagem para começar; nenhum pedido é enviado.",
-    "CONTEXT_LINK_NOT_READY": "Não consegui validar o mesmo vínculo operacional para retomar o grupo. Consulte /ifood e use /verificar quando a conexão estiver pronta.",
-    "UNAVAILABLE": "Conversa temporariamente indisponível. Use /retomar para recuperar o mesmo evento, ou consulte /andamento.",
+    "CONTEXT_LINK_NOT_READY": "Não consegui validar o mesmo vínculo operacional para retomar o grupo. Consulte Minha conexão e use Verificar conexão quando a conexão estiver pronta.",
+    "UNAVAILABLE": "Conversa temporariamente indisponível. Use Retomar conversa para recuperar o mesmo evento, ou consulte Acompanhar.",
     "PROTOCOL": "Resposta incompatível com o contrato. O acompanhamento está pausado; consulte o responsável pelo serviço.",
     "FAILED": "O processamento terminou sem concluir a solicitação. Envie uma nova correção quando o serviço estiver disponível.",
     "RESULT_UNKNOWN": "Resultado externo desconhecido. Não repita o pedido; é necessária reconciliação. Nenhum envio automático será feito.",
-    "CANCEL_UNKNOWN": "A parada local ainda não foi confirmada. Use /retomar para recuperar a mesma solicitação.",
+    "CANCEL_UNKNOWN": "A parada local ainda não foi confirmada. Use Retomar conversa para recuperar a mesma solicitação.",
 }
 
 
@@ -226,7 +226,7 @@ class ConversationWorker:
                 self._deliver(
                     row,
                     [
-                        "Estou processando sua mensagem. Você pode continuar escrevendo ou usar /andamento e /interromper."
+                        "Estou processando sua mensagem. Você pode continuar escrevendo ou usar Acompanhar e Interromper."
                     ],
                     final=False,
                 )

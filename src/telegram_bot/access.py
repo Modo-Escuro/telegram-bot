@@ -31,6 +31,41 @@ class AccessStore:
         )
         self.db.commit()
 
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS access_entry (owner INTEGER PRIMARY KEY, expires REAL NOT NULL)"
+        )
+        self.db.commit()
+
+    def request_entry(self, owner):
+        with self.db:
+            self.db.execute("DELETE FROM access_entry WHERE expires<=?", (self.clock(),))
+            if self.db.execute("SELECT count(*) FROM access_entry").fetchone()[0] >= 1000:
+                return False
+            self.db.execute(
+                "INSERT OR REPLACE INTO access_entry VALUES (?,?)", (owner, self.clock() + 300)
+            )
+        return True
+
+    def awaiting_entry(self, owner):
+        return (
+            self.db.execute(
+                "SELECT 1 FROM access_entry WHERE owner=? AND expires>?", (owner, self.clock())
+            ).fetchone()
+            is not None
+        )
+
+    def expired_entry(self, owner):
+        return (
+            self.db.execute(
+                "SELECT 1 FROM access_entry WHERE owner=? AND expires<=?", (owner, self.clock())
+            ).fetchone()
+            is not None
+        )
+
+    def clear_entry(self, owner):
+        with self.db:
+            self.db.execute("DELETE FROM access_entry WHERE owner=?", (owner,))
+
     def close(self):
         self.db.close()
 

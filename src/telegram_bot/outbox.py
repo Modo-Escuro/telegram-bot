@@ -275,7 +275,7 @@ class Outbox:
             return "Nenhuma mensagem de conversa aguardando processamento local."
         return (
             f"Conversa: {sum(r['n'] for r in rows)} registro(s) em acompanhamento. "
-            "Use /retomar para consultar novamente ou /interromper para solicitar parada local. "
+            "Use Retomar conversa para consultar novamente ou Interromper para solicitar parada local. "
             "Nenhum pedido é enviado."
         )
 

@@ -237,7 +237,7 @@ class CommandTests(unittest.TestCase):
 
     def test_stale_button_does_not_confirm_new_attempt(self):
         reply = self.connections.confirm_click("z" * 24, 1)
-        self.assertIn("não corresponde", reply.text)
+        self.assertEqual(reply.markup["inline_keyboard"][0][0]["callback_data"], "ifc:" + CONFIRM)
         self.backend.confirm.assert_not_called()
 
     def test_click_acknowledged_and_keyboard_removed(self):

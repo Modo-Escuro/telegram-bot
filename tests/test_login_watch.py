@@ -232,7 +232,7 @@ class AccountActionTests(WatchEnvironment, unittest.TestCase):
         self.backend.cancel.return_value = connected, True
         reply = self.connections.reply("/cancelar", [], 1)
         self.assertIn("preserva", reply.text)
-        self.assertIn("verificada", reply.text)
+        self.assertIn("conectada", reply.text)
         self.backend.cancel.assert_called_once()
         self.backend.disconnect.assert_not_called()
 

@@ -3,6 +3,31 @@
 import re
 
 
+def collection_text(text, group):
+    """Remover apenas confirmações redundantes reconstruíveis dos fatos atuais.
+
+    Não descarta texto desconhecido, recusas, alertas nem texto do modelo.
+    """
+    redundant = []
+    for person in group["participants"]:
+        name = person["displayName"]
+        redundant.append(f"{name} entrou na compra.")
+        if "Sem restrições alimentares" in person["conditions"]:
+            redundant.append(f"{name} não tem restrições.")
+        for condition in person["conditions"]:
+            match = re.fullmatch(r"Alergia: (.+) \(obrigatória\)", condition)
+            if match:
+                redundant.append(f"Registrei alergia a {match[1]} para {name}.")
+    for sentence in sorted(redundant, key=len, reverse=True):
+        # Só frases completas na sequência de confirmações do servidor.
+        if text.startswith(sentence):
+            text = text[len(sentence) :].lstrip()
+    # A ordem das ações pode divergir da ordem do grupo.
+    if any(text.startswith(sentence) for sentence in redundant):
+        return collection_text(text, group)
+    return text
+
+
 def money(price):
     def brl(value):
         return f"R$ {value // 100},{value % 100:02d}"
@@ -18,6 +43,16 @@ def money(price):
 def render(snapshot, *, collection_only=False):
     document = snapshot.to_dict()
     lines = []
+    group = next((b for b in document["blocks"] if b["kind"] == "GROUP"), None)
+    budget_text = None
+    if group and group["budgetCents"] is not None:
+        cents = group["budgetCents"]
+        amount = f"R$ {cents // 100}.{cents % 100:02d}"
+        for b in document["blocks"]:
+            if b["kind"] == "TEXT" and b["source"] == "SERVER":
+                for qualifier in ("máximo", "referência"):
+                    if b["text"] == f"Orçamento do grupo: {amount} ({qualifier}).":
+                        budget_text = b["text"].replace(amount, amount.replace(".", ","))
     for block in document["blocks"]:
         kind = block["kind"]
         if collection_only and kind != "GROUP":
@@ -25,15 +60,40 @@ def render(snapshot, *, collection_only=False):
         if kind == "TEXT":
             # Texto do modelo é identificado e nunca vira evidência de pedido/aprovação.
             prefix = "Assistente: " if block["source"] == "MODEL" else ""
-            lines.append(prefix + block["text"])
+            text = block["text"]
+            if group and block["source"] == "SERVER":
+                text = collection_text(text, group)
+                if budget_text and group["budgetCents"] is not None:
+                    cents = group["budgetCents"]
+                    amount = f"R$ {cents // 100}.{cents % 100:02d}"
+                    if text in {
+                        f"Orçamento do grupo: {amount} (máximo).",
+                        f"Orçamento do grupo: {amount} (referência).",
+                    }:
+                        text = ""
+                    if "(máximo)" in budget_text:
+                        text = text.removeprefix(f"Teto máximo de {amount} para o grupo.").lstrip()
+                    if "(referência)" in budget_text:
+                        text = text.removeprefix(
+                            f"Valor de referência de {amount} para o grupo."
+                        ).lstrip()
+            if text:
+                lines.append(prefix + text)
         elif kind == "GROUP":
-            lines.append("Grupo informado:")
+            lines.append(
+                "Certo! Seu grupo ficou assim:"
+                if not collection_only
+                else "Seu grupo continua aqui:"
+            )
+            people = []
             for person in block["participants"]:
                 conditions = "; ".join(person["conditions"]) or "condições ainda não informadas"
-                lines.append(f"• {person['displayName']}: {conditions}")
+                people.append(f"• {person['displayName']}: {conditions}")
+            lines.append("\n".join(people))
             if block["budgetCents"] is not None:
                 lines.append(
-                    money({"kind": "ESTIMATE", "totalCents": block["budgetCents"]}).replace(
+                    budget_text
+                    or money({"kind": "ESTIMATE", "totalCents": block["budgetCents"]}).replace(
                         "Estimativa", "Orçamento"
                     )
                 )
@@ -52,16 +112,33 @@ def render(snapshot, *, collection_only=False):
     if collection_only:
         if not lines:
             lines.append("Não há grupo salvo para apresentar. Envie uma mensagem para começar.")
-        lines.insert(0, "Retomada informativa da organização do grupo.")
+        lines.insert(0, "Vamos continuar de onde paramos? Retomada informativa do grupo salvo.")
         lines.append(
             "Envie sua próxima mensagem para continuar. Itens, preços, endereço e ações precisam de nova validação na conta atual."
         )
-        lines.append(
-            "Para conferir mensagens anteriores, use /andamento. Uma falha pendente pode exigir /retomar."
-        )
+        lines.append("Se alguma mensagem ficou pendente, toque em Acompanhar.")
     else:
-        lines.extend("Falta esclarecer: " + question for question in document["pending"])
-    lines.append("Conversa em preparação. Nenhum pedido é enviado por este bot.")
+        asked = False
+        for question in document["pending"]:
+            routine = question in {
+                "Quem vai participar da compra?",
+                "Qual é o orçamento do grupo?",
+                "Vocês preferem economia ou rapidez?",
+            } or (
+                group
+                and any(
+                    question == f"{p['displayName']} tem alguma alergia ou restrição alimentar?"
+                    for p in group["participants"]
+                )
+            )
+            if not routine or not asked:
+                lines.append(question)
+            asked = asked or bool(routine)
+    if (
+        any(b["kind"] in {"PROPOSAL", "REVIEW", "OUTCOME"} for b in document["blocks"])
+        and not collection_only
+    ):
+        lines.append("Sacola simulada. Nenhum pedido é enviado por este bot.")
     text = "\n\n".join(lines)
     # Defesa adicional: nunca exibir referências humanas nem identificadores técnicos do documento.
     references = [document.get("conversationId", "")]

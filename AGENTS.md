@@ -1,3 +1,5 @@
+**Atualização de UX em 18/10/2026:** navegação por botões e retorno do login sem confirmação duplicada, conforme pedido do usuário. Ver [conversa por botões](docs/conversa-por-botoes.md). Instruções antigas com comandos permanecem como histórico/compatibilidade.
+
 # Instruções para o telegram-bot
 
 - Ampliação autorizada em 18/10/2026: acesso compartilhado por senha em `docs/acesso-senha.md` substitui o
