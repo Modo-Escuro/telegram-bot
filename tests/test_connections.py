@@ -182,7 +182,7 @@ class TransportTests(unittest.TestCase):
     def test_connected_without_operation_is_not_ready(self):
         text = status_text(LinkStatus.parse(payload("CONNECTED")))
         self.assertIn("ainda não liberado", text)
-        self.assertIn("não aprova", text)
+        self.assertIn("Verificar conexão", text)
 
     def test_identity_unknown_is_explicit(self):
         status = pending()

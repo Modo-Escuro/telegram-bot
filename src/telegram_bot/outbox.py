@@ -432,28 +432,21 @@ class Outbox:
                     "RESULT_UNKNOWN": "com resultado externo desconhecido",
                 }.get(last["notice"] or last["state"])
                 if outcome:
-                    return (
-                        "Último processamento: "
-                        + outcome
-                        + ". Nenhuma mensagem aguardando processamento local."
-                    )
-            return "Nenhuma mensagem de conversa aguardando processamento local."
+                    return "Último processamento: " + outcome + ". Não há mensagens pendentes."
+            return "Não há mensagens pendentes."
         states = {
             "RECEIVED": "na fila",
             "PREPARED": "aguardando aceite",
-            "POST_UNKNOWN": "aceite ainda incerto",
+            "POST_UNKNOWN": "aguardando confirmação de recebimento",
             "ACCEPTED": "em processamento ou entrega",
             "PAUSED": "acompanhamento pausado",
-            "DELIVERY_UNKNOWN": "entrega incerta",
+            "DELIVERY_UNKNOWN": "sem confirmação de entrega da resposta",
             "NOTICE": "aviso pendente",
         }
         return (
-            f"Conversa: {sum(r['n'] for r in rows)} registro(s) em acompanhamento. "
-            + "; ".join(f"{r['n']} {states.get(r['state'], 'em acompanhamento')}" for r in rows)
-            + ". "
-            "A resposta será entregue automaticamente enquanto o acompanhamento estiver ativo. "
-            "Retomar conversa é uma recuperação opcional; Interromper solicita parada local. "
-            "Nenhum pedido é enviado."
+            "Em acompanhamento:\n"
+            + "\n".join(f"• {r['n']} {states.get(r['state'], 'em acompanhamento')}" for r in rows)
+            + "\n\nAs respostas chegam automaticamente enquanto o acompanhamento estiver ativo."
         )
 
     def delivered(self, seq, part):

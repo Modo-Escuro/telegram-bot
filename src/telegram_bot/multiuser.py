@@ -11,14 +11,14 @@ from .conversation import ConversationClient
 from .conversation_runner import Conversations, ConversationService, scope_for
 from .menu import keyboard, navigation
 from .outbox import Outbox
-from .runner import private_message, process_batch
+from .runner import CONVERSATION_HELP, DEMO_NOTICE, GET_STARTED, private_message, process_batch
 from .state import State
 from .telegram import Telegram, TelegramError
 from .voice import VoiceConfig, VoiceTranscriber
 
 PROMPT = (
-    "Olá! Eu sou o Ailo, seu assistente de compras. Vamos organizar seu pedido juntos? "
-    "Toque em Entrar na demo para usar a senha da equipe."
+    "Olá! Eu sou o Ailo, seu assistente de compras.\n\n"
+    "Para começar, toque em Entrar na demo e informe a senha da equipe."
 )
 
 
@@ -218,7 +218,7 @@ class PasswordRouter:
                     owner, text if plain_password else (words[1] if len(words) > 1 else "")
                 )
                 reply = {
-                    "OK": "Pronto, você entrou! Quem vai participar da compra? Conte também se alguém tem alergias ou restrições e quanto vocês querem gastar. Para usar a conta teste iFood, toque em Conectar iFood. Nesta demo, a sacola é simulada e nenhum pedido é enviado.",
+                    "OK": "Pronto, você entrou!\n\n" + GET_STARTED + "\n\n" + DEMO_NOTICE,
                     "DENIED": "Senha incorreta. Confira com a equipe e tente novamente.",
                     "LIMIT": "Limite de tentativas atingido. Aguarde 15 minutos antes de tentar novamente.",
                     "FULL": "A demo atingiu o limite de sessões simultâneas. Tente novamente mais tarde.",
@@ -226,8 +226,10 @@ class PasswordRouter:
                 if result == "OK":
                     self.access.clear_entry(owner)
                     self.session(owner)
+                    if self.config.conversation_enabled:
+                        reply += CONVERSATION_HELP
                     if VoiceConfig.from_env() is not None and self.config.conversation_enabled:
-                        reply += " Pode enviar áudios de até um minuto; uso a Groq para transcrever e mostro o texto para você conferir."
+                        reply += "\n\nPode enviar áudios de até um minuto; uso a Groq para transcrever e mostro o texto para você conferir."
                 if result != "OK" and not self.access.allowed(owner):
                     self.access.request_entry(owner)
                 # A tentativa já está gravada: falha Telegram pode repetir orientação, nunca enviar a senha.

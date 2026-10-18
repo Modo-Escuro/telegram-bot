@@ -8,6 +8,12 @@ Entrar na demo solicita a senha em mensagem privada. A senha não entra na fila,
 
 O grupo é apresentado sem repetir confirmações de inclusão e orçamento já refletidas nos fatos do snapshot. Alergias, preferências, dados desconhecidos, alertas, recusas e bloqueios permanecem. Apenas perguntas rotineiras de coleta são apresentadas uma de cada vez; outras pendências não são ocultadas. Nenhuma nova chamada de modelo foi adicionada.
 
+Refinamento de texto em `codex/bot-accessible-messages`, em continuação ao PR #18 já mergeado: apresentação em parágrafos curtos e explicação dos botões em lista, tanto no Iniciar quanto na entrada com senha. O aviso geral sobre login, sacola simulada e ausência de envio fica na apresentação inicial; consultas de conexão, endereço, acompanhamento e rodapé da conversa não o acrescentam novamente. Ajuda também usa lista, e Status não recebe novamente todo o guia de botões. Avisos específicos de custo desconhecido, restrição alimentar, aprovação indisponível, cancelamento e resultado externo desconhecido permanecem.
+
+Retomar conversa explica que uma resposta já recebida pode aparecer novamente durante a recuperação. Essa informação aparece ao retomar, sem o termo técnico “entrega incerta” na apresentação. Acompanhar apresenta os estados em lista, sem repetir a explicação dos botões. Não houve alteração de fila, aprovação, chamadas ao modelo, bancos ou polling.
+
+Validação deste refinamento: suíte com **201 testes aprovados e 10 integrações ignoradas** por falta das variáveis de checkout fixado; Ruff check/format, compileall e diff conferidos. As integrações ignoradas não foram contadas como aprovadas. Sem merge/deploy deste refinamento.
+
 O retorno automático depende da atualização correspondente do api-backend (`docs/login-retorno-natural.md`). O bot acompanha o estado existente, consulta o grupo e não repete ações. Um botão antigo de confirmação mostra o estado atual, sem confirmar uma nova tentativa. A confirmação manual permanece como recuperação de uma tentativa antiga ou falha ao salvar o vínculo. Cancelar/desconectar antigos continuam incapazes de afetar outra referência.
 
 ## Ensaio humano

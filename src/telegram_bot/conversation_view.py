@@ -134,11 +134,6 @@ def render(snapshot, *, collection_only=False):
             if not routine or not asked:
                 lines.append(question)
             asked = asked or bool(routine)
-    if (
-        any(b["kind"] in {"PROPOSAL", "REVIEW", "OUTCOME"} for b in document["blocks"])
-        and not collection_only
-    ):
-        lines.append("Sacola simulada. Nenhum pedido é enviado pelo Ailo.")
     text = "\n\n".join(lines)
     # Defesa adicional: nunca exibir referências humanas nem identificadores técnicos do documento.
     references = [document.get("conversationId", "")]

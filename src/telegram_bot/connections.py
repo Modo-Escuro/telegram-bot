@@ -8,7 +8,6 @@ COMMANDS = frozenset(
     {"/conectar", "/confirmar", "/ifood", "/verificar", "/cancelar", "/desconectar"}
 )
 UNCONFIGURED = "A conexão com o iFood ainda não foi configurada nesta demo. Avise o organizador."
-NO_PURCHASE = "\nLogin não aprova compras. A sacola da demo é simulada; nenhum pedido é enviado."
 
 
 @dataclass
@@ -34,7 +33,7 @@ def status_text(status):
         text = "Pronto, sua conta iFood está conectada!"
     else:
         text = "Conta vinculada, mas acesso ainda não liberado. Use Verificar conexão; podem faltar permissões."
-    return text + NO_PURCHASE
+    return text
 
 
 def status_reply(status):
