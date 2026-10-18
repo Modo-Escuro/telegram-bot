@@ -95,11 +95,18 @@ class ConversationWorker:
         clock=time.time,
         stop_event=None,
         link_status=None,
+        access_allowed=None,
     ):
         self.box, self.client, self.telegram = box, client, telegram
         self.organizer_id, self.clock = organizer_id, clock
         self.stop_event = stop_event or threading.Event()
         self.link_status = link_status
+        self.access_allowed = access_allowed
+
+    def _authorized(self):
+        return not self.stop_event.is_set() and (
+            self.access_allowed is None or self.access_allowed()
+        )
 
     def _version(self):
         try:
@@ -110,6 +117,8 @@ class ConversationWorker:
             raise
 
     def tick(self):
+        if not self._authorized():
+            return False
         self.box.expire()
         row = self.box.next()
         if row is None:
@@ -172,6 +181,8 @@ class ConversationWorker:
         self._deliver(row, chunks(render(snapshot, collection_only=True)))
 
     def _send(self, row):
+        if not self._authorized():
+            return
         # O estado pré-envio sobrevive a queda antes/depois do POST. Recuperar só bytes persistidos.
         command = self.client.restore(
             bytes(row["command"]), "cancel" if row["kind"] == "CANCEL" else "event"
@@ -238,7 +249,7 @@ class ConversationWorker:
     def _deliver(self, row, parts, *, final=True):
         # Texto só em memória. Edições de mensagens conhecidas são recuperáveis, envios novos são incertos.
         for index, text in enumerate(parts):
-            if self.stop_event.is_set():
+            if not self._authorized():
                 return
             message_id = self.box.delivered(row["seq"], index)
             digest = hashlib.sha256(text.encode()).hexdigest()
@@ -348,11 +359,13 @@ class ConversationService:
         organizer_id,
         *,
         link_status_factory=None,
+        access_allowed_factory=None,
     ):
         self.path, self.scope = path, scope
         self.client_factory, self.telegram_factory = client_factory, telegram_factory
         self.organizer_id = organizer_id
         self.link_status_factory = link_status_factory
+        self.access_allowed_factory = access_allowed_factory
         self.stop_event = threading.Event()
         self.failed = threading.Event()
         self.thread = threading.Thread(target=self._run, name="conversation-worker", daemon=True)
@@ -371,6 +384,9 @@ class ConversationService:
                 self.organizer_id,
                 stop_event=self.stop_event,
                 link_status=self.link_status_factory() if self.link_status_factory else None,
+                access_allowed=self.access_allowed_factory()
+                if self.access_allowed_factory
+                else None,
             )
             while not self.stop_event.is_set():
                 worker.tick()

@@ -66,6 +66,7 @@ class BackendConfig:
     base_url: str
     token: str = field(repr=False)
     organizer_id: int
+    password_access: bool = False
 
     def __post_init__(self):
         try:
@@ -207,6 +208,7 @@ class Backend:
             headers={
                 "Authorization": f"Bearer {self.config.token}",
                 "X-Telegram-User-Id": str(self.config.organizer_id),
+                **({"X-Telegram-Access": "PASSWORD"} if self.config.password_access else {}),
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             },
