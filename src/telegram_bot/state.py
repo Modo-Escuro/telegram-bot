@@ -1,5 +1,6 @@
 """Cursor persistente e exclusão de processo; não armazena mensagens nem tokens."""
 
+import json
 import os
 import sqlite3
 import time
@@ -55,6 +56,12 @@ class State:
             "CREATE TABLE IF NOT EXISTS mode_prompt "
             "(id INTEGER PRIMARY KEY CHECK(id=1), message_id INTEGER NOT NULL, used INTEGER NOT NULL)"
         )
+        # Confirmações de limpar/remover: só o último teclado vale, uma vez; nomes ficam aqui, não no callback.
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS confirm_prompt "
+            "(id INTEGER PRIMARY KEY CHECK(id=1), message_id INTEGER NOT NULL, kind TEXT NOT NULL, "
+            "names TEXT NOT NULL, used INTEGER NOT NULL)"
+        )
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS login_watch "
             "(id INTEGER PRIMARY KEY CHECK(id=1), owner INTEGER NOT NULL, "
@@ -106,6 +113,26 @@ class State:
                 (message_id,),
             )
         return result.rowcount == 1
+
+    def confirm_prompt(self, message_id, kind, names=()):
+        with self.db:
+            self.db.execute(
+                "INSERT INTO confirm_prompt VALUES (1, ?, ?, ?, 0) ON CONFLICT(id) DO UPDATE SET "
+                "message_id=excluded.message_id, kind=excluded.kind, names=excluded.names, used=0",
+                (message_id, kind, json.dumps(list(names), ensure_ascii=False)),
+            )
+
+    def claim_confirm(self, message_id, kind):
+        """Consome o teclado atual uma vez; devolve os nomes salvos ou None (antigo/repetido/outro tipo)."""
+        with self.db:
+            row = self.db.execute(
+                "SELECT names FROM confirm_prompt WHERE id=1 AND message_id=? AND kind=? AND used=0",
+                (message_id, kind),
+            ).fetchone()
+            if row is None:
+                return None
+            self.db.execute("UPDATE confirm_prompt SET used=1 WHERE id=1")
+        return json.loads(row[0])
 
     def login_watch(self):
         row = self.db.execute("SELECT * FROM login_watch WHERE id=1").fetchone()

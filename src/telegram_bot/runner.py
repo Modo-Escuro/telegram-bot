@@ -4,7 +4,16 @@ import time
 from .cart import COMMANDS as CART_COMMANDS
 from .connections import COMMANDS, Connections
 from .conversation_contract import ProtocolError
-from .conversation_runner import MODE_MARKUP, MODE_QUESTION, MODE_TEXTS
+from .conversation_runner import (
+    CLEAR_MARKUP,
+    CLEAR_QUESTION,
+    CLEAR_TEXT,
+    MODE_MARKUP,
+    MODE_QUESTION,
+    MODE_TEXTS,
+    remove_markup,
+    remove_text,
+)
 from .menu import navigation
 from .telegram import TelegramError
 
@@ -22,10 +31,76 @@ HELP = (
     "• Conectar iFood: entre na conta teste.\n"
     "• Endereços iFood: escolha onde receber.\n"
     "• Esvaziar sacola: limpe a composição da demo.\n"
+    "• Remover pessoa / Limpar perfil: apague pessoas ou todo o pedido salvo.\n"
     "• Sair da demo: encerre seu acesso.\n\n"
     "Faltou uma resposta? Use /retomar. Para desconectar a conta, use /desconectar."
 )
 CONVERSATION_HELP = "\n\nAs respostas chegam automaticamente por aqui."
+
+
+PROFILE_COMMANDS = frozenset({"/limpar", "/remover"})
+NO_PEOPLE = "Não há pessoas salvas neste pedido."
+
+
+def profile_command(api, state, allowed_id, action, conversations):
+    """Abre a confirmação por botão; nada é apagado sem o clique."""
+    if conversations is None:
+        api.send(allowed_id, "A conversa de compras não está disponível nesta configuração.")
+        return
+    if action == "/limpar":
+        sent = api.send(allowed_id, CLEAR_QUESTION, CLEAR_MARKUP)
+        kind, names = "clear", []
+    else:
+        try:
+            names = conversations.participant_names()
+        except (ValueError, ProtocolError, OSError):
+            api.send(
+                allowed_id, "Não consegui consultar o pedido agora. Tente de novo em instantes."
+            )
+            return
+        if not names:
+            api.send(allowed_id, NO_PEOPLE)
+            return
+        sent = api.send(allowed_id, "Quem você quer remover do pedido?", remove_markup(names))
+        kind = "remove"
+    if isinstance(sent, dict) and type(sent.get("message_id")) is int:
+        state.confirm_prompt(sent["message_id"], kind, names)
+
+
+def profile_click(api, state, allowed_id, callback, update_id, data, conversations):
+    """Clique já autorizado (remetente/chat privado). Uso único por teclado; depois remove o teclado."""
+    message = callback["message"]
+    kind = "clear" if data.startswith("clr:") else "remove"
+    choice = data.split(":", 1)[1]
+    names = state.claim_confirm(message["message_id"], kind)
+    text = None
+    if names is not None and choice != "no":
+        if kind == "clear" and choice == "yes":
+            text, reply = CLEAR_TEXT, "Certo: vou apagar os dados deste pedido."
+        elif kind == "remove" and choice.isdigit() and int(choice) < len(names):
+            name = names[int(choice)]
+            text, reply = remove_text(name), f"Certo: vou remover {name} do pedido."
+    if names is None:
+        reply = "Esta confirmação expirou ou já foi usada. Nada foi apagado."
+    elif text is None:
+        reply = "Cancelado. Nada foi apagado."
+    elif conversations is not None:
+        try:
+            conversations.text_click(callback, update_id, text, "tg-" + kind + "-")
+        except (ValueError, ProtocolError):
+            reply = "Não consegui enviar a confirmação. Nada foi apagado; tente de novo."
+    api.send(allowed_id, reply)
+    try:
+        api.call(
+            "editMessageReplyMarkup",
+            {
+                "chat_id": allowed_id,
+                "message_id": message["message_id"],
+                "reply_markup": {"inline_keyboard": []},
+            },
+        )
+    except TelegramError:
+        pass
 
 
 def private_message(update):
@@ -113,6 +188,12 @@ def process_batch(
                 continue
             if carts:
                 carts.invalidate()
+            if action in PROFILE_COMMANDS and (
+                not target or target.casefold() == username.casefold()
+            ):
+                profile_command(api, state, allowed_id, action, conversations)
+                state.done(update_id)
+                continue
         if conversations is not None and message and message["from"]["id"] == allowed_id:
             text = message.get("text")
             first = (
@@ -257,6 +338,9 @@ def process_callback(
             if queued
             else "Esta escolha expirou ou não corresponde à mensagem original. Toque em Endereços iFood.",
         )
+        return
+    if isinstance(data, str) and data.startswith(("clr:", "rm:")):
+        profile_click(api, state, allowed_id, callback, update_id, data, conversations)
         return
     if isinstance(data, str) and data.startswith("mode:"):
         choice = data.removeprefix("mode:")
