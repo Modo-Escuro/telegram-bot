@@ -19,3 +19,5 @@
 
 - O bot está online: não iniciar outra instância real com o mesmo token. Preservar o volume /data e o SQLite atualizado ao migrar execução. A API ainda estava sem volume na última conferência; preservar vínculos existentes antes de corrigir essa persistência.
 - O botão humano não é enviado automaticamente após o callback: orientar /confirmar no Telegram. A sessão operacional observada não comprova busca, sacola ou compra; não atualizar snapshots históricos como se fossem estado em tempo real.
+
+- Antes de implementar conversa ou compra, consultar docs/plano-conversacional.md, docs/backlog-conversacional.md e docs/decisoes-conversacionais.md. Seguir dependências e critérios das issues; propostas não são decisões aprovadas. O contrato de conversa ainda é proposto.

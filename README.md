@@ -1,5 +1,7 @@
 # Compra Agenciada — bot Telegram
 
+Planejamento de desenvolvimento: [conversa e compra em grupo](docs/plano-conversacional.md) · [tarefas e prioridades](docs/backlog-conversacional.md) · [épico no GitHub](https://github.com/Modo-Escuro/telegram-bot/issues/6).
+
 Interface Telegram do projeto SEMCOMP. O objetivo do produto é organizar uma compra em grupo com restrições individuais e orçamento, preservar essas condições quando o pedido muda e exigir aprovação humana antes do envio.
 
 **Entregue e ensaiado:** bot privado na Railway, login iFood pelo navegador, confirmação humana por botão no Telegram e sessão operacional reconhecida pelo backend. A consulta autenticada registrou `CONNECTED`, `operational: true` e verificação `OK`. A evidência e seus limites estão em [estado atual](docs/estado-atual.md).

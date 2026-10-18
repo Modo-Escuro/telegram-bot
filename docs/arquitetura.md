@@ -1,5 +1,7 @@
 # Arquitetura implementada
 
+Esta página descreve a implementação existente. A evolução para IA, contexto por pessoa e compra aprovada está no [plano integrado](plano-conversacional.md) e no [contrato ainda proposto](contrato-conversa-proposto.md). Não tratar o desenho futuro como módulo entregue.
+
 [Índice](README.md) · [Estado e evidências](estado-atual.md)
 
 ## Fronteiras atuais

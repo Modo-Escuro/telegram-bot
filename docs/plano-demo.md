@@ -1,5 +1,7 @@
 # Plano da demo e próximos incrementos
 
+**Atualização de planejamento — 18/10/2026:** a decomposição executável, prioridades, dependências e critérios estão no [plano conversacional](plano-conversacional.md) e no [backlog](backlog-conversacional.md). A sequência abaixo é o contexto do incremento anterior; o plano novo inclui revisão da branchBruna e reaproveitamento condicionado da F7, sem alterar a evidência histórica de login.
+
 [Índice](README.md) · [Estado atual](estado-atual.md) · [Regras](regras-preservadas.md)
 
 Objetivo: organizar compra em grupo, alterar orçamento ou itens preservando restrições individuais, revisar a sacola e enviar somente após aprovação humana válida no ambiente autorizado do evento.
