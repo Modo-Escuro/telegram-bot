@@ -47,6 +47,8 @@ def render(snapshot, *, collection_only=False, concise=False):
         concise = False
     lines = []
     group = next((b for b in document["blocks"] if b["kind"] == "GROUP"), None)
+    # Uso individual: com uma pessoa só, os textos do bot não falam em "grupo".
+    single = bool(group) and len(group["participants"]) == 1
     budget_text = None
     if group and group["budgetCents"] is not None:
         cents = group["budgetCents"]
@@ -91,10 +93,11 @@ def render(snapshot, *, collection_only=False, concise=False):
         elif kind == "GROUP":
             if concise and not collection_only:
                 continue
+            noun = "pedido" if single else "grupo"
             lines.append(
-                "Certo! Seu grupo ficou assim:"
+                f"Certo! Seu {noun} ficou assim:"
                 if not collection_only
-                else "Seu grupo continua aqui:"
+                else f"Seu {noun} continua aqui:"
             )
             people = []
             for person in block["participants"]:
@@ -123,7 +126,12 @@ def render(snapshot, *, collection_only=False, concise=False):
     if collection_only:
         if not lines:
             lines.append("Não há grupo salvo para apresentar. Envie uma mensagem para começar.")
-        lines.insert(0, "Vamos continuar de onde paramos? Retomada informativa do grupo salvo.")
+        lines.insert(
+            0,
+            "Vamos continuar de onde paramos? Retomada informativa do "
+            + ("pedido" if single else "grupo")
+            + " salvo.",
+        )
         lines.append(
             "Envie sua próxima mensagem para continuar. Itens, preços, endereço e ações precisam de nova validação na conta atual."
         )
@@ -134,7 +142,9 @@ def render(snapshot, *, collection_only=False, concise=False):
             routine = question in {
                 "Quem vai participar da compra?",
                 "Qual é o orçamento do grupo?",
+                "Qual é o seu orçamento?",
                 "Vocês preferem economia ou rapidez?",
+                "Você prefere economia ou rapidez?",
             } or (
                 group
                 and any(
@@ -145,7 +155,11 @@ def render(snapshot, *, collection_only=False, concise=False):
             if not routine or not asked:
                 lines.append(question)
             asked = asked or bool(routine)
-    text = "\n\n".join(lines) or "O grupo continua igual. O que deseja mudar?"
+    text = "\n\n".join(lines) or (
+        "O pedido continua igual. O que deseja mudar?"
+        if single
+        else "O grupo continua igual. O que deseja mudar?"
+    )
     # Defesa adicional: nunca exibir referências humanas nem identificadores técnicos do documento.
     references = [document.get("conversationId", "")]
     for action in document["allowedActions"]:

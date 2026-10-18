@@ -122,9 +122,9 @@ class Connections:
             return ""
         queued = self.conversations.restore_after_login(status, source_key)
         if queued is True:
-            return "\nVou recuperar o grupo que você já organizou para continuarmos daqui."
+            return "\nVou recuperar o pedido que você já organizou para continuarmos daqui."
         if queued is False:
-            return "\nNão consegui agendar a retomada do grupo: a fila está cheia ou o vínculo mudou. Use /verificar depois."
+            return "\nNão consegui agendar a retomada do pedido: a fila está cheia ou o vínculo mudou. Use /verificar depois."
         return ""
 
     def delivered(self, reply, result):
@@ -165,7 +165,7 @@ class Connections:
                 reply = self._present(status)
                 reply.text = (
                     "Toque em Abrir login do iFood e autorize sua conta teste no navegador. "
-                    "Depois, é só voltar para cá: vou acompanhar a conexão e recuperar seu grupo. "
+                    "Depois, é só voltar para cá: vou acompanhar a conexão e recuperar seu pedido. "
                     "Use apenas o seu link de login; não o compartilhe."
                 )
                 rows = (reply.markup or {}).get("inline_keyboard", [])

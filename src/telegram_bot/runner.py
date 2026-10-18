@@ -4,11 +4,12 @@ import time
 from .cart import COMMANDS as CART_COMMANDS
 from .connections import COMMANDS, Connections
 from .conversation_contract import ProtocolError
+from .conversation_runner import MODE_MARKUP, MODE_QUESTION, MODE_TEXTS
 from .menu import navigation
 from .telegram import TelegramError
 
 GET_STARTED = (
-    "Quem vai participar, quais as restrições alimentares e quanto querem gastar?\n\n"
+    "O pedido pode ser só para você ou para um grupo. Conte as restrições alimentares e quanto quer gastar.\n\n"
     "Toque em Conectar iFood para usar a conta teste."
 )
 DEMO_NOTICE = (
@@ -149,6 +150,11 @@ def process_batch(
             try:
                 if isinstance(reply, str):
                     api.send(allowed_id, reply)
+                    if conversations is not None and reply.startswith(START):
+                        # Conversa nova: pergunta uma vez se o uso é individual ou em grupo.
+                        sent = api.send(allowed_id, MODE_QUESTION, MODE_MARKUP)
+                        if isinstance(sent, dict) and type(sent.get("message_id")) is int:
+                            state.mode_prompt(sent["message_id"])
                 else:
                     result = api.send(allowed_id, reply.text, reply.markup)
                     if connections is not None:
@@ -251,6 +257,41 @@ def process_callback(
             if queued
             else "Esta escolha expirou ou não corresponde à mensagem original. Toque em Endereços iFood.",
         )
+        return
+    if isinstance(data, str) and data.startswith("mode:"):
+        choice = data.removeprefix("mode:")
+        ok = (
+            conversations is not None
+            and choice in MODE_TEXTS
+            and state.claim_mode(message["message_id"])
+        )
+        if ok:
+            try:
+                conversations.mode_click(callback, update_id, choice)
+            except (ValueError, ProtocolError):
+                ok = False
+        api.send(
+            allowed_id,
+            (
+                "Certo: pedido só para você. "
+                if choice == "individual"
+                else "Certo: pedido em grupo. "
+            )
+            + "Vou responder automaticamente por aqui."
+            if ok
+            else "Esta escolha expirou ou já foi usada. Pode escrever direto para quem é o pedido.",
+        )
+        try:
+            api.call(
+                "editMessageReplyMarkup",
+                {
+                    "chat_id": allowed_id,
+                    "message_id": message["message_id"],
+                    "reply_markup": {"inline_keyboard": []},
+                },
+            )
+        except TelegramError:
+            pass
         return
     if isinstance(data, str) and data.startswith("cart:"):
         text = (

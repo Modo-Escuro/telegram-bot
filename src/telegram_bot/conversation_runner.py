@@ -16,6 +16,21 @@ from .voice import MAX_BYTES, VoiceError, voice_metadata
 
 PROCESSING = "Vou responder automaticamente por aqui."
 
+# Contrato fixo com a API: o clique vira esta mensagem, como se tivesse sido digitada.
+MODE_TEXTS = {
+    "individual": "É um pedido individual, só para mim.",
+    "group": "É um pedido em grupo.",
+}
+MODE_QUESTION = "Vai pedir só para você ou para um grupo?"
+MODE_MARKUP = {
+    "inline_keyboard": [
+        [
+            {"text": "Só para mim", "callback_data": "mode:individual"},
+            {"text": "Para um grupo", "callback_data": "mode:group"},
+        ]
+    ]
+}
+
 NOTICES = {
     "ADDRESS_UNAVAILABLE": "A verificação de endereços ainda não está disponível nesta versão da API. Avise a equipe; a coleta do grupo pode continuar.",
     "ADDRESS_SELECTED": "Endereço confirmado para as sugestões. Para trocar, toque em Endereços iFood.",
@@ -97,6 +112,28 @@ class Conversations:
         ):
             return False
         return self.box.address_click(callback, update_id, self.client.bot_id)
+
+    def mode_click(self, callback, update_id, choice):
+        """Clique já autorizado e consumido: enfileira o texto fixo pelo caminho normal de mensagem."""
+        message, sender = callback["message"], callback["from"]
+        text = MODE_TEXTS[choice]
+        update = {
+            "update_id": update_id,
+            "message": {
+                "message_id": message["message_id"],
+                "from": sender,
+                "chat": message["chat"],
+                "date": message.get("date", 0),
+                "text": text,
+            },
+        }
+        command = self.client.prepare_text(update, 0)
+        body = command.to_dict()
+        # Mesmo teclado ⇒ mesmo evento: repetição no backend/outbox é deduplicada pelo eventId.
+        body["eventId"] = "tg-mode-" + str(message["message_id"])
+        command = self.client.restore(encode(body), command.schema)
+        self.box.receive(command, update_id, kind="TEXT")
+        return text
 
     def receive(self, update, text_command=None):
         if text_command == "/enderecos":
