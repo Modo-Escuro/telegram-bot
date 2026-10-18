@@ -1,5 +1,7 @@
 # Plano integrado — Compra com Contexto conversacional
 
+**Atualização BOT-01:** fila durável e integração HTTP sintética em [BOT-01](bot-01-fila-duravel.md). RUN-01/DOM-01/DATA-01 e ranking estão na API `d2883f1`; AI-02 continua pendente. DEC-01 adotada no backend fixa demo simulada e MCP só leitura. Abaixo permanece o histórico do planejamento, sem representar deploy ou envio real.
+
 Versão 1.0 · planejamento publicado em 18/10/2026. Estado: **especificado para desenvolvimento; execução pendente**. [Épico e checklist](https://github.com/Modo-Escuro/telegram-bot/issues/6) · [Tarefas e dependências](backlog-conversacional.md) · [Decisões abertas](decisoes-conversacionais.md) · [Contrato proposto](contrato-conversa-proposto.md).
 
 ## Objetivo e conclusão

@@ -36,9 +36,10 @@ class Telegram:
         }
     )
 
-    def __init__(self, token, opener=None):
+    def __init__(self, token, opener=None, *, timeout=40):
         self._base = f"https://api.telegram.org/bot{token}/"
         self._opener = opener or build_opener(NoRedirect())
+        self._timeout = timeout
 
     def call(self, method, payload=None):
         if method not in self.METHODS:
@@ -50,7 +51,7 @@ class Telegram:
             method="POST",
         )
         try:
-            with self._opener.open(request, timeout=40) as response:
+            with self._opener.open(request, timeout=self._timeout) as response:
                 body = json.load(response)
         except HTTPError as exc:
             code = exc.code

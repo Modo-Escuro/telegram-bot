@@ -4,6 +4,9 @@ import sqlite3
 from .backend import Backend, BackendConfig
 from .config import Config
 from .connections import Connections
+from .conversation import ConversationClient
+from .conversation_runner import Conversations, ConversationService, scope_for
+from .outbox import Outbox
 from .runner import identify, poll
 from .state import State, single_instance
 from .telegram import Telegram, TelegramError
@@ -30,9 +33,29 @@ def main():
                 identify(api)
                 return 0
             backend_config = BackendConfig.from_env(config.allowed_user_id)
+            if config.conversation_enabled and backend_config is None:
+                raise ValueError(
+                    "Conversa requer BACKEND_BASE_URL e BACKEND_API_TOKEN configurados."
+                )
             backend = Backend(backend_config) if backend_config else None
             state = State(config.state_dir / f"bot-{me['id']}.sqlite3")
+            box, service = None, None
             try:
+                conversations = None
+                if config.conversation_enabled:
+                    path = config.state_dir / f"bot-{me['id']}.sqlite3"
+                    scope = scope_for(backend_config, me["id"])
+                    client_factory = lambda: ConversationClient(backend_config, me["id"], timeout=5)
+                    box = Outbox(path, scope)
+                    conversations = Conversations(box, client_factory())
+                    service = ConversationService(
+                        path,
+                        scope,
+                        client_factory,
+                        lambda: Telegram(config.token, timeout=5),
+                        config.allowed_user_id,
+                    )
+                    service.start()
                 print("Bot iniciado. Abra a conversa privada e envie /start. Ctrl+C encerra.")
                 poll(
                     api,
@@ -40,9 +63,17 @@ def main():
                     config.allowed_user_id,
                     me["username"],
                     connections=Connections(backend, state, config.allowed_user_id),
+                    conversations=conversations,
+                    service=service,
                 )
             finally:
-                state.close()
+                try:
+                    if service:
+                        service.stop()
+                finally:
+                    if box:
+                        box.close()
+                    state.close()
     except KeyboardInterrupt:
         print("\nBot encerrado.")
         return 0

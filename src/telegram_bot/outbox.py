@@ -1,0 +1,278 @@
+"""Fila local da BOT-01. Cada thread usa sua conexão; nunca guarda snapshots/tokens."""
+
+import hashlib
+import sqlite3
+import time
+from contextlib import contextmanager
+
+from .conversation_contract import ProtocolError, decode, encode
+
+DAY = 86400
+TERMINAL = ("DONE", "CANCELLED", "EXPIRED")
+
+
+class Outbox:
+    def __init__(self, path, scope, *, clock=time.time, capacity=10):
+        self.clock, self.scope, self.capacity = clock, scope, capacity
+        self.db = sqlite3.connect(path, timeout=5)
+        self.db.row_factory = sqlite3.Row
+        self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("PRAGMA synchronous=FULL")
+        self.db.execute("PRAGMA secure_delete=ON")
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS conversation_outbox ("
+            "seq INTEGER PRIMARY KEY, scope TEXT NOT NULL, event_id TEXT NOT NULL, "
+            "digest TEXT NOT NULL, kind TEXT NOT NULL, state TEXT NOT NULL, "
+            "body BLOB, command BLOB, operation_id TEXT, target INTEGER, "
+            "message_id INTEGER, created REAL NOT NULL, due REAL NOT NULL, "
+            "deadline REAL, attempts INTEGER NOT NULL DEFAULT 0, notice TEXT, "
+            "UNIQUE(scope,event_id))"
+        )
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS conversation_delivery ("
+            "seq INTEGER NOT NULL, part INTEGER NOT NULL, message_id INTEGER NOT NULL, digest TEXT NOT NULL, "
+            "PRIMARY KEY(seq,part))"
+        )
+        self.db.commit()
+        # Crash entre envio Telegram e gravação do message_id: entrega possivelmente ocorreu.
+        with self.db:
+            self.db.execute(
+                "UPDATE conversation_outbox SET state='DELIVERY_UNKNOWN' "
+                "WHERE scope=? AND state='SENDING'",
+                (scope,),
+            )
+
+    def close(self):
+        self.db.close()
+
+    @contextmanager
+    def transaction(self):
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+            self.db.commit()
+        except BaseException:
+            self.db.rollback()
+            raise
+
+    def receive(self, command, update_id, *, kind="TEXT"):
+        """Mensagem/controle e cursor na MESMA transação; nenhuma rede antes do commit."""
+        body = command.serialize()
+        document = command.to_dict()
+        event_id = document["eventId"]
+        digest = hashlib.sha256(body).hexdigest()
+        now = self.clock()
+        with self.transaction():
+            previous = self.db.execute(
+                "SELECT * FROM conversation_outbox WHERE scope=? AND event_id=?",
+                (self.scope, event_id),
+            ).fetchone()
+            if previous and previous["digest"] != digest:
+                raise ProtocolError()
+            if not previous:
+                count = self.db.execute(
+                    "SELECT count(*) FROM conversation_outbox WHERE scope=? "
+                    "AND state NOT IN ('DONE','CANCELLED','EXPIRED')",
+                    (self.scope,),
+                ).fetchone()[0]
+                # Limite também de metadados: não confirmar recebimento sem guardar a recusa.
+                records = self.db.execute(
+                    "SELECT count(*) FROM conversation_outbox WHERE scope=?", (self.scope,)
+                ).fetchone()[0]
+                if records >= 10000:
+                    raise ValueError(
+                        "Limite local atingido; manutenção do armazenamento necessária."
+                    )
+                state, notice = "RECEIVED", None
+                target = None
+                if kind == "CANCEL":
+                    active = self.active()
+                    target = active["seq"] if active else None
+                    if not active:
+                        state, notice = "NOTICE", "NO_ACTIVE"
+                    elif active["state"] == "RECEIVED":
+                        self.update(active["seq"], state="CANCELLED", body=None, command=None)
+                        state, notice = "NOTICE", "LOCAL_CANCELLED"
+                elif kind == "RESUME":
+                    self.db.execute(
+                        "DELETE FROM conversation_delivery WHERE seq IN "
+                        "(SELECT seq FROM conversation_outbox WHERE scope=? AND state='DELIVERY_UNKNOWN')",
+                        (self.scope,),
+                    )
+                    self.db.execute(
+                        "UPDATE conversation_outbox SET attempts=0,due=?,state=CASE "
+                        "WHEN state='DELIVERY_UNKNOWN' THEN CASE WHEN operation_id IS NULL "
+                        "THEN 'NOTICE' ELSE 'ACCEPTED' END ELSE state END "
+                        "WHERE scope=? AND state IN ('PAUSED','POST_UNKNOWN','DELIVERY_UNKNOWN')",
+                        (now, self.scope),
+                    )
+                    state, notice = "NOTICE", "RESUMED"
+                elif count >= self.capacity:
+                    state, notice = "NOTICE", "QUEUE_FULL"
+                self.db.execute(
+                    "INSERT INTO conversation_outbox "
+                    "(scope,event_id,digest,kind,state,body,target,created,due,notice) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        self.scope,
+                        event_id,
+                        digest,
+                        kind,
+                        state,
+                        body if state == "RECEIVED" else None,
+                        target,
+                        now,
+                        now,
+                        notice,
+                    ),
+                )
+            self.db.execute(
+                "INSERT INTO cursor VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET "
+                "offset=MAX(cursor.offset,excluded.offset),updated=excluded.updated",
+                (update_id + 1, now),
+            )
+
+    def active(self):
+        return self.db.execute(
+            "SELECT * FROM conversation_outbox WHERE scope=? AND kind='TEXT' "
+            "AND state NOT IN ('DONE','CANCELLED','EXPIRED') ORDER BY seq LIMIT 1",
+            (self.scope,),
+        ).fetchone()
+
+    def next(self):
+        now = self.clock()
+        # Cancelamento com alvo ainda sem aceite espera a recuperação idempotente do alvo.
+        control = self.db.execute(
+            "SELECT o.* FROM conversation_outbox o LEFT JOIN conversation_outbox t ON t.seq=o.target "
+            "WHERE o.scope=? AND (o.kind<>'TEXT' OR o.state='NOTICE') AND o.state NOT IN ('DONE','EXPIRED','CANCELLED') "
+            "AND o.state<>'DELIVERY_UNKNOWN' AND o.attempts<3 "
+            "AND o.due<=? AND (o.kind<>'CANCEL' OR o.state='NOTICE' OR t.operation_id IS NOT NULL "
+            "OR t.state IN ('DONE','EXPIRED','CANCELLED')) ORDER BY o.seq LIMIT 1",
+            (self.scope, now),
+        ).fetchone()
+        if control:
+            return control
+        active = self.active()
+        return (
+            active
+            if active
+            and active["due"] <= now
+            and active["attempts"] < 3
+            and active["state"] != "DELIVERY_UNKNOWN"
+            else None
+        )
+
+    def get(self, seq):
+        return self.db.execute(
+            "SELECT * FROM conversation_outbox WHERE seq=? AND scope=?", (seq, self.scope)
+        ).fetchone()
+
+    def update(self, seq, **fields):
+        allowed = {
+            "state",
+            "body",
+            "command",
+            "operation_id",
+            "message_id",
+            "due",
+            "deadline",
+            "attempts",
+            "notice",
+        }
+        if not fields or not fields.keys() <= allowed:
+            raise ValueError("Transição local inválida.")
+        self.db.execute(
+            "UPDATE conversation_outbox SET "
+            + ",".join(f"{key}=?" for key in fields)
+            + " WHERE seq=? AND scope=?",
+            (*fields.values(), seq, self.scope),
+        )
+
+    def save(self, seq, **fields):
+        with self.db:
+            self.update(seq, **fields)
+
+    def prepare(self, row, version):
+        # A consulta HTTP de versão pode ter coincidido com /interromper na outra conexão.
+        with self.transaction():
+            current = self.get(row["seq"])
+            if (
+                not current
+                or current["body"] is None
+                or current["state"] not in {"RECEIVED", "PAUSED"}
+            ):
+                return
+            self._prepare(current, version)
+
+    def _prepare(self, row, version):
+        document = decode(bytes(row["body"]))
+        document["expectedVersion"] = version
+        if row["kind"] == "CANCEL":
+            target = self.get(row["target"])
+            if not target or not target["operation_id"]:
+                self.update(row["seq"], state="NOTICE", notice="NO_ACTIVE", body=None)
+                return
+            document["operationId"] = target["operation_id"]
+        self.update(row["seq"], command=encode(document), body=None, state="PREPARED", attempts=0)
+
+    def expire(self):
+        """Não expirar comandos enviados sem resposta nem operações em andamento."""
+        with self.db:
+            self.db.execute(
+                "UPDATE conversation_outbox SET body=NULL,command=NULL,state='NOTICE',notice='EXPIRED',attempts=0 "
+                "WHERE scope=? AND (state IN ('RECEIVED','PREPARED') OR (state='PAUSED' AND body IS NOT NULL)) AND created<=?",
+                (self.scope, self.clock() - DAY),
+            )
+            self.db.execute(
+                "DELETE FROM conversation_outbox WHERE scope=? AND state IN ('DONE','CANCELLED','EXPIRED') "
+                "AND created<?",
+                (self.scope, self.clock() - 7 * DAY),
+            )
+
+    def status(self):
+        rows = self.db.execute(
+            "SELECT state,count(*) AS n FROM conversation_outbox WHERE scope=? "
+            "AND state NOT IN ('DONE','CANCELLED','EXPIRED') GROUP BY state",
+            (self.scope,),
+        ).fetchall()
+        if not rows:
+            return "Nenhuma mensagem de conversa aguardando processamento local."
+        return (
+            f"Conversa: {sum(r['n'] for r in rows)} registro(s) em acompanhamento. "
+            "Use /retomar para consultar novamente ou /interromper para solicitar parada local. "
+            "Nenhum pedido é enviado."
+        )
+
+    def delivered(self, seq, part):
+        row = self.db.execute(
+            "SELECT message_id FROM conversation_delivery WHERE seq=? AND part=?", (seq, part)
+        ).fetchone()
+        return row[0] if row else None
+
+    def delivery_digest(self, seq, part):
+        row = self.db.execute(
+            "SELECT digest FROM conversation_delivery WHERE seq=? AND part=?", (seq, part)
+        ).fetchone()
+        return row[0] if row else None
+
+    def record_delivery(self, seq, part, message_id, digest):
+        with self.db:
+            self.db.execute(
+                "INSERT OR REPLACE INTO conversation_delivery VALUES (?,?,?,?)",
+                (seq, part, message_id, digest),
+            )
+
+    def finish(self, seq):
+        with self.db:
+            self.update(seq, state="DONE", body=None, command=None, attempts=0)
+            self.db.execute("DELETE FROM conversation_delivery WHERE seq=?", (seq,))
+
+    def pause_notice(self, row, code):
+        """Aviso fixo independente: não apaga nem substitui o evento em recuperação."""
+        event_id = row["event_id"] + "-paused"
+        with self.db:
+            self.db.execute(
+                "INSERT OR IGNORE INTO conversation_outbox "
+                "(scope,event_id,digest,kind,state,created,due,notice) VALUES (?,?,?,'INFO','NOTICE',?,?,?)",
+                (self.scope, event_id, "technical-notice", self.clock(), self.clock(), code),
+            )

@@ -1,5 +1,7 @@
 # Decisões para execução do plano
 
+**Precedência atual:** a [DEC-01 adotada em 18/10/2026](https://github.com/Modo-Escuro/api-backend/blob/08709c744b073bb2298f52e0f65ec6b2cb6ebfa4/docs/decisoes-conversacionais.md) define D1–D10: um organizador, participantes simulados, rateio em centavos, dados obrigatórios desconhecidos bloqueados, exclusão D7, sacola simulada e MCP só leitura. A tabela inicial abaixo é histórico de perguntas, não o estado atual dessas decisões. Modelo/provedor continuam em AI-01. A [BOT-01](bot-01-fila-duravel.md) segue a decisão adotada e não habilita compra real.
+
 [Plano](plano-conversacional.md) · [DEC-01](https://github.com/Modo-Escuro/api-backend/issues/5) · [StRS preservada](baseline/stakeholder-requirements-specification.md).
 
 Registro inicial: propostas não são decisões aceitas. Responsáveis abaixo são papéis sugeridos; ninguém foi atribuído a uma issue sem indicação da equipe. Registrar autor humano/data/evidência quando cada decisão for fechada.

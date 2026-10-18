@@ -2,6 +2,7 @@ import secrets
 import time
 
 from .connections import COMMANDS, Connections
+from .conversation_contract import ProtocolError
 from .telegram import TelegramError
 
 START = (
@@ -23,6 +24,12 @@ HELP = (
     "/cancelar — cancelar só a tentativa de login\n"
     "/desconectar — remover só o vínculo local\n\n"
     "O botão aparece na mensagem do login. /confirmar e /ifood continuam disponíveis."
+)
+CONVERSATION_HELP = (
+    "\n/andamento — consultar fila de conversa\n"
+    "/interromper — solicitar parada do processamento local\n"
+    "/retomar — recuperar o acompanhamento; entrega incerta pode aparecer novamente\n"
+    "A conversa depende da disponibilidade da API. Nenhum pedido é enviado."
 )
 
 
@@ -69,7 +76,7 @@ def reply_for(update, allowed_id, username, connections=None):
     return "A conversa de compras ainda não está disponível. Use /ajuda para ver os comandos."
 
 
-def process_batch(api, state, updates, allowed_id, username, connections=None):
+def process_batch(api, state, updates, allowed_id, username, connections=None, conversations=None):
     for update in sorted(updates, key=lambda u: u["update_id"]):
         update_id = update["update_id"]
         if type(update_id) is not int:
@@ -82,7 +89,36 @@ def process_batch(api, state, updates, allowed_id, username, connections=None):
             process_callback(api, state, callback, update_id, allowed_id, connections)
             state.done(update_id)
             continue
+        message = private_message(update)
+        if conversations is not None and message and message["from"]["id"] == allowed_id:
+            text = message.get("text")
+            first = (
+                text.strip().split(maxsplit=1)[0] if isinstance(text, str) and text.strip() else ""
+            )
+            command, _, target = first.partition("@")
+            if not first.startswith("/"):
+                command, target = first, ""
+            if (not target or target.casefold() == username.casefold()) and (
+                command in conversations.COMMANDS or (first and not first.startswith("/"))
+            ):
+                try:
+                    reply = conversations.receive(
+                        update, command if command.startswith("/") else None
+                    )
+                except (ValueError, ProtocolError):
+                    reply = "Mensagem não aceita: confira o tamanho e o formato. Nenhuma alteração foi enviada."
+                if reply:
+                    try:
+                        api.send(allowed_id, reply)
+                    except TelegramError as exc:
+                        if exc.code != 403:
+                            raise
+                    state.done(update_id)
+                # A outbox já gravou o cursor atomicamente, ou a recusa foi respondida acima.
+                continue
         reply = reply_for(update, allowed_id, username, connections)
+        if conversations is not None and isinstance(reply, str) and reply in {START, STATUS, HELP}:
+            reply += CONVERSATION_HELP
         if reply:
             try:
                 if isinstance(reply, str):
@@ -99,16 +135,29 @@ def process_batch(api, state, updates, allowed_id, username, connections=None):
         state.done(update_id)
 
 
-def poll(api, state, allowed_id, username, sleep=time.sleep, connections=None):
+def poll(
+    api,
+    state,
+    allowed_id,
+    username,
+    sleep=time.sleep,
+    connections=None,
+    conversations=None,
+    service=None,
+):
     delay = 1
     while True:
         try:
+            if service is not None and service.failed.is_set():
+                raise ValueError(
+                    "Worker de conversa indisponível; reinicie após verificar armazenamento/configuração."
+                )
             updates = (
                 api.updates(state.offset(), timeout=3)
-                if connections is not None and connections.watching
+                if conversations is not None or (connections is not None and connections.watching)
                 else api.updates(state.offset())
             )
-            process_batch(api, state, updates, allowed_id, username, connections)
+            process_batch(api, state, updates, allowed_id, username, connections, conversations)
             if connections is not None:
                 connections.tick(api, allowed_id)
             delay = 1

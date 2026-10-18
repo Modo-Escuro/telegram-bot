@@ -4,6 +4,7 @@
 
 O desenvolvimento da conversa passa pelo [plano integrado](plano-conversacional.md), [backlog com issues e prioridades](backlog-conversacional.md), [decisões abertas](decisoes-conversacionais.md) e [contrato proposto](contrato-conversa-proposto.md). O [épico #6](https://github.com/Modo-Escuro/telegram-bot/issues/6) acompanha API e bot. Documentação e tarefas publicadas não significam implementação concluída.
 [Incremento BOT-02](validacao-bot02.md): acompanhamento do login, cancelamento, desconexão e validação offline. Deploy e ensaio online são evidências separadas.
+[Continuação BOT-01](bot-01-fila-duravel.md): texto livre opt-in, fila persistente e worker separado; testes HTTP contra RUN-01/DATA-01 com processador sintético. Não habilita IA em produção.
 
 ## Por onde começar
 

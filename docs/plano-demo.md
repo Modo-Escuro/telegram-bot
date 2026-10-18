@@ -1,5 +1,7 @@
 # Plano da demo e próximos incrementos
 
+**Atualização BOT-01:** fila durável e integração HTTP sintética em [BOT-01](bot-01-fila-duravel.md). RUN-01/DOM-01/DATA-01 e ranking estão na API `d2883f1`; AI-02 continua pendente. DEC-01 adotada no backend fixa demo simulada e MCP só leitura. Abaixo permanece o histórico do planejamento, sem representar deploy ou envio real.
+
 **Atualização de planejamento — 18/10/2026:** a decomposição executável, prioridades, dependências e critérios estão no [plano conversacional](plano-conversacional.md) e no [backlog](backlog-conversacional.md). A sequência abaixo é o contexto do incremento anterior; o plano novo inclui revisão da branchBruna e reaproveitamento condicionado da F7, sem alterar a evidência histórica de login.
 **Incremento BOT-02:** o código desta branch acrescenta acompanhamento por edição da mensagem de login, cancelamento e desconexão. O relato abaixo conserva o estado observado anteriormente; não comprova deploy deste incremento. Comportamento e limites novos em [login iFood](login-ifood.md#acompanhamento-bot-02).
 

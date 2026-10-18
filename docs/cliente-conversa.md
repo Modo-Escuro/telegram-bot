@@ -4,6 +4,8 @@
 
 ## Estado e alcance
 
+**Atualização BOT-01:** [outbox, worker e texto livre opt-in](bot-01-fila-duravel.md) implementados nesta continuação. As rotas RUN-01/DATA-01 existem na API `08709c7` e são exercitadas por HTTP em loopback com processador sintético. Os schemas fixados abaixo permanecem iguais. O texto seguinte documenta o recorte original do cliente; suas pendências de outbox/polling são substituídas pelo novo guia. IA real, BOT-03/aprovação e ativação operacional permanecem separadas.
+
 Implementado em `conversation.py` e `conversation_contract.py`, com transporte HTTP injetável e testes offline. O cliente usa o contrato da [API-01 em `6ce3d99`](https://github.com/Modo-Escuro/api-backend/blob/6ce3d99863253f3c3c93495621afa33ee92e361d/docs/conversation-api-v1.md). A API-01 está concluída como especificação e conformidade; suas rotas ainda dependem da [RUN-01](https://github.com/Modo-Escuro/api-backend/issues/14).
 
 Este incremento não conecta texto livre ao processamento real, não inicia polling adicional, não chama modelo/MCP e não envia compra. O fluxo de login permanece independente. O fechamento da BOT-01 exige os trabalhos pendentes abaixo e uma integração real validada.

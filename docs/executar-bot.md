@@ -4,6 +4,10 @@
 
 ## Antes de iniciar
 
+A conversa de texto livre é opt-in com `TELEGRAM_CONVERSATION_ENABLED=false` por padrão.
+Condições de ativação, retenção da fila e ensaio isolado estão no [guia BOT-01](bot-01-fila-duravel.md).
+Não habilitar apenas porque o bot iniciou: a API precisa ter o processador AI-02 instalado.
+
 O bot já está online na Railway. Não iniciar polling local com o mesmo token enquanto o serviço estiver ativo. Para transferir a execução, seguir a migração do [estado atualizado](deploy-railway.md#transferir-execução-entre-computador-e-nuvem); preservar `data/` e não voltar a usar uma cópia antiga do SQLite.
 
 `--check` consulta apenas token e webhook, sem consumir updates. `--identify` consome updates de preparação e não deve rodar junto com o serviço online.
