@@ -1,59 +1,51 @@
-# Login iFood no fluxo Telegram
+# Login iFood pelo Telegram
 
-Requisito confirmado em 17/10/2026: o bot precisa verificar a conexão iFood do organizador antes de liberar operações vinculadas à conta. Implementação pendente no bot e no backend. Login não significa autorização para enviar pedido.
+Implementado no bot: cliente HTTP autenticado, /conectar, /confirmar, /ifood e /verificar, com confirmação humana por botão. Contrato conferido contra api-backend commit 20e46fdad96b96534fb8730e66d94460f98a6939, em 17/10/2026. Testes usam respostas simuladas; login real ainda depende das configurações e do ensaio local.
 
-## Fluxo esperado
+## Configurar os dois processos
 
-1. /start em conversa privada: validar o ID numérico do organizador permitido.
-2. Consultar no backend o vínculo entre essa identidade Telegram e a autorização iFood. Sem vínculo confirmado, bloquear consultas de dados da conta, sacola e pedidos. A coleta de preferências pode continuar sem acessar o iFood.
-3. Apresentar Conectar iFood. O backend cria uma tentativa de autorização com state aleatório, PKCE, validade e associação à sessão do organizador; o usuário abre a autorização no navegador. O botão não contém tokens nem credenciais.
-4. O callback é recebido pelo backend, que valida state, validade, uso único e associação à tentativa antes de trocar o código. Tokens permanecem somente no backend.
-5. O bot apresenta Verificar conexão e consulta o estado no backend. Uma mensagem como "já entrei" ou um clique não comprova autenticação. A transação deve continuar associada ao iniciador e a conta vinculada deve ser confirmada por ele antes de uso. Não inventar identidade da conta nem adicionar getUser à allowlist sem validar seu contrato e escopo.
-6. O backend verifica a sessão com uma chamada autenticada de leitura permitida, limitada à finalidade necessária e sem expor dados em logs; consulta a validade e tenta renovar quando aplicável. A ausência de endereços é distinta de falha de autenticação. Metadados de ferramentas não provam escopo para compras.
-7. Somente após vínculo confirmado e sessão operacional, liberar o fluxo de endereço, ofertas e sacola. Cada operação continua sujeita aos escopos e às regras de negócio.
-8. Quando a renovação falhar por credencial inválida/revogada, suspender operações e pedir nova conexão. Falha de rede é indisponibilidade, não prova de logout. Não repetir envio de pedido com resultado desconhecido.
-9. Desconectar remove o vínculo e encerra a sessão local correspondente. Não alegar revogação no provedor sem suporte confirmado. Troca de conta invalida a sacola/aprovação anterior; após reconexão, revalidar a revisão antes de qualquer envio.
+No api-backend, configurar conforme sua documentação:
 
-## O que existe no api-backend
+- BOT_API_TOKEN: segredo de serviço com pelo menos 32 caracteres.
+- ALLOWED_ORGANIZER_IDS: o mesmo ID numérico permitido no bot.
+- PUBLIC_BASE_URL: origem alcançável pelo navegador, na demo http://localhost:8000.
+- Credenciais e callback iFood: somente no backend; seguir seu cadastro OAuth.
 
-Inspeção do código em 17/10/2026; não foi executado login real nesta revisão.
+No Git Bash do bot, após configurar TELEGRAM_BOT_TOKEN e TELEGRAM_ALLOWED_USER_ID:
 
-- GET /api/auth/status: configured, authenticated, expiresAt, expired, hasRefreshToken e scopes.
-- GET /api/auth/login: inicia OAuth e responde com redirecionamento.
-- POST /api/auth/logout: remove os tokens locais e reinicia o cliente MCP.
-- GET /callback e GET /: tratam o retorno OAuth.
-- authenticated é Boolean(tokens): token presente, mesmo expirado, não comprova sessão operacional.
-- A instância de autenticação e o armazenamento de tokens são globais. Não existe vínculo por telegram_user_id nas rotas examinadas.
-- O state é mantido com verifier e createdAt; o callback examinado não verifica explicitamente a idade da tentativa. A limpeza por idade acontece ao iniciar outro login. Exigir a validação de prazo também no callback.
+```bash
+export BACKEND_BASE_URL="http://localhost:8000"
+read -r -s -p "Segredo de serviço da API (BOT_API_TOKEN): " BACKEND_API_TOKEN
+echo
+export BACKEND_API_TOKEN
+./.venv/Scripts/python.exe -m telegram_bot
+```
 
-Fontes: [auth.ts](https://github.com/Modo-Escuro/api-backend/blob/main/src/server/auth.ts) e [app.ts](https://github.com/Modo-Escuro/api-backend/blob/main/src/server/app.ts).
+Insira o mesmo segredo configurado como BOT_API_TOKEN na API. Ele é diferente do token do BotFather e do Client Secret iFood. Nenhum segredo deve ser enviado no Telegram. O programa não carrega .env automaticamente. Sem as duas variáveis BACKEND_*, os comandos informam que a integração está desabilitada; configuração parcial impede iniciar o polling.
 
-Essas rotas são a base existente, não um contrato pronto para múltiplos usuários Telegram. Nunca liberar acesso a uma sessão global somente porque quem enviou /start está logado no Telegram.
+## Fluxo no Telegram
 
-## Contrato a implementar
+1. /conectar chama POST /api/bot/ifood/connect e mostra botão Abrir login do iFood. Novo comando cria outra tentativa e invalida a anterior.
+2. Abrir o botão no navegador do computador do backend e autorizar no iFood. Com loopback, abrir pelo celular não alcança o backend.
+3. /confirmar consulta GET /api/bot/ifood/status e apresenta a identidade mascarada quando disponível. Se indisponível, isso é informado.
+4. Somente tocar em Confirmar conexão se reconhecer a conta. O callback humano envia POST /api/bot/ifood/confirm com confirmationId do botão, após conferir que corresponde à tentativa atual.
+5. /ifood consulta o estado sem chamar o iFood. /verificar chama POST /api/bot/ifood/verify para verificar/renovar a sessão.
 
-Estados conceituais, ainda sem novos endpoints definidos: desconectado, aguardando autorização, aguardando confirmação do vínculo, conectado, reconexão necessária e indisponível.
+/confirmar sem clique não confirma. Não aceitar códigos, URLs OAuth, tokens ou senhas no chat. Esta confirmação vincula a conta; não aprova compra. Cancelamento e desconexão no bot ainda não foram implementados; não são oferecidos botões para essas ações neste incremento.
 
-- Chamadas bot→backend autenticadas e associadas ao organizador validado pelo adaptador; IDs recebidos em texto do usuário ou do modelo não definem identidade.
-- Tentativa expira, é consumida uma única vez e não pode ser reutilizada por outro organizador. Confirmar o vínculo pelo mesmo canal Telegram antes de liberar a conta reduz o risco de associação indevida de links encaminhados.
-- Resposta segura para o bot: estado, referência opaca de tentativa/vínculo, validade, limitações de escopo e URL de autorização quando necessária; nunca access_token, refresh_token, secret ou código de callback.
-- Para o primeiro MVP, um organizador permitido e uma conta dedicada de teste. Mesmo nesse recorte, o vínculo deve ser explícito; ampliar usuários exige isolamento de sessões/tokens no backend.
-- Aprovação do pedido continua sendo uma etapa separada, associada à conta/vínculo, responsável, versão, total e validade da sacola.
+## Autorização e transporte
 
-## Navegador e callback local
+- Só conversa privada do organizador permitido chega ao cliente HTTP. Cabeçalhos: Authorization: Bearer BACKEND_API_TOKEN e X-Telegram-User-Id do organizador validado pelo adaptador, nunca texto do usuário ou modelo.
+- HTTPS obrigatório fora de loopback. A URL é uma origem sem caminho, query ou credenciais. O cliente não segue redirecionamentos e aceita o link de autorização somente na mesma origem do backend, com caminho /auth/ifood/start e tentativa correspondente. PUBLIC_BASE_URL e BACKEND_BASE_URL devem usar a mesma origem.
+- Timeout de 50 segundos por chamada, sem retries automáticos HTTP. Exceções são saneadas, sem corpo remoto, código, credencial ou URL em log.
+- Estado CONNECTED sozinho não libera o fluxo: operacional e allowedOperations precisam indicar acesso. O bot não chama operações de conta neste incremento.
+- Falha de rede é indisponibilidade; não afirmar logout. Botão antigo não confirma outra tentativa. Teclado é removido após uso quando possível.
+- Antes de POST de conexão, verificação ou confirmação, registrar update_id no SQLite. Repetição do update consulta o estado em vez de repetir a mutação, inclusive após reinício. Se houver interrupção entre registro e chamada, não se promete execução; consultar /ifood e emitir novo comando conscientemente.
+- Erro de envio da resposta Telegram pode fazer o usuário perder o link de login. Consultar /ifood; se precisar de outro link, enviar um novo /conectar. Não gravar o link, confirmationId, código ou identidade da conta no SQLite.
+- Outro clique no mesmo botão gera novo callback, mas o backend continua sendo a autoridade de uso único. ALREADY_CONFIRMED apenas consulta estado.
 
-Long polling dispensa webhook público do Telegram. Não dispensa um callback OAuth alcançável pelo navegador do usuário.
+## Limites e próximos passos
 
-Se o backend usa callback localhost/127.0.0.1, o navegador precisa rodar na mesma máquina do backend. Abrir o link no Telegram do celular aponta o callback para o celular, não para o computador. Para a demo local, usar Telegram Desktop e navegador no computador do backend. Para acesso pelo celular, configurar endereço de callback alcançável e cadastrado exatamente no iFood; não alterar o redirect apenas no link de autorização.
+Não há coleta do grupo, busca de ofertas, sacola, aprovação de pedido ou checkout no bot. Login não comprova autorização para compras. linkId ainda não é usado por uma sacola, pois ela não existe neste incremento; qualquer implementação futura deve vincular revisão e aprovação a esse ID e invalidá-las quando mudar.
 
-Não pedir ao usuário que cole senha, código de autenticação, token ou URL de retorno no chat. Não navegar automaticamente.
-
-## Critérios de aceite
-
-- Sem vínculo, nenhum dado da conta é retornado e nenhuma operação de compra é executada.
-- authenticated=true com sessão vencida/rejeitada não libera o fluxo.
-- Callback sem state correto, expirado, repetido ou de outra tentativa é rejeitado.
-- Outra pessoa não consegue consultar ou confirmar a sessão do organizador.
-- Sessão renovada com sucesso retoma consultas; renovação recusada pede login, sem repetir pedidos pendentes.
-- Login concluído não aprova sacola. Troca de conta invalida aprovação anterior.
-- Tokens e dados privados não aparecem em mensagens, logs, fixtures ou commits.
+Referência: [contrato bot→API](https://github.com/Modo-Escuro/api-backend/blob/20e46fdad96b96534fb8730e66d94460f98a6939/docs/bot-api.md).

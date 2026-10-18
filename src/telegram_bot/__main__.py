@@ -1,7 +1,9 @@
 import argparse
 import sqlite3
 
+from .backend import Backend, BackendConfig
 from .config import Config
+from .connections import Connections
 from .runner import identify, poll
 from .state import State, single_instance
 from .telegram import Telegram, TelegramError
@@ -27,10 +29,18 @@ def main():
             if args.identify:
                 identify(api)
                 return 0
+            backend_config = BackendConfig.from_env(config.allowed_user_id)
+            backend = Backend(backend_config) if backend_config else None
             state = State(config.state_dir / f"bot-{me['id']}.sqlite3")
             try:
                 print("Bot iniciado. Abra a conversa privada e envie /start. Ctrl+C encerra.")
-                poll(api, state, config.allowed_user_id, me["username"])
+                poll(
+                    api,
+                    state,
+                    config.allowed_user_id,
+                    me["username"],
+                    connections=Connections(backend, state),
+                )
             finally:
                 state.close()
     except KeyboardInterrupt:

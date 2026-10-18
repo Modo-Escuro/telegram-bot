@@ -199,7 +199,7 @@ class TransportTests(unittest.TestCase):
         Telegram(TOKEN, opener).updates(42)
         payload = json.loads(opener.request.data)
         self.assertEqual(42, payload["offset"])
-        self.assertEqual(["message"], payload["allowed_updates"])
+        self.assertEqual(["message", "callback_query"], payload["allowed_updates"])
         self.assertGreater(opener.timeout, payload["timeout"])
 
     def test_errors_do_not_expose_url_token_or_remote_body(self):

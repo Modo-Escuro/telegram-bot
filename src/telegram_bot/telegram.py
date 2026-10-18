@@ -24,7 +24,16 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 class Telegram:
-    METHODS = frozenset({"getMe", "getWebhookInfo", "getUpdates", "sendMessage"})
+    METHODS = frozenset(
+        {
+            "getMe",
+            "getWebhookInfo",
+            "getUpdates",
+            "sendMessage",
+            "answerCallbackQuery",
+            "editMessageReplyMarkup",
+        }
+    )
 
     def __init__(self, token, opener=None):
         self._base = f"https://api.telegram.org/bot{token}/"
@@ -68,7 +77,7 @@ class Telegram:
         return body.get("result")
 
     def updates(self, offset):
-        payload = {"timeout": 25, "limit": 100, "allowed_updates": ["message"]}
+        payload = {"timeout": 25, "limit": 100, "allowed_updates": ["message", "callback_query"]}
         if offset is not None:
             payload["offset"] = offset
         result = self.call("getUpdates", payload)
@@ -81,8 +90,11 @@ class Telegram:
             raise TelegramError()
         return result
 
-    def send(self, chat_id, text):
-        return self.call("sendMessage", {"chat_id": chat_id, "text": text})
+    def send(self, chat_id, text, markup=None):
+        payload = {"chat_id": chat_id, "text": text}
+        if markup is not None:
+            payload["reply_markup"] = markup
+        return self.call("sendMessage", payload)
 
     def check(self):
         me = self.call("getMe")

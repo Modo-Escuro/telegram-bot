@@ -46,6 +46,10 @@ class State:
             "CREATE TABLE IF NOT EXISTS cursor "
             "(id INTEGER PRIMARY KEY CHECK(id=1), offset INTEGER, updated REAL)"
         )
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS actions "
+            "(update_id INTEGER PRIMARY KEY, created REAL NOT NULL)"
+        )
         self.db.commit()
 
     def close(self):
@@ -65,3 +69,12 @@ class State:
                 "ON CONFLICT(id) DO UPDATE SET offset=excluded.offset, updated=excluded.updated",
                 (update_id + 1, self.clock()),
             )
+
+    def claim_action(self, update_id):
+        """Registrar ANTES de mutação HTTP; resultado desconhecido nunca dispara retry cego."""
+        with self.db:
+            self.db.execute("DELETE FROM actions WHERE created < ?", (self.clock() - WEEK,))
+            result = self.db.execute(
+                "INSERT OR IGNORE INTO actions VALUES (?, ?)", (update_id, self.clock())
+            )
+        return result.rowcount == 1

@@ -1,6 +1,6 @@
 # Executar o bot Telegram
 
-Implementado: long polling, /start, /status, /ajuda, acesso privado por ID numérico, cursor persistente e bloqueio de instância concorrente no mesmo diretório de estado. Não há conexão com backend/iFood, coleta de participantes ou compra nesta etapa.
+Implementado: long polling, /start, /status, /ajuda, acesso privado por ID numérico, cursor persistente e bloqueio de instância concorrente no mesmo diretório de estado. Há cliente HTTP para login iFood via backend, com confirmação por botão. Coleta de participantes e compra continuam pendentes.
 
 ## 1. Criar o bot
 
@@ -59,11 +59,11 @@ Abra a conversa privada com o bot e envie /start. Teste /status e /ajuda. Ctrl+C
 - Webhook ativo: o programa para sem alterar a configuração. Desative o webhook no sistema que o configurou antes de usar polling; não descarte updates pendentes.
 - Conflito 409: encerre outra instância do bot/OpenCode que esteja consumindo getUpdates. Use um único processo por token, inclusive entre computadores.
 - Falha temporária: novas tentativas têm espera progressiva; limites do Telegram respeitam retry_after.
-- O diretório data guarda apenas cursor de updates por ID do bot e arquivos de lock, sem conteúdo de conversa ou token. Não apague o estado durante a operação.
+- O diretório data guarda cursor, IDs dos updates com ações iniciadas e arquivos de lock, sem conteúdo de conversa, link de login, identidade de conta ou token. Não apague o estado durante a operação.
 - Uma interrupção após Telegram aceitar sendMessage e antes da gravação do cursor pode repetir uma resposta textual. Não se promete entrega única de mensagens; não há operação de compra. A futura integração precisa de idempotência própria no backend.
-- Updates ignorados por autorização ou tipo também avançam o cursor. Mensagens editadas e callbacks não são processados nesta etapa.
+- Updates ignorados por autorização ou tipo também avançam o cursor. Mensagens editadas não são processadas; callbacks de confirmação validam remetente e conversa privada.
 - Depois de uma semana sem eventos processados, o cursor é reiniciado para aceitar IDs aleatórios do Telegram.
-- O login iFood segue pendente: [issue do backend](https://github.com/Modo-Escuro/api-backend/issues/1).
+- Integração de login implementada conforme [guia de conexão](login-ifood.md); falta ensaio real com credenciais locais.
 
 ## Verificação
 
@@ -74,3 +74,7 @@ Abra a conversa privada com o bot e envie /start. Teste /status e /ajuda. Ctrl+C
 Os testes usam respostas simuladas, sem rede e sem credenciais. A CI executa em Windows e Linux. Teste manual esperado: organizador recebe /start; outra conta e grupo são ignorados; reiniciar não responde novamente aos updates já processados.
 
 Referência: [Telegram Bot API — getUpdates](https://core.telegram.org/bots/api#getupdates).
+
+## 6. Habilitar login iFood
+
+Consulte [login-ifood.md](login-ifood.md) para configurar os dois processos. No Telegram, envie /conectar, abra o botão no navegador do computador do backend e conclua a autorização. Envie /confirmar, confira a conta e toque em Confirmar conexão. /ifood consulta o estado; /verificar valida a sessão via backend. Não envie código no chat.
