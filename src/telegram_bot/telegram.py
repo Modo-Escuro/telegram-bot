@@ -10,11 +10,25 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from .menu import keyboard
 
 
+def edit_error_reason(method, code, body):
+    description = body.get("description")
+    if method != "editMessageText" or code != 400 or not isinstance(description, str):
+        return "OTHER"
+    if description.startswith("Bad Request: message is not modified"):
+        return "NOT_MODIFIED"
+    if description in {
+        "Bad Request: message can't be edited",
+        "Bad Request: message to edit not found",
+    }:
+        return "EDIT_UNAVAILABLE"
+    return "OTHER"
+
+
 class TelegramError(Exception):
     def __init__(self, code: int = 0, retry_after: int = 0, *, reason="OTHER"):
         self.code = code
         self.retry_after = retry_after
-        self.reason = reason if reason == "NOT_MODIFIED" else "OTHER"
+        self.reason = reason if reason in {"NOT_MODIFIED", "EDIT_UNAVAILABLE"} else "OTHER"
         # Nunca incluir corpo remoto, URL ou exceção de transporte.
         super().__init__(f"Falha na comunicação com Telegram (código {code}).")
 
@@ -92,14 +106,7 @@ class Telegram:
             try:
                 body = json.load(exc)
                 retry_after = int(body.get("parameters", {}).get("retry_after", 0))
-                if (
-                    method == "editMessageText"
-                    and code == 400
-                    and body.get("description", "").startswith(
-                        "Bad Request: message is not modified"
-                    )
-                ):
-                    reason = "NOT_MODIFIED"
+                reason = edit_error_reason(method, code, body)
             except (ValueError, TypeError, AttributeError):
                 pass
             finally:
@@ -116,12 +123,7 @@ class Telegram:
             raise TelegramError(
                 code if type(code) is int else 0,
                 retry_after if type(retry_after) is int and retry_after > 0 else 0,
-                reason="NOT_MODIFIED"
-                if method == "editMessageText"
-                and code == 400
-                and isinstance(body.get("description"), str)
-                and body["description"].startswith("Bad Request: message is not modified")
-                else "OTHER",
+                reason=edit_error_reason(method, code, body),
             )
         return body.get("result")
 
