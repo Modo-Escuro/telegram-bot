@@ -271,6 +271,23 @@ class CallbackTests(unittest.TestCase):
         for secret in [REFERENCE, "Pessoa sintética", "Arroz", callback["id"], callback["data"]]:
             self.assertNotIn(secret, dump)
 
+    def test_review_failure_explains_known_blocker_without_retry_loop_or_write(self):
+        for code, guidance in (
+            ("CART_BAG_UNVERIFIED", "Escolha uma opção"),
+            ("CART_ADDRESS_CONFIRMATION_REQUIRED", "Escolha o endereço"),
+            ("CART_FEATURE_DISABLED", "indisponível nesta versão"),
+        ):
+            with self.subTest(code=code):
+                self.client.review.side_effect = CartError(code)
+                self.carts.receive("/revisarcarrinho")
+                self.pump()
+                self.assertIn(guidance, self.api.send.call_args.args[1])
+                self.assertNotIn(
+                    "tente Revisar carrinho novamente", self.api.send.call_args.args[1]
+                )
+                self.client.confirm.assert_not_called()
+                self.assertIsNone(self.carts.review)
+
     def test_failed_final_read_preserves_succeeded_and_never_repeats_confirm(self):
         callback = self.prepare()
         self.client.current.side_effect = CartError()
@@ -469,7 +486,7 @@ class CallbackTests(unittest.TestCase):
         self.pump()
         self.assertIsNone(self.carts.review)
         self.client.confirm.assert_not_called()
-        self.assertIn("revisão completa e válida", self.api.send.call_args.args[1])
+        self.assertIn("Não consegui consultar os dados", self.api.send.call_args.args[1])
 
     def test_group_budget_and_previous_remote_costs_are_visible_and_distinct(self):
         doc = snapshot().to_dict()
