@@ -42,6 +42,9 @@ def money(price):
 
 def render(snapshot, *, collection_only=False, concise=False):
     document = snapshot.to_dict()
+    # API histórica pode devolver somente GROUP. Nesse caso ele é a própria resposta.
+    if not document["pending"] and all(b["kind"] == "GROUP" for b in document["blocks"]):
+        concise = False
     lines = []
     group = next((b for b in document["blocks"] if b["kind"] == "GROUP"), None)
     budget_text = None

@@ -203,6 +203,15 @@ class PresentationTests(unittest.TestCase):
             ["Conectar iFood", "Endereços iFood", "Esvaziar sacola", "Ajuda", "Sair da demo"],
         )
 
+    def test_legacy_group_only_response_still_displays_the_group(self):
+        d = self.document()
+        d["blocks"] = d["blocks"][:1]
+        d["pending"] = []
+        text = render(Snapshot(encode(d), 0, "COLLECTING"), concise=True)
+        self.assertIn("Ana", text)
+        self.assertIn("amendoim", text)
+        self.assertIn("150,00", text)
+
     def test_unknown_warning_and_model_text_are_not_suppressed(self):
         d = self.document()
         d["blocks"] += [
