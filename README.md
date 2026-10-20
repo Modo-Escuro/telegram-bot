@@ -1,10 +1,10 @@
 # Compra com Contexto — bot Telegram
 
-Interface Python 3.12 do projeto SEMCOMP. Organiza compra em grupo com condições por pessoa, preservando orçamento/restrições quando o pedido muda.
+Interface Python 3.12 do Ailo, projeto SEMCOMP. Entrada principal por intenção natural; a API resolve memória, destinatários, consultas e composição. O bot valida identidade, mantém outbox/recuperação e apresenta resultados.
 
-O código remoto conferido integra login e confirmação humana, cancelamento/desconexão, cliente de conversa v1, outbox/polling opt-in, retomada do grupo e acesso por senha com isolamento por usuário. A API remota já monta Gemini/AI-02/GRP-01 mediante configuração explícita. Isso não comprova ativação nem ensaio completo online.
+A árvore reconciliada inclui login no navegador, outbox/worker, senha e [assistente/progresso/memória](docs/assistente-conversacional.md). Menu: Remover pessoa/Limpar tudo/Meus dados. Sessão conservada por evento; API coordenada sobre main `f6ef20e`, com assistente único e SQLite v6. Isso não comprova ativação online.
 
-Carrinho real está aprovado no escopo somente após confirmação humana específica. A API CART-01 está publicada no [PR #46](https://github.com/Modo-Escuro/api-backend/pull/46), ainda separado da main. Esta branch acrescenta [revisão e callback humano no Telegram](docs/cart-01-telegram.md), com opt-in desligado. BOT-03 completa, outputs reais INT-02 e validação QA-01 continuam pendentes. Envio de pedido e pagamento permanecem proibidos neste incremento. Login/senha não confirmam carrinho nem aprovam compra.
+Carrinho real só após confirmação específica. O [canal PREPARE_CART](docs/cart-01-telegram.md) mantém opt-in OFF; API #46 já mergeado e capturas INT-02 preservadas. Novo ensaio HTTP sintético percorre proposta→escolha→revisão e bloqueio após alergia, sem escrita. Confirmação/callback ponta a ponta, outputs com opções e QA online ainda exigem evidência própria; envio/pagamento proibidos.
 
 - [Remoto publicado × alterações locais](docs/estado-remoto-local.md)
 - [Plano integrado](docs/plano-conversacional.md) e [backlog](docs/backlog-conversacional.md)

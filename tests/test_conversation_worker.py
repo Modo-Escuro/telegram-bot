@@ -524,6 +524,8 @@ class ControlTests(Fixture):
         self.assertEqual(self.client.sent, [])
 
     def test_blocked_api_worker_does_not_block_ingestion_or_help(self):
+        # O serviço abre outra conexão com relógio real; o evento não pode nascer expirado.
+        self.now = datetime.now(UTC).timestamp()
         entered, release = threading.Event(), threading.Event()
 
         def client_factory():

@@ -1,5 +1,7 @@
 # Conversa curta e menu reduzido
 
+> **Registro histórico de síntese.** A lista de cinco botões e o despacho CLEAR_BAG descritos abaixo pertenciam ao intérprete anterior. Hoje o menu e a administração de memória estão em [assistente](assistente-conversacional.md); o botão Esvaziar não é exposto no menu inline atual, embora existam aliases antigos. Não presumir ações guiadas ou imagem de proposta na resposta TEXT do assistente atual.
+
 Pedido de 18/10/2026: respostas pequenas, sem repetir o grupo e com menos botões. O menu passa a ter somente Conectar iFood, Endereços iFood, Esvaziar carrinho, Ajuda e Sair da demo. Minha conexão, Verificar conexão, Interromper e Acompanhar saem do menu; os aliases antigos continuam funcionando. Ajuda mantém /retomar e /desconectar. Acompanhar consultava mensagens do bot, nunca acompanhamento de pedido.
 
 O worker usa apresentação concisa: confirmações das alterações e uma pergunta rotineira por vez, sem repetir GROUP, orçamento inalterado, “Nada foi alterado” ou “Pergunta registrada”. Bloqueios, custo desconhecido, recusas e alertas continuam aparecendo. O renderizador completo permanece disponível para a retomada do grupo após OAuth. Não há novos snapshots ou dados pessoais persistidos no bot.

@@ -1,8 +1,8 @@
 # Arquitetura implementada
 
-Incremento BOT-01: o [fluxo de outbox/worker](bot-01-fila-duravel.md) acrescenta tabelas ao SQLite do bot e comunica as rotas v1 da RUN-01/DATA-01. Não duplica o domínio na API nem instala modelo. O fluxo de login e seu histórico abaixo permanecem separados; a conversa é opt-in, não ativada neste desenvolvimento.
+Mapa da árvore local em 20/10/2026. O [fluxo de outbox/worker](bot-01-fila-duravel.md) usa o SQLite do bot e as rotas v1 da API. Não duplica domínio nem instala modelo. A conversa é opt-in; configuração/deploy online não foram consultados nesta revisão.
 
-Esta página combina o mapa histórico de login com a integração BOT-01/BOT-02. A conversa usa o contrato v1 implementado; a [proposta v0](contrato-conversa-proposto.md) é histórica. Modelo e domínio por pessoa já estão integrados na API, com configuração explícita. O [plano vigente](plano-conversacional.md) exige carrinho real confirmado; CART-01 e callback PREPARE_CART ainda dependem de integração/INT-02. Envio e pagamento seguem proibidos.
+O [assistente](assistente-conversacional.md) usa intenção natural, audiência/memória na API e apresentação progressiva. A [proposta v0](contrato-conversa-proposto.md) e as ações guiadas do intérprete anterior são históricas. CART-01/callback PREPARE_CART têm caminho separado e gates de evidência; integração dessa nova sacola ao canal de revisão ainda exige verificação. Envio/pagamento continuam proibidos.
 
 [Índice](README.md) · [Estado e evidências](estado-atual.md)
 
@@ -19,7 +19,7 @@ flowchart LR
     A -->|Verificação de sessão| M[MCP iFood /marketplace]
 ```
 
-O diagrama acima mostra o login implementado e seu ensaio histórico. A conversa acrescenta runner → outbox SQLite → API RUN-01/AI-02/DATA-01 → consulta e apresentação; BOT-02 retoma o grupo por GET após revalidar o vínculo. O bot ainda não implementa confirmação PREPARE_CART. Consultar [remoto/local](estado-remoto-local.md) para separar integração de código, evidência operacional e CART-01 local. O protótipo FastAPI original é outro serviço.
+O diagrama mostra fronteiras, não uma prova de operação online. A conversa acrescenta runner → outbox com sessão capturada → API RUN-01/assistente/memória/DATA-01 → GET/progresso e apresentação. BOT-02 consulta contexto após revalidar vínculo, sem reexecutar mensagem. PREPARE_CART existe em `cart.py`/`cart_client.py`, desligado por padrão; não é envio de pedido. O protótipo FastAPI original é outro serviço.
 
 ## Mapa do código
 
@@ -32,9 +32,12 @@ O diagrama acima mostra o login implementado e seu ensaio histórico. A conversa
 | `state.py` | Cursor SQLite, registro prévio de ações e lock de processo no mesmo diretório |
 | `backend.py` | Contrato HTTP de login, validação de estados, operações e URL de autorização |
 | `connections.py` | Mensagens do fluxo, apresentação da identidade mascarada e botão humano |
-| `conversation.py` | Cliente v1.0 de eventos, consultas e cancelamento local, utilizado pela outbox/worker |
+| `conversation.py` | Cliente v1.0, sessão da conta, memória, progresso, endereço e cancelamento local |
 | `outbox.py` / `conversation_runner.py` | Persistência dos eventos, acompanhamento sem bloquear polling e retomada por consulta |
 | `conversation_contract.py` | Documentos imutáveis, schemas fixados e validação semântica de respostas |
+| `menu.py` / `runner.py` | Menu inline, controles SELF/remover/limpar e callbacks de uso único |
+| `address_flow.py` | Escolha humana do endereço, inclusive quando só existe um |
+| `cart.py` / `cart_client.py` / `cart_view.py` | Canal humano PREPARE_CART, cliente estrito e revisão/custos, recuperação por GET com opt-in separado |
 | `tests/test_bot.py` | Cenários simulados do canal, transporte, autorização e estado |
 | `tests/test_connections.py` | Cenários simulados do contrato, confirmação, replay e falhas |
 | `Dockerfile` / `railway.toml` | Imagem Python 3.12 e configuração do worker |
@@ -54,7 +57,9 @@ Origem HTTPS configurada em `BACKEND_BASE_URL`. Headers: `Authorization: Bearer 
 | Clique em Confirmar conexão | `POST /api/bot/ifood/confirm` | Envia o `confirmationId` da tentativa atual após validação humana |
 | `/verificar` | `POST /api/bot/ifood/verify` | Solicita verificação/renovação ao backend |
 
-BOT-02 consome também POST /api/bot/ifood/cancel e DELETE /api/bot/ifood/link, com efeitos separados. Consultas automáticas de status atualizam a mensagem de login. Rotas de avaliação e endereços continuam fora do adaptador. O [contrato de referência](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) também descreve essas rotas do backend; existência na API não significa comando entregue no bot.
+BOT-02 consome também POST `/api/bot/ifood/cancel` e DELETE `/api/bot/ifood/link`, com efeitos separados. O callback normal conclui vínculo no navegador; status atualiza a mensagem sem segundo clique. Confirmação manual permanece recuperação. Endereços já são consumidos pelo adaptador; `/api/evaluate` não é seu caminho conversacional principal.
+
+O [cliente atual](cliente-conversa.md) usa `/account-context`, `/memory`, `/events`, `/operations/:id`, `/operations/:id/progress`, snapshot, cancelamento e endereços sob o prefixo da conversa. `X-Conversation-Session` acompanha comandos/eventos associados; `/memory` e endereço têm contratos próprios. O [pin antigo de login](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) é proveniência histórica, não lista atual de rotas.
 
 O timeout HTTP do backend é de 50 segundos nos comandos e 5 segundos nas consultas automáticas; não há retry automático de mutações. O cliente rejeita redirect e link de autorização fora da origem pública configurada ou sem correspondência com a tentativa.
 
@@ -64,7 +69,9 @@ Antes de conexão, verificação, confirmação, cancelamento ou desconexão, o 
 
 O `confirmationId` não é persistido no SQLite: vem do status e do callback do botão. Clique antigo não confirma uma tentativa nova. Uso único e validade também dependem da autoridade do backend. O lock protege processos no mesmo diretório; não impede outra máquina de usar o mesmo token.
 
-O SQLite contém cursor, IDs de ações e uma tentativa acompanhada (organizador, attemptId, messageId, fase e prazos), sem texto de mensagens ou credenciais. No backend, tokens iFood pertencem ao vínculo confirmado, fora do modelo e do bot. A persistência online da API ainda precisa de volume, conforme [estado atual](estado-atual.md).
+O SQLite contém cursor, ações, tentativa acompanhada e outbox: texto/comando pendente tem retenção própria; após aceite conhecido, corpo é removido e ficam metadados de recuperação/sessão. Não persiste snapshots, catálogo, texto da prévia, tokens iFood ou referência clara da confirmação CART-01. A memória seletiva fica na API. Não confundir ausência de snapshot local com ausência total de texto pendente. [Retenção](bot-01-fila-duravel.md#retenção-e-d7).
+
+Tokens iFood pertencem à API; volume atual exige conferência antes de redeploy. A reconciliação usa SQLite v6 na API, unificando variantes v5; o banco do bot tem migrações próprias.
 
 ## Regras para os próximos incrementos
 

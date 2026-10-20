@@ -1,5 +1,7 @@
 # Conversa guiada — incremento local de 18/10/2026
 
+> **Registro histórico do fluxo guiado.** Na árvore coordenada atual de 20/10, a API retirou o intérprete structured e não anuncia as ações guiadas descritas abaixo. O código do bot mantém compatibilidade com botões antigos, mas isso não os torna suportados pela API atual. `CONVERSATION_ACCOUNT_GROUPS_ENABLED` não é configuração vigente da API. UX atual, memória e sessão em [assistente](assistente-conversacional.md): Remover pessoa/Limpar tudo/Meus dados, propostas TEXT e escolha digitada. Testes/pins/relatos abaixo identificam aquela versão, não o fluxo atual.
+
 Continuação local dos PRs API #49 e bot #20, em `codex/conversation-guidance`. Não implantada.
 
 As respostas exibem Escolher opção N, Mudar busca e Ver outras quando a API oferece essas ações. Também aceitam texto: “a segunda”, “mais barato” e “troca por pizza”. A API preserva a busca durante a coleta e decide as opções; o bot não interpreta catálogo ou restrições. Revisar carrinho aparece com sacola atual e `TELEGRAM_CART_ENABLED=true`, abrindo a revisão já existente. Preparação exige outro callback humano específico PREPARE_CART.

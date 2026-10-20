@@ -15,15 +15,13 @@ o recorte anterior de um organizador único; cada usuário é organizador soment
   sem o token de serviço, não dá acesso. O modelo não recebe marcador, senha ou credenciais.
 - Para conversa: `TELEGRAM_CONVERSATION_ENABLED=true` no bot e RUN-01/processador na API, com banco em volume,
   `BOT_TELEGRAM_ID` correto e provedor configurado. A senha não instala um modelo nem contorna cotas.
-- Projeto Railway informado pelo usuário: `d2af9e6b-0bda-4725-bcc8-9092dc2b5a2e`, ambiente `production`.
-  Conferir os seletores explicitamente, sem reutilizar vínculo antigo da pasta local. Cada serviço tem `/data`.
+- Projeto/ambiente Railway informados no incremento original são referência histórica. Antes de operação autorizada, conferir seletores e volumes efetivos de cada serviço; não reutilizar vínculo antigo da pasta local nem presumir `/data` já provisionado.
 
 ## Uso
 
 1. Abrir a conversa privada com o bot e enviar `/start`.
-2. Enviar `/entrar` seguido da senha fornecida privadamente pela equipe.
-3. Acesso dura 24 horas. Usar `/conectar`, entrar com a conta de teste iFood autorizada do evento e conferir
-   a identidade no botão humano. A senha da demo não substitui as credenciais nem o OAuth da conta de teste.
+2. Usar **Entrar na demo** e informar a senha na etapa privada solicitada; `/entrar` continua alias compatível. A senha não vai à outbox/modelo.
+3. Acesso dura 24 horas. Em Conta iFood → Entrar no iFood, autorizar a conta de teste no navegador; o callback conclui sem segundo clique. Confirmação manual é recuperação compatível. A senha da demo não substitui credenciais/OAuth iFood.
 4. Texto livre usa a conversa e os limites vigentes da API. `/ajuda`, `/ifood`, `/verificar`, `/andamento` e demais
    comandos preservam os comportamentos anteriores. Recursos pendentes do backend continuam indisponíveis.
 5. `/sair` revoga o acesso à demo, sem desconectar a conta iFood nem apagar a intenção aceita. Para remover o

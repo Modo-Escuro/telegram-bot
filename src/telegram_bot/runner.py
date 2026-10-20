@@ -9,9 +9,10 @@ from .conversation_runner import (
     CLEAR_MARKUP,
     CLEAR_QUESTION,
     CLEAR_TEXT,
-    MODE_MARKUP,
-    MODE_QUESTION,
     MODE_TEXTS,
+    SELF_MARKUP,
+    SELF_QUESTION,
+    SELF_TEXT,
     remove_markup,
     remove_text,
 )
@@ -19,7 +20,7 @@ from .menu import inline_menu, navigation
 from .telegram import TelegramError
 
 GET_STARTED = (
-    "O pedido pode ser só para você ou para um grupo. Conte as restrições alimentares e quanto quer gastar.\n\n"
+    "Me conte o que você tem em mente e a ocasião. Por exemplo: “Quero um bolo para presentear minha namorada”.\n\n"
     "Em Conta iFood, toque em Entrar no iFood para usar sua conta teste."
 )
 DEMO_NOTICE = (
@@ -32,13 +33,13 @@ HELP = (
     "• Conta iFood: entre, acompanhe o login ou saia da conta teste.\n"
     "• Endereços iFood: escolha onde receber.\n"
     "• Esvaziar carrinho: limpe a composição da demo.\n"
-    "• Remover pessoa / Limpar perfil: apague pessoas ou todo o pedido salvo.\n"
+    "• Remover pessoa / Limpar tudo / Meus dados: apague uma pessoa, todo o pedido ou só o seu perfil.\n"
     "• Sair da demo: encerre seu acesso.\n\n"
     "Faltou uma resposta? Use /retomar. Você pode escrever ou usar os botões das mensagens."
 )
 
 
-PROFILE_COMMANDS = frozenset({"/limpar", "/remover"})
+PROFILE_COMMANDS = frozenset({"/limpar", "/limpadados", "/remover"})
 NO_PEOPLE = "Não há pessoas salvas neste pedido."
 
 
@@ -55,6 +56,9 @@ def profile_command(api, state, allowed_id, action, conversations):
     if action == "/limpar":
         sent = api.send(allowed_id, CLEAR_QUESTION, CLEAR_MARKUP)
         kind, names = "clear", []
+    elif action == "/limpadados":
+        sent = api.send(allowed_id, SELF_QUESTION, SELF_MARKUP)
+        kind = "self"
     else:
         if not names:
             api.send(allowed_id, NO_PEOPLE)
@@ -69,13 +73,15 @@ def profile_command(api, state, allowed_id, action, conversations):
 def profile_click(api, state, allowed_id, callback, update_id, data, conversations):
     """Clique já autorizado (remetente/chat privado). Uso único por teclado; depois remove o teclado."""
     message = callback["message"]
-    kind = "clear" if data.startswith("clr:") else "remove"
+    kind = "clear" if data.startswith("clr:") else "self" if data.startswith("se:") else "remove"
     choice = data.split(":", 1)[1]
     names = state.claim_confirm(message["message_id"], kind)
     text = None
     if names is not None and choice != "no":
         if kind == "clear" and choice == "yes":
             text, reply = CLEAR_TEXT, "Certo: vou apagar os dados deste pedido."
+        elif kind == "self" and choice == "yes":
+            text, reply = SELF_TEXT, "Certo: vou apagar seus dados desta memória."
         elif kind == "remove" and choice.isdigit() and int(choice) < len(names):
             name = names[int(choice)]
             text, reply = remove_text(name), f"Certo: vou remover {name} do pedido."
@@ -239,17 +245,6 @@ def process_batch(
                         if reply.startswith(START) or reply in {HELP, "O que você quer fazer?"}
                         else None,
                     )
-                    if conversations is not None and reply.startswith(START):
-                        # Conversa nova: pergunta uma vez se o uso é individual ou em grupo.
-                        try:
-                            context, _ = conversations.profile_context()
-                        except (ConversationError, ValueError, ProtocolError):
-                            context = None
-                        sent = api.send(allowed_id, MODE_QUESTION, MODE_MARKUP)
-                        if isinstance(sent, dict) and type(sent.get("message_id")) is int:
-                            state.mode_prompt(sent["message_id"])
-                            if context is not None:
-                                state.bind_prompt(sent["message_id"], context)
                 else:
                     if reply.connection_state and hasattr(api, "set_connection_state"):
                         api.set_connection_state(allowed_id, reply.connection_state)
@@ -354,12 +349,12 @@ def process_callback(
         ):
             return
         action = data[4:]
-        if action in {"remove", "clear"}:
+        if action in {"remove", "clear", "self"}:
             profile_command(
                 api,
                 state,
                 allowed_id,
-                "/remover" if action == "remove" else "/limpar",
+                {"remove": "/remover", "clear": "/limpar", "self": "/limpadados"}[action],
                 conversations,
             )
         elif action in {"account", "connect"}:
@@ -408,7 +403,7 @@ def process_callback(
             else "Esta escolha expirou ou não corresponde à mensagem original. Toque em Endereços iFood.",
         )
         return
-    if isinstance(data, str) and data.startswith(("clr:", "rm:")):
+    if isinstance(data, str) and data.startswith(("clr:", "rm:", "se:")):
         profile_click(api, state, allowed_id, callback, update_id, data, conversations)
         return
     if isinstance(data, str) and data.startswith("mode:"):

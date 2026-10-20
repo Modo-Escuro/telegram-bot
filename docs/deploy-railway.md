@@ -4,7 +4,7 @@
 
 ## Serviço existente
 
-O serviço `telegram-bot` está conectado a `Modo-Escuro/telegram-bot`, branch `main`, no mesmo projeto do `api-backend`. A imagem Docker foi construída na Railway; o usuário confirmou respostas de `/start` e `/ifood`, e o login foi concluído. Consulte o snapshot em [estado atual](estado-atual.md) para as versões de referência.
+O ensaio histórico registrou serviço `telegram-bot` ligado ao repositório/branch main, imagem Docker construída, respostas de `/start`/`/ifood` e login concluído. [Estado/evidência](estado-atual.md) identifica as versões; esta atualização documental de 20/10 não reconferiu serviço, autodeploy, variáveis ou volumes.
 
 O bot usa long polling: não recebe conexões HTTP e não precisa de domínio público, porta exposta ou healthcheck HTTP. Manter uma réplica e a cópia local parada.
 
@@ -14,7 +14,7 @@ O bot usa long polling: não recebe conexões HTTP e não precisa de domínio p�
 | --- | --- |
 | `TELEGRAM_BOT_TOKEN` | Token do BotFather, somente no painel/ambiente |
 | `TELEGRAM_ALLOWED_USER_ID` | Mesmo organizador numérico permitido pela API |
-| `BACKEND_BASE_URL` | `https://api-backend-production-9c4c.up.railway.app` |
+| `BACKEND_BASE_URL` | Origem HTTPS pública da API do ambiente, compatível com PUBLIC_BASE_URL |
 | `BACKEND_API_TOKEN` | Referência `${{api-backend.BOT_API_TOKEN}}` |
 | `TELEGRAM_STATE_DIR` | `/data`, dentro do volume próprio do bot |
 
@@ -57,8 +57,10 @@ Para voltar ao computador, primeiro parar a nuvem e copiar de volta o SQLite atu
 
 ## Persistência da API
 
-O bot já tem volume; a API ainda não. Seu diretório `.ifood-links` pode perder os vínculos em um redeploy. O próximo incremento deve preservar os arquivos existentes e migrá-los para um volume exclusivo da API antes de mudar `IFOOD_LINKS_DIR`.
+O ensaio de 17/10 registrou volume no bot e ausência de volume na API; não assumir que essa configuração permanece. Antes de redeploy conferir `TELEGRAM_STATE_DIR`, `IFOOD_LINKS_DIR`, `CONVERSATION_DB_FILE`, volumes e durabilidade atuais. Se ainda houver disco efêmero, preservar os arquivos e migrá-los para volume exclusivo antes de mudar caminhos.
 
-Tentativas OAuth pendentes ficam em memória mesmo com volume: não redeployar a API durante o login. Não mover ou expor tokens em commits, logs ou no chat. O frontend de diagnóstico não é necessário para o fluxo de login do bot.
+Tentativas OAuth ficam em RAM: não redeployar a API durante login. Sem tokens em Git/log/chat. Painel retirado; raiz/callback concluem no navegador. API reconciliada usa v6 e binários v5/anteriores recusam o banco. Preservar WAL/SHM, memória, grupos anteriores e intenções; sem downgrade. Merge/deploy continuam etapas separadas da validação local.
+
+Na API coordenada remova seletores/flags legados de agent/F7/sessão global. No bot, conversa e CART-01 têm opt-ins separados e permanecem desligados por padrão. Modelo/escrita exigem configuração/evidência próprias; instrução documental não é autorização de implantação.
 
 Referências operacionais: [variáveis](https://docs.railway.com/variables), [configuração como código](https://docs.railway.com/config-as-code/reference), [volumes](https://docs.railway.com/volumes).

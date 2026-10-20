@@ -1,5 +1,7 @@
 # Kanban — retrato conferido em 18/10/2026
 
+> Quadro histórico, não sincronizado com GitHub nesta revisão. “Atual” no corpo refere-se a 18/10; não usar essas contagens para afirmar o estado presente. Implementação local e prioridade corrente em [plano](plano-conversacional.md) e [assistente](assistente-conversacional.md).
+
 [Backlog com as 23 tarefas](backlog-conversacional.md) · [Plano](plano-conversacional.md) · [Remoto/local](estado-remoto-local.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6).
 
 O quadro inicial de 22 tarefas todas abertas ficou desatualizado. O retrato atual tem **15 fechadas e 8 abertas**, após adicionar INT-02 e integrar RUN-01 #41; OPS-02 #38 foi mergeado, mas sua issue continua aberta. Este arquivo não sincroniza automaticamente; as issues continuam fonte do andamento.

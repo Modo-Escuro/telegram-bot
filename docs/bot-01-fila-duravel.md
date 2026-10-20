@@ -2,6 +2,8 @@
 
 [Issue #1](https://github.com/Modo-Escuro/telegram-bot/issues/1) · [Cliente v1](cliente-conversa.md) · [Login](login-ifood.md)
 
+**Atualização local de 20/10:** o mesmo fluxo de fila atende o assistente. O cliente captura `/account-context`, conserva sessão na outbox e usa `X-Conversation-Session` em envio/consulta/replay; não transfere mensagem entre contas. [Contrato atual](cliente-conversa.md) e [UX/memória](assistente-conversacional.md). Base/CI/resultados de origem abaixo são históricos; não representam o processador atual nem o estado atual das issues.
+
 ## Alcance e base
 
 Implementação sobre os incrementos das PRs #7 (plano), #8 (BOT-02) e #9 (cliente), preservando seus commits.
@@ -11,7 +13,7 @@ O estado observado online em 17/10/2026 permanece separado e não foi revalidado
 Backend fixado no ensaio/CI histórico deste incremento: `Modo-Escuro/api-backend@2b77c958f358130c91a72e310d5c31f6c39c2d00`, com RUN-01,
 DOM-01 e DATA-01. Seus schemas v1 continuam iguais aos fixados no cliente (`6ce3d99`); não alterar cópias locais
 isoladamente. A DATA-01 já persiste compra/participantes/patches e expurga dados no SQLite da API. AI-02 foi
-mergeada nessa base, mas ainda não montada no entrypoint daquele pin. A main remota atual já integra a montagem AI-01/AI-02 com opt-in explícito; ver [remoto/local](estado-remoto-local.md). Não mudar o pin dos testes por esta revisão documental.
+mergeada nessa base, mas não montada no entrypoint daquele pin. O processador local atual é o assistente opt-in; [remoto/local](estado-remoto-local.md) conserva retratos datados. Não mudar pins por esta revisão.
 Os testes do incremento original da BOT-01 usaram `d2883f1`; a continuação BOT-02 atualiza a referência para `2b77c95`.
 
 A [DEC-01 vigente](decisoes-conversacionais.md) exige carrinho real após confirmação humana PREPARE_CART; este incremento BOT-01 não instala esse callback. BOT-03 deve apresentar revisão e confirmar pelo caminho dedicado da CART-01, dependente da INT-02 para ativação. `/purchase-approvals` é outra finalidade; envio e pagamento continuam proibidos.
@@ -67,7 +69,7 @@ As respostas são texto simples (sem `parse_mode`), divididas em até 3500 unida
 emoji. O renderizador só projeta campos conhecidos e omite referências internas, de ação e aprovação. Texto MODEL
 é identificado como fala do assistente e não vira confirmação operacional. Custo é apresentado como desconhecido,
 estimativa, faixa ou cotação da API; não somar no bot nem trocar `null` por zero. A interface sempre informa que
-nenhum pedido é enviado. O resultado atual pode conter uma correção mais recente que a operação consultada.
+nenhum pedido é enviado na apresentação inicial; não repete aviso geral em todo rodapé. Avisos específicos permanecem. O resultado atual pode conter correção mais recente que a operação consultada.
 
 ## Falhas e recuperação
 
@@ -128,7 +130,7 @@ recupera o SQLite. O lock de instância existente continua obrigatório.
 
 `TELEGRAM_CONVERSATION_ENABLED=false` é o padrão. Nenhuma variável Railway foi alterada neste desenvolvimento.
 Se desativado, não criar a fila/worker de conversa e preservar os comandos existentes. Ativação exige backend
-configurado, o ID real do bot cadastrado na API, volume persistente, uma instância, AI-02 instalada e ensaio humano
+configurado, ID do bot cadastrado na API, volume persistente, uma instância, assistente instalado e ensaio humano
 controlado. A flag do bot não instala processador na API e não deve ser ligada apenas porque a infraestrutura existe.
 
 Preservar o SQLite atual, inclusive eventuais WAL/SHM, ao migrar; parar o processo para uma cópia consistente.
@@ -155,4 +157,4 @@ cliente Telegram/MCP/modelo. A CI executa esse job em Windows/Linux com Node 22.
 
 O job unitário ignora explicitamente os seis testes HTTP quando não há checkout da API; o job de integração os
 executa obrigatoriamente. Resultados finais e commit ficam na descrição do PR e na issue. Testes locais/CI não
-comprovam deploy nem IA online. A BOT-01 permanece aberta até revisão, integração e ensaio operacional do seu alcance.
+comprovam deploy nem IA online. O fechamento histórico da BOT-01 refere-se ao alcance registrado no [backlog datado](backlog-conversacional.md), não a todos os ensaios externos. Situação atual no GitHub não foi consultada nesta atualização.

@@ -4,6 +4,8 @@ Atualização: [remoto/local](estado-remoto-local.md) e [decisões vigentes](dec
 
 A StRS v0.2 em baseline é uma cópia integral, com IDs e decisões abertas preservados. Continua em validação. O protótipo original demonstra regras em simulação; sua persistência SQLite não garante execução única no iFood.
 
+**Reconciliação local de 20/10:** memória não mistura pessoas/finalidades e fila conserva sessão. Limpeza de dados não cancela carrinho remoto. API usa v6 e assistente único; identidade estável entre relogins não comprovada. Usuário confirmou UNKNOWN obrigatório bloqueante por consumidor, substituindo liberação com aviso do #52. [Alcance](assistente-conversacional.md).
+
 ## Requisitos que permanecem
 
 A tabela descreve requisitos a implementar e verificar, não funcionalidades de compra já entregues. Consulte [estado atual](estado-atual.md) para o alcance real do incremento.

@@ -44,6 +44,20 @@ CLEAR_MARKUP = {
         ]
     ]
 }
+# Perfil do titular: confirmação por botão; a API resolve o comando digitado sem modelo.
+SELF_TEXT = "Confirmo: apagar meus dados da memória."
+SELF_QUESTION = (
+    "Isto apaga apenas suas informações salvas neste perfil. "
+    "Pessoas que você identificou continuam registradas. Confirmar?"
+)
+SELF_MARKUP = {
+    "inline_keyboard": [
+        [
+            {"text": "Apagar meus dados", "callback_data": "se:yes"},
+            {"text": "Cancelar", "callback_data": "se:no"},
+        ]
+    ]
+}
 MAX_REMOVE_BUTTONS = 10
 
 
@@ -214,10 +228,29 @@ class Conversations:
         capture = getattr(self.client, "account_context", None)
         session = capture() if capture else None
         snapshot = self.client.get_snapshot(**({"session_ref": session} if session else {}))
-        return {"session": session, "version": snapshot.version}, self.participant_names(snapshot)
+        names = self.memory_names()
+        return (
+            {"session": session, "version": snapshot.version},
+            names if names is not None else self.participant_names(snapshot),
+        )
+
+    def memory_names(self):
+        """Destinatários da memória do vínculo autenticado (fatos do servidor)."""
+        capture = getattr(self.client, "memory_directory", None)
+        if capture is None:
+            return None
+        body = capture()
+        if body is None or not body.get("enabled"):
+            return None
+        labels = [
+            entry["label"]
+            for entry in body.get("recipients", [])
+            if isinstance(entry, dict) and entry.get("kind") == "RECIPIENT"
+        ]
+        return labels[:MAX_REMOVE_BUTTONS]
 
     def participant_names(self, snapshot=None):
-        """Nomes do bloco GROUP do snapshot atual (fatos do servidor)."""
+        """Nomes do bloco GROUP do snapshot atual (caminho legado, API sem diretório de memória)."""
         body = (snapshot or self.client.get_snapshot()).to_dict()
         group = next((b for b in body.get("blocks", []) if b.get("kind") == "GROUP"), None)
         names = [p.get("displayName") for p in (group or {}).get("participants", [])]
@@ -480,6 +513,18 @@ class ConversationWorker:
                 attempts=0,
                 due=self.clock() + operation.poll_after_ms / 1000,
             )
+            progress = getattr(self.client, "get_progress", None)
+            if progress:
+                try:
+                    text = progress(
+                        row["operation_id"],
+                        event_id=row["event_id"],
+                        **self._session_args(row),
+                    )
+                except ConversationError:
+                    text = None  # A prévia não pode interromper a recuperação do resultado final.
+                if text and self._authorized():
+                    self._deliver(row, chunks(text), final=False)
             return
         if operation.status == "SUCCEEDED":
             # Não reutilizar snapshot histórico da operação: ele pode ter sido substituído/expurgado.

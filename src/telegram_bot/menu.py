@@ -19,7 +19,8 @@ BUTTONS = {
     "Esvaziar carrinho": "Esvaziar carrinho simulado",
     "Esvaziar sacola": "Esvaziar carrinho simulado",
     "Remover pessoa": "/remover",
-    "Limpar perfil": "/limpar",
+    "Limpar tudo": "/limpar",
+    "Meus dados": "/limpadados",
 }
 
 
@@ -38,7 +39,8 @@ def inline_menu(*, access=False, cart=False):
         if access
         else [
             [("Conta iFood", "account"), ("Endereços iFood", "addresses")],
-            [("Remover pessoa", "remove"), ("Limpar perfil", "clear")],
+            [("Remover pessoa", "remove"), ("Limpar tudo", "clear")],
+            [("Meus dados", "self")],
             *([[("Revisar carrinho", "review")]] if cart else []),
             [("Ajuda", "help"), ("Sair da demo", "exit")],
         ]

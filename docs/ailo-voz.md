@@ -1,6 +1,6 @@
 # Ailo: apresentação, digitação e áudio
 
-Apresentação escolhida: “Olá! Eu sou o Ailo, seu assistente de compras. Vamos organizar seu pedido juntos?”. O termo “compras agenciadas” foi simplificado para facilitar a compreensão. Não há declaração de atendimento humano.
+Apresentação corrente: “Olá! Eu sou o Ailo, seu assistente de compras”, seguida de convite para contar objetivo/ocasião, sem formulário inicial. O termo “compras agenciadas” foi simplificado. Não há declaração de atendimento humano. [Guia do assistente](assistente-conversacional.md).
 
 Ao iniciar o serviço normal, o adaptador tenta definir o nome de exibição como Ailo (`setMyName`), sem alterar o username ou iniciar outro polling. Se a chamada falhar, a equipe pode ajustar o nome no BotFather. Os modos de diagnóstico não renomeiam o perfil. O Telegram ainda identifica a conta como bot em sua própria interface; o produto não controla esse rótulo.
 
