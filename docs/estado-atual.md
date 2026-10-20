@@ -1,8 +1,8 @@
 # Estado de código e evidências online
 
-[Estado remoto/local](estado-remoto-local.md) registra o código atual conferido: bot #13/#14 integrado; API com montagem AI-01 e RUN-01 #41 integrada. BOT-01 e BOT-02 estão fechadas no GitHub. A continuação da retomada já foi mergeada; não está mais em desenvolvimento nesta revisão.
+[Estado remoto/local](estado-remoto-local.md) separa a árvore local de 20/10 dos retratos GitHub de 18/10 e deste ensaio online de 17/10. A fonte atual de implementação/UX é [assistente](assistente-conversacional.md). Fechamentos de issues/merges anotados abaixo são históricos, não consulta ao vivo.
 
-A ativação e a jornada online precisam de evidência própria. A API CART-01 está no PR #46; esta branch acrescenta o [canal humano](cart-01-telegram.md) ainda desligado. Outputs, revisão final completa e ensaio real continuam pendentes. Nenhuma evidência antiga foi regravada.
+Ativação/jornada online exigem evidência própria. O [canal CART-01](cart-01-telegram.md) inclui revisão completa e apresentação final na árvore local, com opt-in OFF por padrão. Outputs externos e fio da nova sacola às revisões ainda precisam de verificação. Nenhuma evidência antiga é regravada para ampliar o alcance.
 
 ## Evidência online histórica — 17/10/2026
 
@@ -63,7 +63,7 @@ Não reiniciar ou redeployar a API durante uma autorização. Atualizar somente 
 4. A consulta inicial retornava `DISCONNECTED`. Após login no navegador, `/callback` retornou 200 e o estado mudou para `AWAITING_CONFIRMATION`.
 5. O usuário enviou `/confirmar`, concluiu o botão humano e informou sucesso. A consulta autenticada posterior confirmou `CONNECTED`, sessão operacional e verificação `OK`.
 
-## Validação automatizada e seu alcance
+## Validação automatizada do incremento de 17/10 e seu alcance
 
 A suíte do bot tem 39 testes simulados: autorização privada, identificação, transporte, deduplicação, cursor, lock, replay de ações e confirmação humana. Lint e formatação também foram executados no incremento. A CI roda testes em Windows e Linux; execução local em Windows não substitui o resultado de cada job da CI.
 

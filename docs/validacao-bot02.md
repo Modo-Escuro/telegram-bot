@@ -1,5 +1,7 @@
 # BOT-02 — implementação e validação
 
+> **Relatório histórico de implementação.** Testes/pins e etapas manuais abaixo pertencem ao incremento original. Login corrente conclui no navegador; confirmações manuais são recuperação compatível. Ver [login atual](login-ifood.md), [cliente](cliente-conversa.md) e [assistente](assistente-conversacional.md). Não contar estes resultados como nova execução/validação online.
+
 **Registro histórico da primeira etapa**, já incorporada à `main` pelas PRs #8/#10. A continuação e seus testes estão em [retomada de contexto](bot-02-retomada-contexto.md); as pendências descritas abaixo representam aquele incremento, não o estado de desenvolvimento atual.
 
 Issue: [telegram-bot#2](https://github.com/Modo-Escuro/telegram-bot/issues/2). Base: `main@e280807`. Branch: `codex/bot-02-retorno-login`. Validação local em 18/10/2026, Python 3.12/Windows.

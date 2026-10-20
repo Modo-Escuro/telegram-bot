@@ -1,5 +1,13 @@
 # Plano integrado — Compra com Contexto
 
+## Situação local vigente — 20/10/2026
+
+Entrada natural, progresso, sessão capturada e controles de memória estão implementados localmente. API reconciliada sobre main f6ef20e: assistente único, SQLite v6, memória e sacola com endereço observado. UNKNOWN obrigatório bloqueia, substituindo #52 conforme usuário confirmou. [Guia atual](assistente-conversacional.md).
+
+Próximo marco: verificar/integrar a nova seleção de sacola ao canal CART-01 de revisão/PREPARE_CART já existente, mantendo gates de evidência e flags OFF. INT-02/ensaio humano continuam externos; BUY-01/02 não entregues. Esta revisão documental não atualiza estado de issues, CI remota ou produção.
+
+## Retrato histórico de planejamento — 18/10
+
 **Continuação local de 18/10:** [CART-01 integrada offline](cart-01-conclusao-offline.md) reúne #18/#17 com revisão completa e custos finais, contra a API com INT-02 #48. O retrato abaixo é histórico; não há ativação real ou fechamento de INT-02 por testes sintéticos.
 
 Continuação de código: [continuidade automática e endereços](continuidade-enderecos.md), em branch separada dos drafts CART-01. O retrato abaixo conserva a origem do planejamento.
@@ -20,7 +28,7 @@ PREPARE_CART autoriza só composição/mutações da revisão atual. Estimativa 
 
 O objetivo original de fechamento externo continua pendente: carrinho, pedido e pagamento são estados distintos. Confirmar com o evento o critério DA10 e registrar evidência confiável quando houver autorização de escopo. Não encerrar o épico por simulação.
 
-## Próximas entregas
+## Entregas planejadas no retrato de 18/10
 
 1. **INT-02/CART-01:** validar saídas reais por operação e integrar confirmação/intenções duráveis sem duplicar DATA-01/GRP-01/DOM-01. Não depende de aguardar AI-01, já integrada. Não ativar legado por flag para contornar contrato/persistência.
 2. **BOT-03 — apresentação:** mostrar grupo, pendências, propostas e cobertura com dados da API; esta parte pode avançar sem BUY-01/02. Não inventar preço nem esconder pessoa sem cobertura.

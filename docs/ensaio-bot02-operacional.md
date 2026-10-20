@@ -1,4 +1,4 @@
-**Atualização de UX em 18/10/2026:** navegação por botões e retorno do login sem confirmação duplicada, conforme pedido do usuário. Ver [conversa por botões](conversa-por-botoes.md). Instruções antigas com comandos permanecem como histórico/compatibilidade.
+**Registro histórico do ensaio de 18/10/2026.** Valores, schema 2, instruções de clique e flags abaixo pertencem àquele ambiente. Não aplicar a tabela antiga como configuração do assistente atual. Código local corrente usa API v5, login sem segundo clique e menu de memória; guias em [assistente](assistente-conversacional.md), [login](login-ifood.md) e [execução](executar-bot.md). Nenhuma nova inspeção de produção foi feita nesta atualização.
 
 # BOT-02 — habilitação e ensaio operacional
 

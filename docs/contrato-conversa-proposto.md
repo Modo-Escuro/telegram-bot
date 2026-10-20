@@ -1,5 +1,7 @@
 # Contrato de conversa — especificação proposta v0
 
+> **Proposta histórica v0, não contrato em execução.** Não usar rotas/nomes desta proposta para implementar o cliente atual. [Cliente v1/extensões](cliente-conversa.md) e [assistente](assistente-conversacional.md) documentam a árvore corrente; F7 foi retirada da API local. O conteúdo de origem é preservado para rastreabilidade.
+
 Estado: proposta de interface, **não implementada**. [API-01](https://github.com/Modo-Escuro/api-backend/issues/12) fecha nomes de rotas, schemas e compatibilidade antes da implementação. [Plano](plano-conversacional.md).
 
 ## Operações lógicas

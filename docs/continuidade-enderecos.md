@@ -1,5 +1,7 @@
 # Continuidade automática e endereço iFood — 18/10/2026
 
+**Leitura atual:** o diagnóstico e os resultados abaixo preservam o incremento de 18/10. Seleção de endereço/recuperação continuam implementadas, mas o `/start` atual é natural e não anuncia espera automática em mensagem longa; usa digitação/prévia opcional. API agora tem assistente único e SQLite v5; não aplicar o roteiro de rollback histórico para instalar binário antigo sobre esse banco. Ver [assistente](assistente-conversacional.md), [login](login-ifood.md) e [operação](deploy-railway.md).
+
 Base `main@d239edd43d072198367fd2fda3846fa29774ba65`, branch `codex/conversation-continuity-addresses`. O #17 de cart permanece separado. Este repositório não possui CLAUDE.md; foram lidos AGENTS.md, plano-conversacional.md, fila BOT-01, retomada BOT-02, contratos e código vigente dos dois repositórios. Nenhuma produção, flag, volume, polling real ou compra foi alterada.
 
 ## Causa e correção

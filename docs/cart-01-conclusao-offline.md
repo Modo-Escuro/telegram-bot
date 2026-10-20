@@ -1,5 +1,7 @@
 # CART-01 — Continuação integrada offline em 18/10/2026
 
+> **Registro histórico de integração.** SHAs, hashes, banco v3 e resultados abaixo identificam o ensaio de origem. A API local atual usa v5, com memória/sessão e F7 retirada; não rebaixar o banco para reproduzir este registro. [Guia CART-01](cart-01-telegram.md) e [assistente](assistente-conversacional.md) distinguem o canal implementado da integração da nova sacola ainda a verificar. Sem nova confirmação de estado remoto/online nesta revisão.
+
 Esta continuação acompanha o [draft bot #17](https://github.com/Modo-Escuro/telegram-bot/pull/17), dependente do [draft API #46](https://github.com/Modo-Escuro/api-backend/pull/46). Endereços API #47 e bot #18 já estão nas mains `a027ed4` e `6adb78d`. O texto abaixo registra a preparação/auditoria local anterior à publicação; publicar não significa merge, deploy ou ativação.
 
 Integração local de `codex/conversation-continuity-addresses@52b9381` (#18) com `codex/cart-01-telegram@0d6caec` (#17), em `codex/cart-01-integration`. O checkout antigo do usuário e as branches remotas foram preservados. A API local combina main `39edd95` (INT-02 #48), endereço #47 e CART-01 #46. Código local não comprova merge remoto, deploy ou resposta real do iFood.

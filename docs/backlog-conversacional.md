@@ -1,5 +1,7 @@
 # Backlog e dependências — 18/10/2026
 
+> Retrato histórico de issues, sem consulta nova ao GitHub em 20/10. Memória seletiva e áudio opt-in já têm código local; o intérprete estruturado foi retirado da API. Isso não altera retroativamente as colunas/contagens de 18/10. Para implementação/próximo marco, usar [assistente](assistente-conversacional.md) e [plano local](plano-conversacional.md#situação-local-vigente--20102026).
+
 [Plano](plano-conversacional.md) · [Remoto/local](estado-remoto-local.md) · [Kanban](kanban.md) · [Épico](https://github.com/Modo-Escuro/telegram-bot/issues/6).
 
 Retrato das issues consultadas após os merges API #38/#41/#42: 23 tarefas (15 fechadas, 8 abertas); épico não entra na contagem. Fechamento de issue descreve seu alcance, não prova ensaio real. A INT-01 fechou auditoria/metadados; INT-02 continua outputs/reconciliação. Nenhum responsável ou prazo é inferido.

@@ -6,9 +6,9 @@
 
 A conversa de texto livre é opt-in com `TELEGRAM_CONVERSATION_ENABLED=false` por padrão.
 Condições de ativação, retenção da fila e ensaio isolado estão no [guia BOT-01](bot-01-fila-duravel.md).
-Não habilitar apenas porque o bot iniciou: a API precisa ter o processador AI-02 instalado.
+Não habilitar apenas porque o bot iniciou: a API precisa ter o assistente instalado pelos opt-ins de runtime/modelo. F7, painel e sessão global não são dependências do bot atual.
 
-O bot já está online na Railway. Não iniciar polling local com o mesmo token enquanto o serviço estiver ativo. Para transferir a execução, seguir a migração do [estado atualizado](deploy-railway.md#transferir-execução-entre-computador-e-nuvem); preservar `data/` e não voltar a usar uma cópia antiga do SQLite.
+Há evidência histórica de bot online na Railway, não uma conferência atual. Antes de iniciar polling local com token já usado, verificar que não há outra instância ativa. Para transferir execução, seguir [migração](deploy-railway.md#transferir-execução-entre-computador-e-nuvem); preservar todo o diretório de estado e não usar cópia antiga do SQLite.
 
 `--check` consulta apenas token e webhook, sem consumir updates. `--identify` consome updates de preparação e não deve rodar junto com o serviço online.
 
@@ -35,13 +35,13 @@ echo
 export TELEGRAM_BOT_TOKEN
 read -r -p "Seu ID numérico do Telegram: " TELEGRAM_ALLOWED_USER_ID
 export TELEGRAM_ALLOWED_USER_ID
-export BACKEND_BASE_URL="https://api-backend-production-9c4c.up.railway.app"
+export BACKEND_BASE_URL="https://<origem-publica-da-api-configurada>"
 read -r -s -p "Segredo de serviço da API (BOT_API_TOKEN): " BACKEND_API_TOKEN
 echo
 export BACKEND_API_TOKEN
 ```
 
-O organizador precisa ser o mesmo permitido em `ALLOWED_ORGANIZER_IDS` na API. O valor de `BACKEND_API_TOKEN` é o `BOT_API_TOKEN` da API. Credenciais não devem ser coladas em comandos literais, histórico ou chat.
+Substitua a origem de exemplo pela origem pública configurada. O organizador precisa ser admitido na API (allowlist ou acesso por senha autenticado). `BACKEND_API_TOKEN` corresponde a `BOT_API_TOKEN`. Credenciais não devem ser coladas em comandos literais, histórico ou chat.
 
 `TELEGRAM_STATE_DIR` usa `data` por padrão. Para executar uma migração reversa, aponte para o diretório com o SQLite atualizado e já conferido. O exemplo não importa o estado da nuvem automaticamente.
 
@@ -63,7 +63,7 @@ Depois de encerrar a instância online e concluir a transferência de estado, in
 
 `/start`, `/status` e `/ajuda` respondem ao organizador em conversa privada. Outro usuário ou grupo é ignorado. Ctrl+C encerra. `/status` mostra o estágio da demo; `/ifood` consulta o vínculo e `/verificar` pede verificação da sessão ao backend.
 
-No [fluxo de login](login-ifood.md), volte à mensagem após autorizar no navegador: ela é atualizada com o botão humano. `/confirmar` é a alternativa se o acompanhamento terminar. `/cancelar` encerra só a tentativa; `/desconectar` remove só o vínculo local. Nenhum código deve ser digitado no Telegram.
+No [fluxo de login](login-ifood.md), o navegador conclui o vínculo e o bot atualiza a mensagem sem segundo clique. Confirmação manual é recuperação compatível, não etapa obrigatória. `/cancelar` encerra só a tentativa; `/desconectar` remove só o vínculo. Menu oferece Remover pessoa/Limpar tudo/Meus dados, com confirmações próprias; [alcance da memória](assistente-conversacional.md#menu-e-administração-de-memória).
 
 ## Criar um bot ou identificar um novo organizador
 

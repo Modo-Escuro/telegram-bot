@@ -1,4 +1,4 @@
-**Atualização de UX em 18/10/2026:** navegação por botões e retorno do login sem confirmação duplicada, conforme pedido do usuário. Ver [conversa por botões](conversa-por-botoes.md). Instruções antigas com comandos permanecem como histórico/compatibilidade.
+**Guia atual conferido em 20/10/2026:** login conclui no navegador; menu e memória em [assistente](assistente-conversacional.md). Comandos antigos são aliases, não um segundo consentimento obrigatório. Observação online de 17/10 é histórica.
 
 # Login iFood pelo Telegram
 
@@ -6,9 +6,9 @@
 
 ## Status e configuração
 
-O fluxo foi concluído pelo usuário na Railway e confirmado por consulta autenticada: vínculo `CONNECTED`, sessão operacional e verificação `OK`. Isso não aprova compra. A evidência sanitizada está em [estado atual](estado-atual.md).
+O fluxo de 17/10 foi concluído pelo usuário na Railway e confirmado como CONNECTED/operacional; a [evidência](estado-atual.md) não é inspeção do serviço atual. O código local posterior conclui vínculo no callback, sem segundo clique. Nenhum login aprova compra.
 
-O contrato do cliente foi implementado contra `20e46fd` e revisado para `686300d`. Use o [contrato bot→API dessa versão](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md); não inventar rotas ou schemas de compra.
+Origem histórica do cliente: `20e46fd`/`686300d`; o [pin do contrato](https://github.com/Modo-Escuro/api-backend/blob/686300d1a10c12bb6c3bd899e40fbd3a68c648f5/docs/bot-api.md) é preservado. No checkout coordenado, o contrato corrente está em `api-backend/docs/bot-api.md` e `docs/login-retorno-natural.md`; não extrapolar rotas/garantias de versões antigas.
 
 | No bot | Correspondência na API |
 | --- | --- |
@@ -20,14 +20,14 @@ Credenciais iFood, PKCE, callback e tokens pertencem à API. [Railway](deploy-ra
 
 ## Passo a passo do organizador
 
-1. Envie **`/conectar`**. O bot mostra **Abrir login do iFood**. Um novo `/conectar` cria outra tentativa e invalida a anterior.
+1. Em **Menu → Conta iFood**, toque em **Entrar no iFood** (alias `/conectar`). O bot mostra o link de autorização. Nova tentativa invalida a pendente anterior.
 2. Abra o link e conclua a autorização no **mesmo navegador**, mantendo o cookie da tentativa. Com callback HTTPS público, o computador ou celular pode ser usado. Com callback localhost, use o computador em que o backend está rodando.
-3. Quando a página informar que a autorização foi recebida, volte à **mensagem do login no Telegram**. O bot consulta o status e edita essa mensagem para mostrar **Confirmar conexão**. Não é uma nova notificação push. Se a mensagem foi removida ou o acompanhamento terminou, envie `/confirmar` ou `/ifood`.
-4. Confira a conta mascarada apresentada e toque em **Confirmar conexão** somente se reconhecê-la. Quando a identidade não puder ser verificada, o bot informa isso explicitamente. `/confirmar` sem clique não confirma.
-5. Envie **`/verificar`** para solicitar a verificação da sessão. `/ifood` consulta o estado salvo sem nova operação iFood. Vínculo `CONNECTED` isolado não basta: sessão operacional e operações permitidas são exigidas.
-6. Com conversa habilitada e conexão operacional, o bot consulta o grupo salvo em segundo plano após o clique ou `/verificar`. Confira participantes, condições e orçamento. A retomada não repete mensagens anteriores nem apresenta proposta/aprovação antiga. [Alcance e limites](bot-02-retomada-contexto.md).
+3. A página do callback informa **Conta conectada** e orienta voltar ao Telegram. O backend valida state/PKCE/cookie/prazo e instala o vínculo; não é necessário segundo clique no fluxo normal.
+4. O bot acompanha status por GET e atualiza a mensagem. Se houver tentativa antiga ou falha de instalação recuperável em AWAITING_CONFIRMATION, o botão manual **Confirmar conexão** continua disponível; confira a conta mascarada antes desse clique. `/confirmar` apenas recupera a apresentação, não confirma sozinho.
+5. Se necessário use **Verificar conexão** ou `/verificar`. `/ifood` consulta o estado conhecido sem nova operação iFood. CONNECTED isolado não basta: acesso depende de sessão operacional/permissões.
+6. Com conversa habilitada e vínculo operacional, o bot agenda contexto/endereço por consulta, sem repetir texto/modelo ou proposta/aprovação antiga. O assistente atual usa memória separada: consulta de GROUP não é reconstrução automática de todos os perfis. Confirme o endereço, mesmo que único, antes de buscar ofertas.
 
-Não enviar senha, token, código OAuth, URL de retorno ou código digitado no Telegram. Esta confirmação vincula a conta ao organizador; a aprovação de um pedido futuro será outro evento humano.
+Não enviar senha iFood, token, código OAuth ou URL de retorno no Telegram. A senha de acesso à demo tem fluxo próprio e não substitui OAuth. O vínculo da conta e a confirmação de preparação/pedido são finalidades diferentes.
 
 ## Estados e recuperação
 
@@ -37,11 +37,11 @@ Não enviar senha, token, código OAuth, URL de retorno ou código digitado no T
 | `AWAITING_AUTHORIZATION` | Concluir no navegador e voltar à mensagem do login; `/confirmar` é alternativa |
 | `AWAITING_CONFIRMATION` | Conferir a conta na mensagem atualizada e tocar no botão; `/confirmar` recupera a apresentação |
 | `CONNECTED` sem sessão operacional/operações | Enviar `/verificar`; pode faltar verificação ou permissão |
-| `CONNECTED` operacional | Vínculo pronto para as operações permitidas; conversa de compras continua pendente |
+| `CONNECTED` operacional | Operações permitidas disponíveis conforme opt-ins; não significa carrinho/pedido autorizado |
 | `RECONNECT_REQUIRED` | Gerar nova tentativa com `/conectar` |
 | `UNAVAILABLE` | Indisponibilidade não é logout; tentar `/verificar` depois |
 
-A tentativa de autorização vale dez minutos; após o callback há mais dez minutos para confirmação, conforme o contrato revisado. Tentativa expirada requer novo `/conectar`. Botão antigo não confirma nova tentativa.
+A tentativa de autorização vale dez minutos. A instalação é automática no callback normal; o prazo adicional de confirmação pertence ao caminho manual compatível, quando aplicável. Tentativa expirada exige novo login. Botão antigo não confirma outra tentativa.
 
 Se não houver botão após o login, envie `/confirmar` ou `/ifood`; não envie código. Se a página indicar divergência de navegador, use o mesmo navegador do início. Falha de rede não comprova logout nem sucesso; diante de resultado desconhecido, consultar `/ifood` antes de nova ação consciente. `/cancelar` ou **Cancelar tentativa** cancela somente a tentativa pendente e preserva o vínculo confirmado. `/desconectar` ou **Desconectar vínculo** remove somente o vínculo local; não solicita revogação no provedor nem cancela uma tentativa pendente. Para ambos os efeitos, use as duas ações conscientemente.
 
@@ -57,9 +57,9 @@ Se não houver botão após o login, envie `/confirmar` ou `/ifood`; não envie 
 
 ## Persistência e próximos passos
 
-O bot preserva cursor, ações e metadados do acompanhamento no volume `/data`: organizador, attemptId, messageId, fase, prazos e próxima consulta. A tabela é criada de forma aditiva, sem remover cursor/ações. Nenhum texto, URL OAuth, confirmationId ou identidade mascarada é guardado nessa tabela. Os vínculos da API ainda estão em armazenamento sem volume; antes de redeploy do backend, preservar os arquivos existentes e concluir uma migração verificada. Tentativas pendentes ficam em memória mesmo com volume: não redeployar a API durante o login.
+O bot preserva cursor, ações e acompanhamento no diretório de estado configurado: organizador, attemptId, messageId, fase, prazos e próxima consulta. A tabela de login não guarda texto, URL OAuth, confirmationId ou identidade mascarada. A outbox de conversa tem retenção própria de comandos pendentes. Antes de redeploy, conferir/preservar volumes e vínculos atuais; o registro antigo de API sem volume não prova o estado de hoje. Tentativas OAuth ficam em RAM mesmo com volume.
 
-`linkId` deverá vincular futuros carrinhos e aprovações. Mudança da conta/vínculo invalidará revisões anteriores. Essa regra ainda é requisito: carrinho e aprovação de compra não existem neste bot.
+`linkId` já é revalidado nas revisões CART-01; a outbox também conserva `sessionRef` capturado para mensagens. Não há identidade estável entre relogins: uma pendência da conta anterior não deve ser enviada sob referência nova. A preparação exige callback próprio; aprovação/envio de pedido não estão implementados.
 
 ## Acompanhamento BOT-02
 
@@ -73,4 +73,4 @@ Botões de cancelar/desconectar incluem referência à tentativa/vínculo e são
 
 Após o clique, a resposta mostra o estado atual e encerra o acompanhamento quando não há tentativa. A [continuação BOT-02](bot-02-retomada-contexto.md) agenda consulta informativa do grupo se a sessão for operacional e o worker de conversa estiver habilitado. Revalidação de carrinho/aprovação após mudança de linkId permanece nas tarefas BOT-03/BUY-01 e no backend; ausência desses botões não comprova sua invalidação futura.
 
-Código e testes deste incremento não comprovam deploy nem ensaio online. O snapshot anterior permanece histórico. Validar manualmente depois do merge/deploy: /conectar, navegador, mensagem atualizada, clique e /verificar; cancelar reconexão preservando o vínculo; desconectar com tentativa pendente preservando a tentativa.
+Código/testes não comprovam deploy ou ensaio online. Roteiro atual após implantação autorizada: Entrar no iFood → navegador → conclusão sem segundo clique → status atualizado → verificar se necessário → endereço confirmado. Ensaiar caminho manual apenas quando aplicável, cancelamento de reconexão e desconexão com tentativa pendente, preservando os efeitos distintos. Não preencher resultados por inferência.

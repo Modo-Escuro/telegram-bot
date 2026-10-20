@@ -1,5 +1,7 @@
 # Estado remoto, alterações locais e escopo — 18/10/2026
 
+**Reconciliação em 20/10:** bases conferidas: bot main 43105ba e API main f6ef20e; #46 mergeado e #50 documental conflitante. Publicação autorizada após a preparação: API [#58](https://github.com/Modo-Escuro/api-backend/pull/58), head 148b595082823288fbb713d1a6e341e32dfbffc7; commit funcional do bot be55381, seguido da consolidação documental. Worktrees e originais preservados; sem merge/deploy ou consulta de configuração/volume/online. Quadros abaixo são históricos; conferir os drafts para andamento atual.
+
 **Continuação local:** [integração CART-01 offline](cart-01-conclusao-offline.md) reúne #18/#17 com revisão e apresentação dos custos finais, validada em HTTP local. O quadro abaixo é histórico e não comprova publicação ou ativação desta continuação.
 
 Retrato conferido em 18/10/2026, horário de São Paulo. Não é monitoramento contínuo. SHAs identificam código publicado; não comprovam configuração, deploy ou ensaio online.

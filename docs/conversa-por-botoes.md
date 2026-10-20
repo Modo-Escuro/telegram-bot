@@ -1,5 +1,7 @@
 # Conversa e navegação por botões
 
+> **Histórico de evolução de UX.** O menu atual foi conferido em `menu.py`: teclado persistente só Menu; menu inline Conta iFood, Endereços iFood, Remover pessoa, Limpar tudo, Meus dados, Ajuda/Sair e revisão se CART-01 habilitada. [Guia atual](assistente-conversacional.md#menu-e-administração-de-memória). Rótulos, contagens de testes e roteiros abaixo pertencem aos incrementos datados, não à configuração online atual.
+
 Atualização solicitada de síntese e menu: [conversa curta](ux-sintese.md). Essa continuação substitui os rótulos e a apresentação extensa descritos no retrato histórico abaixo; não altera os controles de segurança.
 
 Pedido do usuário em 18/10/2026: respostas mais amigáveis, navegação sem digitar comandos e conclusão do login no navegador sem confirmação duplicada no Telegram.

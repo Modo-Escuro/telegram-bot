@@ -1,5 +1,7 @@
 # BOT-02 — Retomar a organização após o login
 
+**Comportamento atual (20/10, código local):** callback OAuth conclui vínculo no navegador; acompanhamento agenda contexto/endereço sem segundo clique obrigatório. A retomada não reenvia texto nem recompõe memória/sacola a partir de GROUP. Sessão capturada e compatibilidade em [assistente](assistente-conversacional.md#sessão-capturada-e-compatibilidade). Referências de CI, prazos e ensaios de origem abaixo são históricos; não confirmar instalação/ativação atual por esse registro.
+
 **Atualização 18/10/2026:** a retomada está integrada pela PR #11 e a issue está fechada. A API
 `dc448f9` já monta Gemini e propostas; a CI deste incremento usa essa versão. Abaixo permanece o
 histórico da implementação anterior. Configuração efetiva, validação atual e pendências humanas estão
@@ -26,7 +28,7 @@ de status iFood e snapshot de conversa; não depende de inventar endpoint ou eve
 
 ## Comportamento
 
-1. O clique humano confirma a conta pelas proteções já existentes. Callback OAuth sozinho não confirma.
+1. No fluxo normal, o callback validado conclui o vínculo no navegador. O clique adicional só existe para confirmação manual compatível/recuperação; status por polling nunca executa essa confirmação.
 2. Se a resposta validada indica `CONNECTED`, sessão operacional, permissões e `linkId`, o bot persiste uma
    solicitação local de consulta antes de enviar a resposta ao clique. Sem esses requisitos, orienta `/verificar`.
 3. `/verificar` também agenda a consulta quando o resultado é operacional. Se esse comando for recebido novamente
@@ -90,7 +92,7 @@ seis ensaios HTTP; sem `BOT01_API_ROOT`, a suíte unitária registra esses skips
 Ensaio após revisão/merge e deploy, operado pelo organizador sem iniciar um segundo polling:
 
 1. Preservar SQLite/volume e conferir a versão implantada. Verificar flags, backend e processador/provedor.
-2. `/conectar`, autorizar no navegador e voltar à mensagem; conferir a identidade e clicar humanamente.
+2. Entrar no iFood, autorizar no navegador e voltar à mensagem atualizada sem segundo clique obrigatório. Usar confirmação manual só quando a API apresentar recuperação compatível.
 3. Com sessão operacional e conversa habilitada, conferir a orientação de consulta e o grupo recuperado.
    Se a sessão ainda não está operacional, usar `/verificar`; se não houver grupo, conferir a orientação inicial.
 4. Confirmar que participantes, restrições e orçamento permanecem, sem proposta/aprovação ou repetição do texto.
@@ -99,5 +101,4 @@ Ensaio após revisão/merge e deploy, operado pelo organizador sem iniciar um se
 6. Conservar o roteiro original de cancelar reconexão e desconectar com tentativa pendente. Registrar só estados
    sanitizados, commit e resultado. Não enviar códigos, URLs privadas ou dados da conta ao chat.
 
-Código/CI não comprovam esse ensaio. A BOT-02 permanece aberta até revisão e validação operacional, com a
-invalidação das futuras ações de compra acompanhada nas dependências citadas.
+Código/CI não comprovam esse ensaio. O registro de fechamento da BOT-02 no retrato de 18/10 descreve o incremento, não execução humana de todos os cenários. Invalidação das ações de compra continua exigindo validação específica CART-01/BUY-01; esta revisão não consultou as issues ao vivo.
