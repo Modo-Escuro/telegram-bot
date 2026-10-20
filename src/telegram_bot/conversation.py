@@ -114,6 +114,7 @@ class ConversationClient:
         self._opener = opener or build_opener(NoRedirect())
         self._timeout = timeout
         self._now = now
+        self._progress_available = True
 
     def _envelope(self, update: dict, expected_version: int, *, callback: bool = False) -> dict:
         # Receber somente updates obtidos pelo transporte Telegram autenticado.
@@ -238,6 +239,28 @@ class ConversationClient:
         check_snapshot(body, self._now())
         return Snapshot(encode(body), body["version"], body["phase"])
 
+    @safe_response()
+    def get_progress(self, operation_id: str, *, event_id: str, session_ref=None):
+        """Prévia opcional e transitória; API anterior continua compatível."""
+        if not self._progress_available:
+            return None
+        require(isinstance(operation_id, str) and re.fullmatch(r"[A-Za-z0-9_-]{16,64}", operation_id))
+        _, body = self._request(
+            "GET", f"/operations/{operation_id}/progress", session_ref=session_ref
+        )
+        if body == {"enabled": False}:
+            self._progress_available = False
+            return None
+        require(
+            body.get("contractVersion") == "1.0"
+            and body.get("enabled") is True
+            and body.get("operationId") == operation_id
+            and body.get("eventId") == event_id
+        )
+        text = body.get("text")
+        require(text is None or (isinstance(text, str) and 0 < len(text) <= 600))
+        return text
+
     def _operation(self, body: dict) -> Operation:
         validate("operation", body)
         self._scope(body)
@@ -306,6 +329,21 @@ class ConversationClient:
         )
         return body["sessionRef"]
 
+    @safe_response()
+    def memory_directory(self):
+        _, body = self._request("GET", "/memory")
+        require(body.get("contractVersion") == "1.0")
+        require(type(body.get("enabled")) is bool)
+        require(isinstance(body.get("recipients"), list))
+        for entry in body["recipients"]:
+            require(isinstance(entry, dict))
+            require(isinstance(entry.get("label"), str) and 0 < len(entry["label"]) <= 80)
+            require(entry.get("kind") in ("SELF", "RECIPIENT"))
+        require(
+            isinstance(body.get("revision"), int) and body["revision"] >= 0
+        )
+        return body
+
     def _request(
         self, method: str, suffix: str, raw: bytes | None = None, *, session_ref=None
     ) -> tuple[int, dict]:
@@ -337,6 +375,11 @@ class ConversationClient:
                 data = response.read(MAX_BODY + 1)
             if status == 404 and suffix == "/account-context":
                 return 200, {"enabled": False}
+            if status == 404 and suffix.endswith("/progress"):
+                return 200, {"enabled": False}
+            if status == 404 and suffix == "/memory":
+                # API anterior sem o diretório de memória: o bot mantém o caminho legado.
+                return 200, {"contractVersion": "1.0", "revision": 0, "recipients": [], "enabled": False}
             if status == 404 and suffix == "/addresses":
                 # API anterior: recurso adicional ausente, contrato RUN-01 continua válido.
                 raise ConversationError("ACTION_UNAVAILABLE")

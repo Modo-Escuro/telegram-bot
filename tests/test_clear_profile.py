@@ -7,7 +7,13 @@ from test_conversation_worker import OWNER, Fixture
 from test_individual_mode import click
 
 from telegram_bot.conversation_contract import Snapshot, encode
-from telegram_bot.conversation_runner import CLEAR_QUESTION, CLEAR_TEXT, remove_text
+from telegram_bot.conversation_runner import (
+    CLEAR_QUESTION,
+    CLEAR_TEXT,
+    SELF_QUESTION,
+    SELF_TEXT,
+    remove_text,
+)
 from telegram_bot.menu import BUTTONS, inline_menu
 from telegram_bot.runner import NO_PEOPLE, process_batch
 
@@ -93,10 +99,12 @@ class ProfileTests(Fixture):
         return [json.loads(raw)["input"]["text"] for raw in self.client.sent if b'"input"' in raw]
 
     def test_menu_has_buttons(self):
-        self.assertEqual(BUTTONS["Limpar perfil"], "/limpar")
+        self.assertEqual(BUTTONS["Limpar tudo"], "/limpar")
+        self.assertEqual(BUTTONS["Meus dados"], "/limpadados")
         self.assertEqual(BUTTONS["Remover pessoa"], "/remover")
         labels = [b["text"] for row in inline_menu()["inline_keyboard"] for b in row]
-        self.assertIn("Limpar perfil", labels)
+        self.assertIn("Limpar tudo", labels)
+        self.assertIn("Meus dados", labels)
         self.assertIn("Remover pessoa", labels)
 
     def test_clear_asks_first_and_sends_exact_text_once(self):
@@ -144,6 +152,62 @@ class ProfileTests(Fixture):
 
     def test_remove_without_people(self):
         self.client.current = group_snapshot()
+        self.run_batch(command(1, "/remover"))
+        self.assertEqual(self.telegram.send.call_args_list[-1].args[1], NO_PEOPLE)
+        self.assertEqual(self.client.sent, [])
+
+    def directory(self, enabled, *recipients):
+        body = {"contractVersion": "1.0", "revision": 3, "enabled": enabled, "recipients": []}
+        if enabled:
+            body["recipients"] = [{"kind": kind, "label": label} for kind, label in recipients]
+        else:
+            body["recipients"] = []
+        return body
+
+    def test_self_confirmation_sends_exact_text_once(self):
+        self.run_batch(command(1, "/limpadados"))
+        call, prompt = self.prompt(SELF_QUESTION)
+        self.assertEqual(
+            [b["callback_data"] for b in call.args[2]["inline_keyboard"][0]], ["se:yes", "se:no"]
+        )
+        self.assertEqual(self.client.sent, [])  # perguntar não apaga nada
+        self.run_batch(click(2, "se:yes", prompt))
+        self.run_batch(click(3, "se:yes", prompt))  # clique duplo
+        self.assertEqual(self.sent_texts(), [SELF_TEXT])
+        self.assertEqual(SELF_TEXT, "Confirmo: apagar meus dados da memória.")
+        replies = [c.args[1] for c in self.telegram.send.call_args_list]
+        self.assertTrue(any("já foi usada" in r for r in replies))
+
+    def test_self_click_on_clear_keyboard_sends_nothing(self):
+        self.run_batch(command(1, "/limpar"))
+        _, prompt = self.prompt(CLEAR_QUESTION)
+        self.run_batch(click(2, "se:yes", prompt))  # tipo errado para o teclado
+        self.assertEqual(self.sent_texts(), [])
+
+    def test_remove_lists_memory_recipients_not_group_names(self):
+        self.client.memory_directory = Mock(
+            return_value=self.directory(True, ("SELF", "Eu"), ("RECIPIENT", "Cara"))
+        )
+        self.client.current = group_snapshot("Legado")
+        self.run_batch(command(1, "/remover"))
+        call, prompt = self.prompt("Quem você quer remover do pedido?")
+        rows = call.args[2]["inline_keyboard"]
+        self.assertEqual([r[0]["text"] for r in rows], ["Remover Cara", "Cancelar"])
+        self.run_batch(click(2, "rm:0", prompt))
+        self.assertEqual(self.sent_texts(), [remove_text("Cara")])
+        self.tick(4)
+        self.assertEqual(self.client.memory_directory.call_count, 1)
+
+    def test_remove_falls_back_to_group_names_without_memory_directory(self):
+        self.client.memory_directory = Mock(return_value=self.directory(False))
+        self.client.current = group_snapshot("Legado")
+        self.run_batch(command(1, "/remover"))
+        call, _ = self.prompt("Quem você quer remover do pedido?")
+        self.assertEqual([r[0]["text"] for r in call.args[2]["inline_keyboard"]][:2], ["Remover Legado", "Cancelar"])
+
+    def test_remove_with_empty_memory_directory(self):
+        self.client.memory_directory = Mock(return_value=self.directory(True, ("SELF", "Eu")))
+        self.client.current = group_snapshot("Legado")
         self.run_batch(command(1, "/remover"))
         self.assertEqual(self.telegram.send.call_args_list[-1].args[1], NO_PEOPLE)
         self.assertEqual(self.client.sent, [])

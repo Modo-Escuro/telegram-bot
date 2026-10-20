@@ -1,4 +1,4 @@
-"""Pergunta individual/grupo no início: botões fora do modelo, texto fixo, envio único."""
+"""Entrada natural sem formulário; botões individual/grupo antigos continuam verificáveis."""
 
 import json
 
@@ -44,26 +44,24 @@ class ModeTests(Fixture):
         )
 
     def prompt_id(self):
-        calls = [c for c in self.telegram.send.call_args_list if c.args[1] == MODE_QUESTION]
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(
-            [b["callback_data"] for b in calls[0].args[2]["inline_keyboard"][0]],
-            ["mode:individual", "mode:group"],
-        )
-        index = self.telegram.send.call_args_list.index(calls[0])
-        return 1001 + index  # Fixture devolve message_id = 1000 + chamada
+        # Teclado emitido por uma versão anterior do bot, ainda registrado no SQLite.
+        message_id = 42
+        self.state.mode_prompt(message_id)
+        context, _ = self.adapter.profile_context()
+        self.state.bind_prompt(message_id, context)
+        return message_id
 
     def sent_texts(self):
         self.tick(4)
         return [json.loads(raw)["input"]["text"] for raw in self.client.sent if b'"input"' in raw]
 
-    def test_start_asks_individual_or_group_once(self):
+    def test_start_invites_natural_request_without_individual_group_form(self):
         self.run_batch(start())
-        self.prompt_id()
-        self.assertEqual(self.client.sent, [])  # perguntar não envia nada ao backend
-        self.assertFalse(
-            any("automaticamente" in c.args[1] for c in self.telegram.send.call_args_list)
-        )
+        texts = [c.args[1] for c in self.telegram.send.call_args_list]
+        self.assertTrue(any("bolo" in text for text in texts))
+        self.assertNotIn(MODE_QUESTION, texts)
+        self.assertEqual(self.client.sent, [])
+        self.assertIsNone(self.box.active())
 
     def test_each_button_sends_exact_text_once_even_with_double_click(self):
         for choice in ("individual", "group"):
@@ -81,7 +79,7 @@ class ModeTests(Fixture):
     def test_old_unknown_or_foreign_click_sends_nothing(self):
         self.run_batch(start(1))
         old = self.prompt_id()
-        self.run_batch(start(2))  # novo teclado invalida o anterior
+        self.state.mode_prompt(old + 2)  # outro teclado legado invalida o anterior
         self.run_batch(click(3, "mode:group", old))
         self.run_batch(click(4, "mode:qualquer", old + 2))
         self.run_batch(click(5, "mode:group", old + 2, sender=OWNER + 1))
